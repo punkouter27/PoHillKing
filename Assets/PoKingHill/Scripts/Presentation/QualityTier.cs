@@ -73,7 +73,11 @@ namespace PoKingHill
         {
             float ms = Time.unscaledDeltaTime * 1000f;
             _ms[_head] = ms; _head = (_head + 1) % N; if (_count < N) _count++;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            long bytes = 0;   // not implemented on WebGL: every call logs an error with a stack trace
+#else
             long bytes = GC.GetAllocatedBytesForCurrentThread();
+#endif
             if (_lastBytes > 0 && bytes >= _lastBytes) { _gcSum += bytes - _lastBytes; _gcFrames++; }
             _lastBytes = bytes;
 

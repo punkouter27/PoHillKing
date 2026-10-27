@@ -26,7 +26,11 @@ namespace PoKingHill
         ProfilerRecorder _frameGc;
         PolicyRunner[] _runners;
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        long Alloc() => _frameGc.Valid ? _frameGc.CurrentValue : 0;   // GetAllocatedBytesForCurrentThread is not implemented on WebGL
+#else
         long Alloc() => _frameGc.Valid ? _frameGc.CurrentValue : GC.GetAllocatedBytesForCurrentThread();
+#endif
         static double Ms(long ticks) => ticks * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
 
         void OnEnable()
