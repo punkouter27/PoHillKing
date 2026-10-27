@@ -67,3 +67,6 @@ training/assets/*/unity_obs_*
 training/*.egg-info/
 Assets/_Recovery/
 Assets/_Recovery.meta
+
+# WebGL build: Burst output Unity writes beside the project
+/Data/

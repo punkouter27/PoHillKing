@@ -23,6 +23,12 @@ using SizeDict = System.Collections.Generic.Dictionary<string, string[]>;
 using NestedDictionary = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string[]>>;
 namespace Mujoco {
 public static class MujocoLib {
+#if UNITY_WEBGL && !UNITY_EDITOR
+const string Lib = "__Internal";  // statically linked: Assets/Plugins/WebGL/MuJoCo
+#else
+const string Lib = "mujoco";
+#endif
+
 
 // ----------------------------------Constants----------------------------------
 
@@ -6735,1048 +6741,1048 @@ public unsafe struct mjuiItemEdit_ {}
 
 // ------------------------------Function declarations--------------------------
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_defaultVFS(void* vfs);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_addFileVFS(void* vfs, [MarshalAs(UnmanagedType.LPStr)]string directory, [MarshalAs(UnmanagedType.LPStr)]string filename);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_addBufferVFS(void* vfs, [MarshalAs(UnmanagedType.LPStr)]string name, void* buffer, int nbuffer);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_deleteFileVFS(void* vfs, [MarshalAs(UnmanagedType.LPStr)]string filename);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_containsBufferVFS(void* vfs, [MarshalAs(UnmanagedType.LPStr)]string name);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_containsFileVFS(void* vfs, [MarshalAs(UnmanagedType.LPStr)]string directory, [MarshalAs(UnmanagedType.LPStr)]string filename);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_deleteVFS(void* vfs);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern UIntPtr mj_getCacheSize(mjCache_* cache);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern UIntPtr mj_getCacheCapacity(mjCache_* cache);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern UIntPtr mj_setCacheCapacity(mjCache_* cache, UIntPtr size);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjCache_* mj_getCache();
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_clearCache(mjCache_* cache);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjModel_* mj_loadXML([MarshalAs(UnmanagedType.LPStr)]string filename, void* vfs, StringBuilder error, int error_sz);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern UInt64 mj_encode(void* s, mjModel_* m, [MarshalAs(UnmanagedType.LPStr)]string filename, [MarshalAs(UnmanagedType.LPStr)]string content_type, void* vfs, StringBuilder error, int error_sz);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_saveLastXML([MarshalAs(UnmanagedType.LPStr)]string filename, mjModel_* m, StringBuilder error, int error_sz);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_freeLastXML();
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_getXMLDependencies([MarshalAs(UnmanagedType.LPStr)]string filename, void* dependencies);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_step(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_step1(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_step2(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_forward(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_inverse(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_forwardSkip(mjModel_* m, mjData_* d, int skipstage, int skipsensor);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_inverseSkip(mjModel_* m, mjData_* d, int skipstage, int skipsensor);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_defaultLROpt(mjLROpt_* opt);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_defaultSolRefImp(double* solref, double* solimp);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_defaultOption(mjOption_* opt);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_defaultVisual(mjVisual_* vis);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjModel_* mj_copyModel(mjModel_* dest, mjModel_* src);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_saveModel(mjModel_* m, [MarshalAs(UnmanagedType.LPStr)]string filename, void* buffer, UInt64 buffer_sz);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjModel_* mj_loadModel([MarshalAs(UnmanagedType.LPStr)]string filename, void* vfs);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjModel_* mj_loadModelBuffer(void* buffer, UInt64 buffer_sz);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_deleteModel(mjModel_* m);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern UInt64 mj_sizeModel(mjModel_* m);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjData_* mj_makeData(mjModel_* m);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjData_* mj_copyData(mjData_* dest, mjModel_* m, mjData_* src);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjData_* mjv_copyData(mjData_* dest, mjModel_* m, mjData_* src);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_resetCtrl(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_resetData(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_resetDataDebug(mjModel_* m, mjData_* d, byte debug_value);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_resetDataKeyframe(mjModel_* m, mjData_* d, int key);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_markStack(mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_freeStack(mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void* mj_stackAllocByte(mjData_* d, UIntPtr bytes, UIntPtr alignment);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double* mj_stackAllocNum(mjData_* d, UIntPtr size);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int* mj_stackAllocInt(mjData_* d, UIntPtr size);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_deleteData(mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_resetCallbacks();
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_setConst(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_setLengthRange(mjModel_* m, mjData_* d, int index, mjLROpt_* opt, StringBuilder error, int error_sz);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_printFormattedModel(mjModel_* m, [MarshalAs(UnmanagedType.LPStr)]string filename, [MarshalAs(UnmanagedType.LPStr)]string float_format);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_printModel(mjModel_* m, [MarshalAs(UnmanagedType.LPStr)]string filename);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_printFormattedData(mjModel_* m, mjData_* d, [MarshalAs(UnmanagedType.LPStr)]string filename, [MarshalAs(UnmanagedType.LPStr)]string float_format);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_printData(mjModel_* m, mjData_* d, [MarshalAs(UnmanagedType.LPStr)]string filename);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_printMat(double* mat, int nr, int nc);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_printMatSparse(double* mat, int nr, int* rownnz, int* rowadr, int* colind);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_printSchema([MarshalAs(UnmanagedType.LPStr)]string filename, StringBuilder buffer, int buffer_sz, int flg_html, int flg_pad);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_printScene(mjvScene_* s, [MarshalAs(UnmanagedType.LPStr)]string filename);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_printFormattedScene(mjvScene_* s, [MarshalAs(UnmanagedType.LPStr)]string filename, [MarshalAs(UnmanagedType.LPStr)]string float_format);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_fwdKinematics(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_fwdPosition(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_fwdVelocity(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_fwdActuation(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_fwdAcceleration(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_fwdConstraint(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_Euler(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_RungeKutta(mjModel_* m, mjData_* d, int N);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_implicit(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_invPosition(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_invVelocity(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_invConstraint(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_compareFwdInv(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_sensorPos(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_sensorVel(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_sensorAcc(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_energyPos(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_energyVel(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_checkPos(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_checkVel(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_checkAcc(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_kinematics(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_comPos(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_camlight(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_flex(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_tendon(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_transmission(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_crb(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_makeM(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_factorM(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_solveM(mjModel_* m, mjData_* d, double* x, double* y, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_solveM2(mjModel_* m, mjData_* d, double* x, double* y, double* sqrtInvD, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_comVel(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_passive(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_subtreeVel(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_rne(mjModel_* m, mjData_* d, int flg_acc, double* result);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_rnePostConstraint(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_maxContact(mjModel_* m, int g1, int g2, int has_margin);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_collision(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_makeConstraint(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_island(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_projectConstraint(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_referenceConstraint(mjModel_* m, mjData_* d);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_constraintUpdate(mjModel_* m, mjData_* d, double* jar, double* cost, int flg_coneHessian);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_stateSize(mjModel_* m, int sig);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_getState(mjModel_* m, mjData_* d, double* state, int sig);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_extractState(mjModel_* m, double* src, int srcsig, double* dst, int dstsig);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_setState(mjModel_* m, mjData_* d, double* state, int sig);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_copyState(mjModel_* m, mjData_* src, mjData_* dst, int sig);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double* mj_readCtrl(mjModel_* m, mjData_* d, int id, double time, double* result, int interp);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double* mj_readSensor(mjModel_* m, mjData_* d, int id, double time, double* result, int interp);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_initCtrlHistory(mjModel_* m, mjData_* d, int id, double* times, double* values);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_initSensorHistory(mjModel_* m, mjData_* d, int id, double* times, double* values, double phase);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_setKeyframe(mjModel_* m, mjData_* d, int k);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_addContact(mjModel_* m, mjData_* d, mjContact_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_isPyramidal(mjModel_* m);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_isSparse(mjModel_* m);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_isDual(mjModel_* m);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_mulJacVec(mjModel_* m, mjData_* d, double* res, double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_mulJacTVec(mjModel_* m, mjData_* d, double* res, double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_jac(mjModel_* m, mjData_* d, double* jacp, double* jacr, double* point, int body);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_jacBody(mjModel_* m, mjData_* d, double* jacp, double* jacr, int body);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_jacBodyCom(mjModel_* m, mjData_* d, double* jacp, double* jacr, int body);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_jacSubtreeCom(mjModel_* m, mjData_* d, double* jacp, int body);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_jacGeom(mjModel_* m, mjData_* d, double* jacp, double* jacr, int geom);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_jacSite(mjModel_* m, mjData_* d, double* jacp, double* jacr, int site);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_jacPointAxis(mjModel_* m, mjData_* d, double* jacPoint, double* jacAxis, double* point, double* axis, int body);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_jacDot(mjModel_* m, mjData_* d, double* jacp, double* jacr, double* point, int body);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_angmomMat(mjModel_* m, mjData_* d, double* mat, int body);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_name2id(mjModel_* m, int type, [MarshalAs(UnmanagedType.LPStr)]string name);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern IntPtr mj_id2name(mjModel_* m, int type, int id);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern IntPtr mj_actuatorInputName(mjModel_* m, int id, int input);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_fullM(mjModel_* m, mjData_* d, double* dst);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_mulM(mjModel_* m, mjData_* d, double* res, double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_mulM2(mjModel_* m, mjData_* d, double* res, double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_addM(mjModel_* m, mjData_* d, double* dst, int* rownnz, int* rowadr, int* colind);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_applyFT(mjModel_* m, mjData_* d, double* force, double* torque, double* point, int body, double* qfrc_target);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_objectVelocity(mjModel_* m, mjData_* d, int objtype, int objid, double* res, int flg_local);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_objectAcceleration(mjModel_* m, mjData_* d, int objtype, int objid, double* res, int flg_local);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mj_geomDistance(mjModel_* m, mjData_* d, int geom1, int geom2, double distmax, double* fromto);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_insideSite(mjModel_* m, mjData_* d, int siteid, double* point);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_contactForce(mjModel_* m, mjData_* d, int id, double* result);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_differentiatePos(mjModel_* m, double* qvel, double dt, double* qpos1, double* qpos2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_integratePos(mjModel_* m, double* qpos, double* qvel, double dt);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_normalizeQuat(mjModel_* m, double* qpos);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_local2Global(mjData_* d, double* xpos, double* xmat, double* pos, double* quat, int body, byte sameframe);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mj_getTotalmass(mjModel_* m);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_setTotalmass(mjModel_* m, double newmass);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern IntPtr mj_getPluginConfig(mjModel_* m, int plugin_id, [MarshalAs(UnmanagedType.LPStr)]string attrib);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_loadPluginLibrary([MarshalAs(UnmanagedType.LPStr)]string path);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mj_version();
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern IntPtr mj_versionString();
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mj_ray(mjModel_* m, mjData_* d, double* pnt, double* vec, byte* geomgroup, byte flg_static, int bodyexclude, int* geomid, double* normal);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_multiRay(mjModel_* m, mjData_* d, double* pnt, double* vec, byte* geomgroup, byte flg_static, int bodyexclude, int* geomid, double* dist, double* normal, int nray, double cutoff);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mj_rayHfield(mjModel_* m, mjData_* d, int geomid, double* pnt, double* vec, double* normal);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mj_rayMesh(mjModel_* m, mjData_* d, int geomid, double* pnt, double* vec, double* normal);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_rayGeom(double* pos, double* mat, double* size, double* pnt, double* vec, int geomtype, double* normal);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mj_rayFlex(mjModel_* m, mjData_* d, int flex_layer, byte flg_vert, byte flg_edge, byte flg_face, byte flg_skin, int flexid, double* pnt, double* vec, int* vertid, double* normal);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_raySkin(int nface, int nvert, int* face, float* vert, double* pnt, double* vec, int* vertid);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_defaultCamera(mjvCamera_* cam);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_defaultFreeCamera(mjModel_* m, mjvCamera_* cam);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_defaultPerturb(mjvPerturb_* pert);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_room2model(double* modelpos, double* modelquat, double* roompos, double* roomquat, mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_model2room(double* roompos, double* roomquat, double* modelpos, double* modelquat, mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_cameraInModel(double* headpos, double* forward, double* up, mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_cameraInRoom(double* headpos, double* forward, double* up, mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mjv_frustumHeight(mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_alignToCamera(double* res, double* vec, double* forward);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_moveCamera(mjModel_* m, int action, double reldx, double reldy, mjvCamera_* cam);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_movePerturb(mjModel_* m, mjData_* d, int action, double reldx, double reldy, mjvScene_* scn, mjvPerturb_* pert);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_moveModel(mjModel_* m, int action, double reldx, double reldy, double* roomup, mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_initPerturb(mjModel_* m, mjData_* d, mjvScene_* scn, mjvPerturb_* pert);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_applyPerturbPose(mjModel_* m, mjData_* d, mjvPerturb_* pert, int flg_paused);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_applyPerturbForce(mjModel_* m, mjData_* d, mjvPerturb_* pert);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjvGLCamera_ mjv_averageCamera(mjvGLCamera_* cam1, mjvGLCamera_* cam2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjvGLCamera_ mjv_camera2GLCamera(mjModel_* model, mjData_* data, mjvCamera_* mjv_camera);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mjv_select(mjModel_* m, mjData_* d, mjvOption_* vopt, double aspectratio, double relx, double rely, mjvScene_* scn, double* selpnt, int* geomid, int* flexid, int* skinid);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_defaultOption(mjvOption_* opt);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_defaultFigure(mjvFigure_* fig);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_initGeom(mjvGeom_* geom, int type, double* size, double* pos, double* mat, float* rgba);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_connector(mjvGeom_* geom, int type, double width, double* from, double* to);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_defaultScene(mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_makeScene(mjModel_* m, mjvScene_* scn, int maxgeom);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_freeScene(mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_updateScene(mjModel_* m, mjData_* d, mjvOption_* opt, mjvPerturb_* pert, mjvCamera_* cam, int catmask, mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_copyModel(mjModel_* dest, mjModel_* src);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_addGeoms(mjModel_* m, mjData_* d, mjvOption_* opt, mjvPerturb_* pert, int catmask, mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_makeLights(mjModel_* m, mjData_* d, mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_updateCamera(mjModel_* m, mjData_* d, mjvCamera_* cam, mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_updateSkin(mjModel_* m, mjData_* d, mjvScene_* scn);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_cameraFrame(double* headpos, double* forward, double* up, double* right, mjData_* d, mjvCamera_* cam);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjv_cameraFrustum(float* zver, float* zhor, float* zclip, mjModel_* m, mjvCamera_* cam);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_defaultContext(mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_defaultRendererInfo(mjrRendererInfo_* info);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_getRendererInfo(mjrRendererInfo_* info);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_makeContext(mjModel_* m, mjrContext_* con, int fontscale);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_changeFont(int fontscale, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_addAux(int index, int width, int height, int samples, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_freeContext(mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_resizeOffscreen(int width, int height, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_uploadTexture(mjModel_* m, mjrContext_* con, int texid);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_uploadMesh(mjModel_* m, mjrContext_* con, int meshid);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_uploadHField(mjModel_* m, mjrContext_* con, int hfieldid);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_restoreBuffer(mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_setBuffer(int framebuffer, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_readPixels(byte* rgb, float* depth, mjrRect_ viewport, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_drawPixels(byte* rgb, float* depth, mjrRect_ viewport, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_blitBuffer(mjrRect_ src, mjrRect_ dst, int flg_color, int flg_depth, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_setAux(int index, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_blitAux(int index, mjrRect_ src, int left, int bottom, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_text(int font, [MarshalAs(UnmanagedType.LPStr)]string txt, mjrContext_* con, float x, float y, float r, float g, float b);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_overlay(int font, int gridpos, mjrRect_ viewport, [MarshalAs(UnmanagedType.LPStr)]string overlay, [MarshalAs(UnmanagedType.LPStr)]string overlay2, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjrRect_ mjr_maxViewport(mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_rectangle(mjrRect_ viewport, float r, float g, float b, float a);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_label(mjrRect_ viewport, int font, [MarshalAs(UnmanagedType.LPStr)]string txt, float r, float g, float b, float a, float rt, float gt, float bt, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_figure(mjrRect_ viewport, mjvFigure_* fig, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_render(mjrRect_ viewport, mjvScene_* scn, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjr_finish();
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mjr_getError();
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mjr_findRect(int x, int y, int nrect, mjrRect_* rect);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjuiThemeSpacing_ mjui_themeSpacing(int ind);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjuiThemeColor_ mjui_themeColor(int ind);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjui_add(mjUI_* ui, mjuiDef_* def);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjui_addToSection(mjUI_* ui, int sect, mjuiDef_* def);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjui_resize(mjUI_* ui, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjui_update(int section, int item, mjUI_* ui, mjuiState_* state, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjuiItem_* mjui_event(mjUI_* ui, mjuiState_* state, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjui_render(mjUI_* ui, mjuiState_* state, mjrContext_* con);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_error([MarshalAs(UnmanagedType.LPStr)]string msg);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_warning([MarshalAs(UnmanagedType.LPStr)]string msg);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_clearHandlers();
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern IntPtr mju_setLogHandler(IntPtr handler);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern mjLogConfig_ mju_getLogConfig();
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_setLogConfig(mjLogConfig_ config);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_info(int topic, [MarshalAs(UnmanagedType.LPStr)]string msg);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_message(mjLogMessage_* msg);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void* mju_malloc(UIntPtr size);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_free(void* ptr);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mj_warning(mjData_* d, int warning, int info);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_writeLog([MarshalAs(UnmanagedType.LPStr)]string type, [MarshalAs(UnmanagedType.LPStr)]string msg);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_zero3(double* res);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_copy3(double* res, double* data);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_scl3(double* res, double* vec, double scl);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_add3(double* res, double* vec1, double* vec2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_sub3(double* res, double* vec1, double* vec2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_addTo3(double* res, double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_subFrom3(double* res, double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_addToScl3(double* res, double* vec, double scl);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_addScl3(double* res, double* vec1, double* vec2, double scl);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_normalize3(double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_norm3(double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_dot3(double* vec1, double* vec2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_dist3(double* pos1, double* pos2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_mulMatVec3(double* res, double* mat, double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_mulMatTVec3(double* res, double* mat, double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_cross(double* res, double* a, double* b);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_zero4(double* res);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_unit4(double* res);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_copy4(double* res, double* data);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_normalize4(double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_zero(double* res, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_fill(double* res, double val, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_copy(double* res, double* vec, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_sum(double* vec, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_L1(double* vec, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_scl(double* res, double* vec, double scl, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_add(double* res, double* vec1, double* vec2, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_sub(double* res, double* vec1, double* vec2, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_addTo(double* res, double* vec, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_subFrom(double* res, double* vec, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_addToScl(double* res, double* vec, double scl, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_addScl(double* res, double* vec1, double* vec2, double scl, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_normalize(double* res, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_norm(double* res, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_dot(double* vec1, double* vec2, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_mulMatVec(double* res, double* mat, double* vec, int nr, int nc);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_mulMatTVec(double* res, double* mat, double* vec, int nr, int nc);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_mulVecMatVec(double* vec1, double* mat, double* vec2, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_transpose(double* res, double* mat, int nr, int nc);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_symmetrize(double* res, double* mat, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_eye(double* mat, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_mulMatMat(double* res, double* mat1, double* mat2, int r1, int c1, int c2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_mulMatMatT(double* res, double* mat1, double* mat2, int r1, int c1, int r2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_mulMatTMat(double* res, double* mat1, double* mat2, int r1, int c1, int c2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_sqrMatTD(double* res, double* mat, double* diag, int nr, int nc);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_transformSpatial(double* res, double* vec, int flg_force, double* newpos, double* oldpos, double* rotnew2old);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mju_dense2sparse(double* res, double* mat, int nr, int nc, int* rownnz, int* rowadr, int* colind, int nnz);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_sparse2dense(double* res, double* mat, int nr, int nc, int* rownnz, int* rowadr, int* colind);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_sym2dense(double* res, double* mat, int n, int* rownnz, int* rowadr, int* colind);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_rotVecQuat(double* res, double* vec, double* quat);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_negQuat(double* res, double* quat);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_mulQuat(double* res, double* quat1, double* quat2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_mulQuatAxis(double* res, double* quat, double* axis);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_axisAngle2Quat(double* res, double* axis, double angle);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_quat2Vel(double* res, double* quat, double dt);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_subQuat(double* res, double* qa, double* qb);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_quat2Mat(double* res, double* quat);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_mat2Quat(double* quat, double* mat);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_derivQuat(double* res, double* quat, double* vel);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_quatIntegrate(double* quat, double* vel, double scale);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_quatZ2Vec(double* quat, double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mju_mat2Rot(double* quat, double* mat);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_euler2Quat(double* quat, double* euler, [MarshalAs(UnmanagedType.LPStr)]string seq);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_mulPose(double* posres, double* quatres, double* pos1, double* quat1, double* pos2, double* quat2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_negPose(double* posres, double* quatres, double* pos, double* quat);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_trnVecPose(double* res, double* pos, double* quat, double* vec);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mju_cholFactor(double* mat, int n, double mindiag);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_cholSolve(double* res, double* mat, double* vec, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mju_cholUpdate(double* mat, double* x, int n, int flg_plus);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_cholFactorBand(double* mat, int ntotal, int nband, int ndense, double diagadd, double diagmul);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_cholSolveBand(double* res, double* mat, double* vec, int ntotal, int nband, int ndense);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_band2Dense(double* res, double* mat, int ntotal, int nband, int ndense, byte flg_sym);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_dense2Band(double* res, double* mat, int ntotal, int nband, int ndense);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_bandMulMatVec(double* res, double* mat, double* vec, int ntotal, int nband, int ndense, int nvec, byte flg_sym);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mju_bandDiag(int i, int ntotal, int nband, int ndense);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mju_eig3(double* eigval, double* eigvec, double* quat, double* mat);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mju_boxQP(double* res, double* R, int* index, double* H, double* g, int n, double* lower, double* upper);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_boxQPmalloc(double** res, double** R, int** index, double** H, double** g, int n, double** lower, double** upper);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_muscleGain(double len, double vel, double* lengthrange, double acc0, double* prm);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_muscleBias(double len, double* lengthrange, double acc0, double* prm);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_muscleDynamics(double ctrl, double act, double* prm);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_encodePyramid(double* pyramid, double* force, double* mu, int dim);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_decodePyramid(double* force, double* pyramid, double* mu, int dim);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_springDamper(double pos0, double vel0, double Kp, double Kv, double dt);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_min(double a, double b);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_max(double a, double b);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_clip(double x, double min, double max);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_sign(double x);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mju_round(double x);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern IntPtr mju_type2Str(int type);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mju_str2Type([MarshalAs(UnmanagedType.LPStr)]string str);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern IntPtr mju_writeNumBytes(UIntPtr nbytes);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern IntPtr mju_warningText(int warning, UIntPtr info);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mju_isBad(double x);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern int mju_isZero(double* vec, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_standardNormal(double* num2);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_f2n(double* res, float* vec, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_n2f(float* res, double* vec, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_d2n(double* res, double* vec, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_n2d(double* res, double* vec, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_insertionSort(double* list, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mju_insertionSortInt(int* list, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_Halton(int index, int base_);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern IntPtr mju_strncpy(StringBuilder dst, [MarshalAs(UnmanagedType.LPStr)]string src, int n);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern double mju_sigmoid(double x);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjd_transitionFD(mjModel_* m, mjData_* d, double eps, byte flg_centered, double* A, double* B, double* C, double* D);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjd_inverseFD(mjModel_* m, mjData_* d, double eps, byte flg_actuation, double* DfDq, double* DfDv, double* DfDa, double* DsDq, double* DsDv, double* DsDa, double* DmDq);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjd_subQuat(double* qa, double* qb, double* Da, double* Db);
 
-[DllImport("mujoco", CallingConvention = CallingConvention.Cdecl)]
+[DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
 public static unsafe extern void mjd_quatIntegrate(double* vel, double scale, double* Dquat, double* Dvel, double* Dscale);
 }
 }

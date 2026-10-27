@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0f0a">
+    <title>{{{ PRODUCT_NAME }}}</title>
+    <style>
+      /* Not Unity's default page: that one draws a fixed canvas plus a footer and
+         scrolls in any window shorter than the canvas. Here the canvas is the
+         largest {{{ WIDTH }}}:{{{ HEIGHT }}} rectangle that fits the window, centred,
+         nothing else. */
+      html, body { margin: 0; height: 100%; background: #0a0f0a; overflow: hidden; }
+      body { display: flex; align-items: center; justify-content: center; }
+      #frame { position: relative; }
+      #unity-canvas { display: block; background: #0a0f0a; outline: none; touch-action: none; }
+      #loading { position: absolute; inset: 0; display: flex; flex-direction: column;
+                 align-items: center; justify-content: center; gap: 14px;
+                 font: 600 14px/1 system-ui, sans-serif; letter-spacing: 0.12em; color: #e8efe8; }
+      #bar { width: 60%; height: 6px; border-radius: 3px; background: #1c261c; overflow: hidden; }
+      #fill { width: 0; height: 100%; background: #f5c542; }
+      #error { position: absolute; left: 8%; right: 8%; bottom: 8%; display: none;
+               padding: 12px; border-radius: 6px; background: #5a1a1a; color: #fff;
+               font: 13px/1.4 system-ui, sans-serif; }
+    </style>
+  </head>
+  <body>
+    <div id="frame">
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
+      <div id="loading"><div>{{{ PRODUCT_NAME }}}</div><div id="bar"><div id="fill"></div></div></div>
+      <div id="error"></div>
+    </div>
+    <script>
+      var canvas = document.getElementById("unity-canvas");
+      var loading = document.getElementById("loading");
+      var fill = document.getElementById("fill");
+      var errorBox = document.getElementById("error");
+
+      // Keep the build's canvas aspect (WebGLBuild sets it).
+      function fit() {
+        var height = window.innerHeight;
+        var width = Math.round(height * {{{ WIDTH }}} / {{{ HEIGHT }}});
+        if (width > window.innerWidth) {
+          width = window.innerWidth;
+          height = Math.round(width * {{{ HEIGHT }}} / {{{ WIDTH }}});
+        }
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+      }
+      window.addEventListener("resize", fit);
+      fit();
+
+      function showError(message) {
+        errorBox.textContent = message;
+        errorBox.style.display = "block";
+      }
+
+      var buildUrl = "Build";
+      var config = {
+        dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+        frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+        codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+        productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+        productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+        showBanner: function (message, type) {
+          if (type === "error") {
+            showError(message);
+          }
+        },
+      };
+
+      var script = document.createElement("script");
+      script.src = buildUrl + "/{{{ LOADER_FILENAME }}}";
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (progress) {
+          fill.style.width = (100 * progress) + "%";
+        }).then(function () {
+          loading.style.display = "none";
+          canvas.focus();
+        }).catch(function (message) {
+          showError(String(message));
+        });
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
