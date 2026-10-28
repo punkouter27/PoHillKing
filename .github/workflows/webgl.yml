@@ -1,0 +1,30 @@
+name: Build & Deploy WebGL
+
+# Same workflow in every Po Unity game. It runs on the self-hosted `unity` runner (the dev PC), which has Unity,
+# its license and the az login. Push-only on purpose: the repo is public, and a pull_request trigger would let
+# anyone's fork run code on that PC. Never add one.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: webgl-${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  webgl:
+    runs-on: [self-hosted, unity]
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Keeps Library/ (git-ignored) between runs: a cold Unity import takes up to an hour.
+          clean: false
+          lfs: true
+      - name: Build, deploy and check the live page
+        shell: pwsh
+        run: ./tools/ci_webgl.ps1 -Method PoKingHill.EditorTools.WebGLBuild.Build
