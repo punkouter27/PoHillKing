@@ -85,7 +85,7 @@ def default_cfg(rung: str = "r0") -> dict:
         reward_clip=True,          # clip each step's shaped sum at zero (terminal terms and the potential are outside the clip)
         potential_gamma=0.99,      # reward["potential"]: F = gamma * phi(s') - phi(s), phi = (opponent radius - my radius) / OUT_RADIUS
         tactics=None,              # dict(probs=[5], hold_s=[lo, hi]): learner goal points from obs.TACTICS (training only), held per segment
-        duel_share=0.0,            # > 2 robots: this share of worlds is a duel; one opponent, drawn per world, is benched (out from the
+        duel_share=0.0,            # > 2 robots: this share of worlds is a duel; one opponent, drawn per world, fights, the rest are benched (out from the
                                    # start, re-pinned 50 m up off the mountain every control step, as Unity parks unused bodies)
         fatigue=dict(enabled=False, tau_s=10.0, min_scale=0.6, gain=2.0, omega_ref=10.0, obs=False),
         getup=None,                # dict (rung "getup"): episodes start from drops in random orientations and never end on a fall
@@ -205,6 +205,13 @@ def default_cfg(rung: str = "r0") -> dict:
         me = rung[:-4]
         cfg.update(default_cfg("r5ffa")); cfg.update(scene=mix_scene([me, "g1", "g1", "g1"]))
         if me == "trump": cfg["reward"].update(push_out=1.0, belly_push=4.0, arm_contact=-1.0); cfg["goal_cmd"].update(vmax=0.7)
+    elif rung.endswith("_hill4") and rung[:-6] in HUMANS:  # _hill with the learner's own body in the ring (2026-10-28)
+        # kim_hill2 held off a copy of itself (Python mirror duel 11 % decided): the _hill ring never shows the learner its
+        # own body. Four bodies, a_ = this body, b_ = a frozen copy of it (slot1), c_ and d_ = the other two humans
+        # (slot2, slot3); half the worlds are duels against one of the three, so a sixth of them are mirror duels.
+        me = rung[:-6]; bodies = [me, me] + [h for h in HUMANS if h != me]
+        cfg.update(default_cfg(f"{me}_hill")); cfg.update(scene=mix_scene(bodies), robots=["a_", "b_", "c_", "d_"])
+        cfg["goal_cmd"].update(vmax=[0.7 if b == "trump" else 1.0 for b in bodies])
     elif rung.endswith("_hill") and rung[:-5] in HUMANS:   # the game's one brain per body: duels and three-ways (2026-10-21)
         # Motion: the action low-pass (action_map "smooth" 0.6, carried in the exported brain's _action.json) and a 3x
         # action_rate penalty, for human-like movement instead of the fighters' step-to-step twitching.
@@ -313,7 +320,9 @@ class FrozenPolicy(torch.nn.Module):
 class FrozenPool:
     """Several frozen opponents; each opponent row is assigned one of them, re-drawn whenever its world resets.
     slots = frozen robots per world (1 in a duel: one row per world). An entry "path.pt:slot2" only drives frozen slot 2
-    (robot c_; slot 1 = b_): mixed-body scenes need each body driven by a brain of its own kind."""
+    (robot c_; slot 1 = b_): mixed-body scenes need each body driven by a brain of its own kind. An entry "path.pt:live"
+    starts as that checkpoint in a module of its own, takes the learner's action path, and train.py --self-play
+    overwrites it with the learner's current actor (refresh_live)."""
     def __init__(self, ckpts, device, num_rows, stochastic=False, slots=1):
         # an entry "path.pt:stand" is an opponent that gets a zero command (holds its ground) instead of attacking
         specs = [opp_spec(c) for c in ckpts]
@@ -321,10 +330,12 @@ class FrozenPool:
         self.stands = torch.tensor(["stand" in f for _, f in specs], device=device)
         self.shoves = torch.tensor(["shove" in f for _, f in specs], device=device)
         self.any_stand = any("stand" in f for _, f in specs); self.any_shove = any("shove" in f for _, f in specs)
-        loaded = {}                           # one module per checkpoint file, shared by all entries naming it
-        for c, _ in specs:
-            if c not in loaded: loaded[c] = FrozenPolicy(c, device, stochastic)
-        self.nets = [loaded[c] for c, _ in specs]
+        self.live = [i for i, (_, f) in enumerate(specs) if "live" in f]
+        loaded = {}                           # one module per checkpoint file, shared by all entries naming it (a live entry has its own)
+        key = lambda i, c: (c, i) if i in self.live else c
+        for i, (c, _) in enumerate(specs):
+            if key(i, c) not in loaded: loaded[key(i, c)] = FrozenPolicy(c, device, stochastic)
+        self.nets = [loaded[key(i, c)] for i, (c, _) in enumerate(specs)]
         self.amaps = [ckpt_action_spec(c) for c, _ in specs]          # each opponent's own action path (koth/action_map.py)
         self.slots = slots
         self.choice = torch.randint(0, len(self.nets), (num_rows,), device=device)
@@ -336,6 +347,13 @@ class FrozenPool:
     def set_weights(self, w):
         w = torch.tensor(w, dtype=torch.float32, device=self.choice.device); assert len(w) == len(self.nets) and w.sum() > 0
         self.weights = w / w.sum()
+
+    def refresh_live(self, actor_sd: dict):
+        """Copy the learner's actor (rsl_rl actor state dict) into every live entry; its exploration noise, if any, follows."""
+        sd = {k: v.detach().clone() for k, v in actor_sd.items()}
+        for i in self.live:
+            net = self.nets[i]; net.actor = Actor(sd)
+            if net.noise_std is not None and "distribution.std_param" in sd: net.noise_std = sd["distribution.std_param"].abs()
 
     def resample(self, world_ids):
         if any(self.slot_of):                 # per slot, among the entries allowed there
@@ -377,6 +395,8 @@ class KothEnv:
         fo = cfg["frozen_opponent"]
         self.frozen = None if not fo else FrozenPool(fo if isinstance(fo, (list, tuple)) else [fo], self.device, N * max(A - 1, 1),
                                                      cfg["frozen_stochastic"], slots=max(A - 1, 1))
+        if self.frozen is not None:
+            for i in self.frozen.live: self.frozen.amaps[i] = action_spec(cfg.get("action"))     # a live copy moves as the learner does
         assert self.frozen is None or A >= 2
         self.num_envs = N if self.frozen is not None else M      # rows rsl_rl sees (learner = robot a_ only when the others are frozen)
         # learner rows (robot a_ of every world) and frozen-opponent rows
@@ -491,7 +511,7 @@ class KothEnv:
         self.style = torch.zeros(M, dtype=torch.bool, device=device)      # rows fighting in the shove style
         self.act_f = z(M, 29); self.pose_offset = z(M, 29)
         self.out = torch.zeros(M, dtype=torch.bool, device=device)        # > 2 robots: eliminated this round (latched)
-        self.bench = torch.zeros(N, dtype=torch.long, device=device)      # duel_share: the robot index sitting this world out, 0 = none
+        self.bench = torch.zeros(N, dtype=torch.long, device=device)      # duel_share: bit k set = robot k sits this world out, 0 = none
         self.stale_t = z(M); self.push_out_sum = z(M)                    # anti-stalemate timer, push_out paid this episode
         self.fatigue = z(M, 29)                                          # per-joint fatigue state in [0, 1]
         self.phi_prev = z(M)                                             # reward["potential"]: phi of the state the step started from
@@ -679,13 +699,14 @@ class KothEnv:
         yaw = self._rand((n, A), -rn["yaw"], rn["yaw"])
         xy = self._spawn_xy(n)
         bench = torch.zeros(n, dtype=torch.long, device=self.device)
-        if A > 2 and self.cfg.get("duel_share", 0.0) > 0:      # a duel: one opponent sits out, the other starts across from a_
+        if A > 2 and self.cfg.get("duel_share", 0.0) > 0:      # a duel: one opponent starts across from a_, the others sit out
             duel = torch.rand(n, device=self.device) < self.cfg["duel_share"]
-            bench = torch.where(duel, torch.randint(1, A, (n,), device=self.device), 0)
+            keep = torch.randint(1, A, (n,), device=self.device)
+            bench = torch.where(duel, ((1 << A) - 2) & ~(1 << keep), 0)
             if xy is not None and duel.any():
                 ang = torch.atan2(xy[:, 0, 1], xy[:, 0, 0]) + math.pi + self._rand(n, -1.0, 1.0)
                 for k in range(1, A):
-                    fight = duel & (bench != k); rk = xy[:, k].norm(dim=1)
+                    fight = duel & (keep == k); rk = xy[:, k].norm(dim=1)
                     xy[:, k] = torch.where(fight[:, None], torch.stack([rk * torch.cos(ang), rk * torch.sin(ang)], 1), xy[:, k])
         if xy is not None:
             slope = 2 * SLOPE_K * (xy.norm(dim=2) - PLATEAU_R).clamp(min=0)
@@ -707,7 +728,9 @@ class KothEnv:
         self.feet_air_time[rows] = 0; self.feet_contact[rows] = True
         self.out[rows] = False; self.stale_t[rows] = 0; self.push_out_sum[rows] = 0; self.fatigue[rows] = 0
         self.bench[ids] = bench
-        if bench.any(): b = ids[bench > 0]; self.out[b * A + bench[bench > 0]] = True; self._pin_benched()
+        if bench.any():
+            for k in range(1, A): self.out[ids * A + k] |= (bench >> k) & 1 == 1
+            self._pin_benched()
         fxy = q[:, self.rq + 0], q[:, self.rq + 1]   # feet start under the pelvis; exact value only matters for one step of slip
         self.prev_feet_xy[rows] = torch.stack(fxy, 2).reshape(-1, 1, 2).expand(-1, 2, -1)
         self.episode_length_buf[ids] = 0
@@ -779,7 +802,7 @@ class KothEnv:
         """duel_share: each benched robot's root back to (100, 0, 50), upright, at rest (Unity MatchDirector.Park)."""
         if not bool((self.bench > 0).any()): return
         for k in range(1, self.A):
-            b = self.bench == k
+            b = (self.bench >> k) & 1 == 1
             if not bool(b.any()): continue
             qa, da = self.rq[k], self.rd[k]
             for j, v in enumerate((100.0, 0.0, 50.0, 1.0, 0.0, 0.0, 0.0)): self.qpos[:, qa + j] = torch.where(b, v, self.qpos[:, qa + j])

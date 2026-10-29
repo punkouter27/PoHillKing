@@ -48,12 +48,12 @@ def load_policy(env, ckpt):
 
 
 def base_rung(rung: str) -> str:
-    """kim_r0b -> r0, trump_r4bull -> r4league, trump_vs_g1 -> r4league, kim_ffa / kim_hill -> r5ffa: the bar a rung is judged on."""
+    """kim_r0b -> r0, trump_r4bull -> r4league, trump_vs_g1 -> r4league, kim_ffa / kim_hill(4) -> r5ffa: the bar a rung is judged on."""
     if "_vs_" in rung: return "r4league"
     if "_att_" in rung: return "r4att"
     body, _, rest = rung.partition("_")
     if body not in HUMANS: return rung
-    if rest in ("ffa", "hill"): return "r5ffa"
+    if rest in ("ffa", "hill", "hill4"): return "r5ffa"
     return {"r4bull": "r4league", "bull": "r4league"}.get(rest, rest[:2])
 
 

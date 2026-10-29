@@ -607,3 +607,55 @@ the upload key (the phone's 10-17 install was upload-signed) and installed on a 
 on the device; logcat: Play Asset Delivery ClassNotFoundException (harmless probe) and an Input System
 "InputUpdateType.None is not a valid update mask" in onDeviceChange (package-internal); the phone disconnected before touch
 and frame times were checked.
+
+## 2026-10-28 — the hill brains with their own body in the ring (no promotion)
+
+The shipped kim_hill2 held off a copy of itself (duel_stats.py mirror 11 % decided, 2026-10-22), and quick match seats two
+bodies of every kind. New rung `<body>_hill4` (env.py): a four-body ring, a_ = the body, b_ = a frozen copy of its shipped
+brain (slot1), c_/d_ = the other two humans' shipped brains; half the worlds are duels against one of the three (duel_share
+now benches every opponent but one: `bench` is a bitmask, three-body `_hill` unchanged in distribution). Queue
+`scripts/queue_hill4.py`, on this PC (RTX 2060 6 GB, no runs/: the shipped ONNX brains rebuilt with onnx_to_ckpt.py into
+runs/shipped/<body>/, Kim's with her smooth 0.6 action path): warm from the shipped brain, 400 iterations, 1024 worlds,
+11.6 s/iteration, 1 h 45 min per body with evals. Bars: mirror duel decided >= max(0.6, shipped + 0.2), three-way within
+0.03 of shipped, decided share vs shipped >= 0.45, jitter <= shipped (eval.py, --leg-contact-rule unity, 3 x 256).
+
+| Run | Mirror decided (shipped) | 3-way (shipped) | Duel vs shipped | Jitter rad/step (shipped) | Result |
+|---|---|---|---|---|---|
+| kim_hill4a | 0.423 (0.479) | 0.491 (0.471) | 0.292 | 0.0528 (0.0547) | kept as a run |
+| trump_hill4a | 0.004 (0.887) | 0.453 (0.414) | 0.779 | 0.0375 (0.0871) | kept as a run |
+| grandpa_hill4a | 0.327 (0.981) | 0.400 (0.125) | 0.362 | 0.0545 (0.1044) | kept as a run |
+
+Training's ep/decided reached 0.96 / 0.94 / 1.00, but against the frozen *old* brain: the new brains learned to beat (or
+outlast) the shipped copy, not to break a deadlock against themselves. Every brain trained with the low-pass (kim_hill2,
+the three hill4a) stalls in its own mirror, while the unsmoothed fighters decide 89-98 %; Grandpa's three-way more than
+triples and Trump beats his shipped brain 78 % of the decided duels, yet two copies of either rarely finish. Also: eval.py
+measures the shipped Kim's mirror at 48 % decided, duel_stats.py at 11 % (different round rules or simulators: to resolve).
+Next: live self-play (slot1 refreshed from the learner's weights every N iterations), then Kim again.
+
+## 2026-10-29 — overnight: hill4 with live self-play, most urgent body first (no promotion)
+
+`train.py --self-play N` + opponent flag `:live` (env.FrozenPool.refresh_live): slot1 draws between the body's best brain
+and a live copy of the learner refreshed every 25 iterations (with the learner's action path). `scripts/overnight_hill4.py`,
+9.4 h (22:22-07:49), 400 iterations x 1024 worlds per run: each round trains the body with the highest urgency
+(max(0, 0.6 - mirror decided) + max(0, 0.33 - three-way) + 0.2 max(0, jitter / 0.06 - 1)) / (1 + 0.5 failed attempts);
+co-evolution against the other bodies' best brains; promotion needs mirror >= max(0.6, best - 0.1), three-way >= best - 0.03,
+decided share vs the best >= 0.45, jitter <= 1.05 x best, and less urgency (-0.02) or +0.03 three-way. Start urgency:
+Grandpa 0.353, Kim 0.121, Trump 0.090. Report: `SCREENSHOTS/training-261029/index.html`.
+
+| Run | Mirror decided | 3-way | Duel vs shipped | Jitter rad/step | Urgency |
+|---|---|---|---|---|---|
+| grandpa shipped | 0.981 | 0.125 | - | 0.1044 | 0.353 |
+| grandpa_hill4b | 0.385 | 0.423 | 0.275 | 0.0571 | 0.215 |
+| grandpa_hill4c | 0.283 | 0.345 | 0.275 | 0.0399 | 0.317 |
+| grandpa_hill4d | 0.130 | 0.263 | 0.210 | 0.0381 | 0.537 |
+| grandpa_hill4e | 0.289 | 0.237 | 0.239 | 0.0354 | 0.404 |
+| grandpa_hill4f | 0.449 | 0.271 | 0.206 | 0.0358 | 0.210 |
+| kim shipped | 0.479 | 0.471 | - | 0.0547 | 0.121 |
+| kim_hill4b | 0.025 | 0.535 | 0.572 | 0.0499 | 0.575 |
+
+Nothing promoted; every shipped brain unchanged; Trump got no run. Live self-play does not cure the mirror stall: the
+eight brains trained with the low-pass (smooth 0.6, action_rate -0.03) decide 0.004-0.45 of their mirror duels, the
+unsmoothed fighters 0.89-0.98. kim_hill4b is the first hill brain to beat its shipped brain (0.572 of the decided duels,
+three-way +0.06) and the worst mirror of all (0.025). Restarts from the same brain spread widely (Grandpa mirror 0.13-0.45).
+Suspect: the low-pass and the action_rate penalty. Next: a smoothing sweep (smooth 0 / 0.3 / 0.6, 200 iterations, Kim and
+Grandpa), and in the game a round tie-break (e.g. the sea rising faster after 15 s) so a mirror stalemate still ends.

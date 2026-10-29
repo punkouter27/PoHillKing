@@ -12,6 +12,8 @@ graduation.json beside model_final.pt (the bars); export_policy.py refuses a che
 Action path (koth/action_map.py): --action-map tanh, --action-scale <scale json from scripts/action_scale.py>,
 --torque-window. With --warm, a changed scale is folded into the warm-started actor (output rows, std, last-action
 normalizer), so it starts out with the same joint targets wherever the old one was inside its clamp.
+--self-play N with an --opponent entry "path.pt:live" (e.g. :slot1:live): that opponent is the learner itself, refreshed
+every N iterations, so a brain also practises breaking a deadlock against its own current style (mirror duels).
 --curriculum ladder[:bar:demote] (koth/curriculum.py) draws the --opponent list (weakest first) by stages that advance
 on the learner's win share instead of on the iteration count."""
 import argparse, datetime, json, os, socket, statistics, subprocess, sys, time
@@ -180,6 +182,7 @@ def main():
     ap.add_argument("--torque-window", action="store_true", help="clamp targets to the torque-feasible window at the current state")
     ap.add_argument("--action-smooth", type=float, default=None, help="action low-pass k (koth/action_map.py smooth; 0 = off)")
     ap.add_argument("--no-reward-clip", action="store_true", help="do not clip the per-step shaped reward at zero")
+    ap.add_argument("--self-play", type=int, default=0, help="every this many iterations, copy the learner's actor into the --opponent entries marked :live")
     ap.add_argument("--curriculum", default=None, help="koth/curriculum.py preset (ladder[:bar:demote]) or a spec json; needs --opponent (weakest first)")
     a = ap.parse_args()
     t_start = time.time()
@@ -239,6 +242,15 @@ def main():
         def log_cur(*args, **kw):
             cur.after_iteration(kw.get("it", 0)); return log_c(*args, **kw)
         runner.logger.log = log_cur
+    if a.self_play:
+        assert env.frozen is not None and env.frozen.live, "--self-play needs an --opponent entry marked :live"
+        log_s = runner.logger.log
+        def log_self(*args, **kw):
+            it = kw.get("it", 0)
+            if (it + 1) % a.self_play == 0:
+                env.frozen.refresh_live(runner.alg._raw_actor.state_dict()); print(f"self-play: live opponents = learner at iteration {it}")
+            return log_s(*args, **kw)
+        runner.logger.log = log_self
     try:
         runner.learn(a.iters, init_at_random_ep_len=True)
     except BaseException:

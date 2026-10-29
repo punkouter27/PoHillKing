@@ -1,0 +1,124 @@
+{
+ "title": "Overnight hill4 self-play 261029",
+ "subtitle": "9.4 h, 6 runs; Toddler = stalls in its mirror, Child = decides its mirror, Adult = no urgency left",
+ "sections": [
+  {
+   "title": "hill4 self-play, the most urgent body first",
+   "summary": {
+    "toddler": "kim",
+    "child": "trump, grandpa",
+    "adult": "none"
+   },
+   "runs": [
+    {
+     "label": "grandpa_hill4b",
+     "dir": "grandpa_hill4/grandpa_hill4b"
+    },
+    {
+     "label": "grandpa_hill4c",
+     "dir": "grandpa_hill4/grandpa_hill4c"
+    },
+    {
+     "label": "grandpa_hill4d",
+     "dir": "grandpa_hill4/grandpa_hill4d"
+    },
+    {
+     "label": "grandpa_hill4e",
+     "dir": "grandpa_hill4/grandpa_hill4e"
+    },
+    {
+     "label": "kim_hill4b",
+     "dir": "kim_hill4/kim_hill4b"
+    },
+    {
+     "label": "grandpa_hill4f",
+     "dir": "grandpa_hill4/grandpa_hill4f"
+    }
+   ],
+   "baseline": "grandpa_hill4b",
+   "metrics": [
+    {
+     "tag": "Train/mean_reward",
+     "label": "mean reward"
+    },
+    {
+     "tag": "ep/decided",
+     "label": "rounds decided"
+    },
+    {
+     "tag": "Loss/value",
+     "label": "value loss"
+    }
+   ],
+   "evals": [
+    {
+     "label": "grandpa_hill4b",
+     "values": {
+      "body": "grandpa",
+      "start": "grandpa",
+      "new": "mirror 0.385, 3-way 0.423, jitter 0.0571",
+      "best before": "mirror 0.981, 3-way 0.125, jitter 0.1044",
+      "duel vs best": "0.275",
+      "result": "kept as a run"
+     }
+    },
+    {
+     "label": "grandpa_hill4c",
+     "values": {
+      "body": "grandpa",
+      "start": "grandpa",
+      "new": "mirror 0.283, 3-way 0.345, jitter 0.0399",
+      "best before": "mirror 0.981, 3-way 0.125, jitter 0.1044",
+      "duel vs best": "0.275",
+      "result": "kept as a run"
+     }
+    },
+    {
+     "label": "grandpa_hill4d",
+     "values": {
+      "body": "grandpa",
+      "start": "grandpa",
+      "new": "mirror 0.130, 3-way 0.263, jitter 0.0381",
+      "best before": "mirror 0.981, 3-way 0.125, jitter 0.1044",
+      "duel vs best": "0.210",
+      "result": "kept as a run"
+     }
+    },
+    {
+     "label": "grandpa_hill4e",
+     "values": {
+      "body": "grandpa",
+      "start": "grandpa",
+      "new": "mirror 0.289, 3-way 0.237, jitter 0.0354",
+      "best before": "mirror 0.981, 3-way 0.125, jitter 0.1044",
+      "duel vs best": "0.239",
+      "result": "kept as a run"
+     }
+    },
+    {
+     "label": "kim_hill4b",
+     "values": {
+      "body": "kim",
+      "start": "kim",
+      "new": "mirror 0.025, 3-way 0.535, jitter 0.0499",
+      "best before": "mirror 0.479, 3-way 0.471, jitter 0.0547",
+      "duel vs best": "0.572",
+      "result": "kept as a run"
+     }
+    },
+    {
+     "label": "grandpa_hill4f",
+     "values": {
+      "body": "grandpa",
+      "start": "grandpa",
+      "new": "mirror 0.449, 3-way 0.271, jitter 0.0358",
+      "best before": "mirror 0.981, 3-way 0.125, jitter 0.1044",
+      "duel vs best": "0.206",
+      "result": "kept as a run"
+     }
+    }
+   ],
+   "verdict": "kim: runs/shipped/kim/model_final.pt (mirror 0.479, 3-way 0.471, jitter 0.0547; shipped mirror 0.479, 3-way 0.471, jitter 0.0547); trump: runs/shipped/trump/model_final.pt (mirror 0.887, 3-way 0.414, jitter 0.0871; shipped mirror 0.887, 3-way 0.414, jitter 0.0871); grandpa: runs/shipped/grandpa/model_final.pt (mirror 0.981, 3-way 0.125, jitter 0.1044; shipped mirror 0.981, 3-way 0.125, jitter 0.1044)"
+  }
+ ]
+}
