@@ -13,8 +13,8 @@ duel_stats_getup_python.json.
 --getup --hill-rule plays the game's rule since 2026-10-21 (RunGetupDuelStats with hill): every fall anywhere inside
 the out radius gets up, no count, no limit; only a ring-out is out. Writes duel_stats_hill_python.json.
 
-A brain exported with <name>_action.json (koth/action_map.py: tanh map, per-joint scale, torque window) is run through
-that action path, as Unity's PolicyRunner does."""
+A brain exported with <name>_action.json (koth/action_map.py: tanh map, per-joint scale, torque window, low-pass, slew,
+observation delay, breathing sway, gait clock, fatigue) is run through that path, as Unity's PolicyRunner does."""
 import argparse, json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np, mujoco
@@ -22,7 +22,7 @@ from koth.obs import goal_command, STYLE_POSES, SHOVE_FAR, SHOVE_NEAR, SHOVE_SMO
 from koth.build_mjcf import ASSETS, UNITY_MODELS
 from koth.rules import is_out, ground_z, OUT_RADIUS, PLATEAU_R, FALL_UP, FALL_HEIGHT
 from koth import cpu_sim
-from koth.action_map import NumpyMap, read_sidecar
+from koth.action_map import NumpyMap, NumpyFatigue, read_sidecar
 
 ap = argparse.ArgumentParser(); ap.add_argument("--policy", default="attacker"); ap.add_argument("--rounds", type=int, default=200)
 ap.add_argument("--seconds", type=float, default=25.0); ap.add_argument("--seed", type=int, default=0)
@@ -39,7 +39,10 @@ policy_path = os.path.join(UNITY_MODELS, f"{a.policy}_policy.onnx")
 sess = cpu_sim.session(policy_path)
 m = mujoco.MjModel.from_xml_path(os.path.join(ASSETS, "scene_koth_2p_train.xml")); d = mujoco.MjData(m)
 R = cpu_sim.robots(m, spec["joints"], ("a_", "b_"))
-for s_ in R: s_["amap"] = NumpyMap(read_sidecar(policy_path), spec["action_scale"], *NumpyMap.gains(m, s_["aid"]))
+for s_ in R:
+    s_["amap"] = NumpyMap(read_sidecar(policy_path), spec["action_scale"], *NumpyMap.gains(m, s_["aid"]))
+    s_["fat"] = NumpyFatigue(s_["amap"].fatigue, m, s_["aid"], s_["dadr"], spec["ctrl_dt"]) if s_["amap"].fatigue else None
+WAIST_PITCH = next(i for i, j in enumerate(spec["joints"]) if "waist_pitch" in j)
 pool = cpu_sim.pool(m, spec["pool_bodies"])
 default = np.array(spec["default_pose"])
 shove_offset = np.array([next((v - default[i] for k, v in STYLE_POSES[a.style_pose].items() if k in j), 0.0) for i, j in enumerate(spec["joints"])])
@@ -72,6 +75,8 @@ for rnd in range(a.rounds):
         r = rng.uniform(0.5, 1.2); b = bearing + i * np.pi; yaw = rng.uniform(-np.pi, np.pi)
         d.qpos[s["rq"]:s["rq"] + 2] = [r * np.cos(b), r * np.sin(b)]; d.qpos[s["rq"] + 3:s["rq"] + 7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
         s["last"] = np.zeros(29, dtype=np.float32); s["f"] = np.zeros(29); s["phase"] = np.float32(0)
+        s["g"] = np.zeros(29); s["hist"] = None; s["n"] = 0; s["fresh"] = True          # slew state, delay ring, fight ticks (PolicyRunner)
+        if s["fat"] is not None: s["fat"].reset()
         s["down"] = None; s["stood"] = None; s["getups"] = 0
     park = cpu_sim.park(d, pool)
     result = None
@@ -82,19 +87,33 @@ for rnd in range(a.rounds):
                 obs = cpu_sim.observe(d, s, default, np.zeros(3), s["phase"])[0].numpy().astype(np.float32)
                 act = np.clip(cpu_sim.infer(getup_sess, obs), -1, 1).astype(np.float32)
                 s["ctrl"] = cpu_sim.default_ctrl(s, default, spec["action_scale"], act); s["last"] = act; s["f"] = act.astype(np.float64)
+                s["g"] = s["f"].copy(); s["hist"] = None              # PolicyRunner.GetUpTick: _actS = a, the delay ring refills
                 s["phase"] = cpu_sim.advance_phase(s["phase"], spec["ctrl_dt"])
                 continue
             cmd = goal_command(T(quat), T([d.qpos[o["rq"]] - d.qpos[rq], d.qpos[o["rq"] + 1] - d.qpos[rq + 1]]), 0.0, a.vmax)[0].numpy()
+            am, fat = s["amap"], s["fat"]
+            if fat is not None:                    # PolicyRunner.UpdateFatigue, skipped on the first tick after a reset
+                if not s["fresh"]: fat.update(d)
+                s["fresh"] = False
             obs = cpu_sim.observe(d, s, default, cmd, s["phase"], other=o)[0].numpy().astype(np.float32)
-            act = s["amap"].to_action(cpu_sim.infer(sess, obs))
+            if fat is not None and fat.fz["obs"]: obs = np.concatenate([obs, fat.F.astype(np.float32)])
+            if am.delay > 0:                       # PolicyRunner.DelayedObs: a ring of delay + 1, filled with the first input
+                s["hist"] = [obs] * (am.delay + 1) if s["hist"] is None else s["hist"][1:] + [obs]
+                obs = s["hist"][0]
+            act = am.to_action(cpu_sim.infer(sess, obs))
             f = act.astype(np.float64); off = 0.0
-            k = max(SHOVE_SMOOTH if a.shove else 0.0, s["amap"].smooth)       # action low-pass (action_map.py smooth)
+            k = max(SHOVE_SMOOTH if a.shove else 0.0, am.smooth)       # action low-pass (action_map.py smooth)
             if k > 0: f = s["f"] = k * s["f"] + (1 - k) * f
+            if am.slew > 0: f = am.slew_limit(s["g"], f)
+            s["g"] = f
+            if am.breath > 0:                      # breathing sway of the waist_pitch rest pose
+                off = np.zeros(29); off[WAIST_PITCH] = am.breath * np.sin(2 * np.pi * am.breath_hz * s["n"] * spec["ctrl_dt"])
             if a.shove:
                 dist = np.hypot(d.qpos[o["rq"]] - d.qpos[rq], d.qpos[o["rq"] + 1] - d.qpos[rq + 1])
-                off = np.clip((SHOVE_FAR - dist) / (SHOVE_FAR - SHOVE_NEAR), 0, 1) * shove_offset
-            s["ctrl"] = s["amap"].target(default + off, f, d.qpos[s["qadr"]], d.qvel[s["dadr"]], s["lo"], s["hi"]); s["last"] = act
-            s["phase"] = cpu_sim.advance_phase(s["phase"], spec["ctrl_dt"])
+                off = off + np.clip((SHOVE_FAR - dist) / (SHOVE_FAR - SHOVE_NEAR), 0, 1) * shove_offset
+            s["ctrl"] = am.target(default + off, f, d.qpos[s["qadr"]], d.qvel[s["dadr"]], s["lo"], s["hi"]); s["last"] = act
+            if fat is not None: fat.apply()
+            s["phase"] = cpu_sim.advance_phase(s["phase"], spec["ctrl_dt"], am.gait_hz or None); s["n"] += 1
         cpu_sim.step(m, d, pool, park, R, spec["decimation"])
         t_now = (tick + 1) * spec["ctrl_dt"]
         out = [out_with_getup(s, t_now) if a.getup else is_out(d.qpos[s["rq"]:s["rq"] + 3], d.qpos[s["rq"] + 3:s["rq"] + 7]) for s in R]

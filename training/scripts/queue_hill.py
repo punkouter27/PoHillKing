@@ -16,7 +16,7 @@ RunHumanFfaStats against duel_stats.py and eval.py (see STAGED_TRAINING.md secti
   .venv/Scripts/python.exe scripts/queue_hill.py [--iters 400] [--num-envs 1536] [--bodies kim trump grandpa]
 Progress: runs/overnight/progress_hill.txt; eval rows: runs/overnight/<body>_hill2_eval.json; TensorBoard on :6006.
 """
-import argparse, json, os, socket, subprocess, sys
+import argparse, json, os, socket, subprocess, sys, time
 from datetime import datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -60,6 +60,18 @@ def evaluate(robot, args):
     rows = [json.loads(l) for l in (p.stdout or "").splitlines() if l.strip().startswith("{")]
     if not rows: note(f"eval failed for {robot} {args[:4]}: {(p.stderr or '')[-400:]}")
     return rows
+
+
+def wait_done(log, script, hours=12.0):
+    """Wait until `script`'s last "=== ... ===" line in `log` says it is done (one training on the GPU at a time); a
+    queue that died never writes it, so give up after `hours`."""
+    t0 = time.time()
+    while os.path.exists(log) and time.time() - t0 < hours * 3600:
+        marks = [l.strip() for l in open(log, encoding="utf-8") if l.strip().endswith("===") and f"=== {script}" in l]
+        if not marks or marks[-1].endswith(f"=== {script} done ==="): return True
+        time.sleep(60)
+    if os.path.exists(log): note(f"gave up waiting for {script} after {hours} h"); return False
+    return True
 
 
 def mean(rows, key): return sum(r.get(key, 0.0) for r in rows) / max(len(rows), 1)

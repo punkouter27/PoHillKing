@@ -60,6 +60,8 @@ Assets/PoKingHill/Scenes/Gate_ffa_7p.unity
 Assets/PoKingHill/Scenes/Gate_ffa_7p.unity.meta
 Assets/PoKingHill/Scenes/Gate_duel_grandpa_2p.unity
 Assets/PoKingHill/Scenes/Gate_duel_grandpa_2p.unity.meta
+Assets/PoKingHill/Scenes/Gate_ffa_humans.unity
+Assets/PoKingHill/Scenes/Gate_ffa_humans.unity.meta
 # Unity observation dumps for obs_audit.py (ParityBatch.RunObsDump): large, regenerated on demand
 training/assets/*/unity_obs_*
 
@@ -70,3 +72,7 @@ Assets/_Recovery.meta
 
 # WebGL build: Burst output Unity writes beside the project
 /Data/
+
+# Local editor tooling (Aura visualizer graph, machine-specific MCP config)
+.aura/
+.vscode/mcp.json

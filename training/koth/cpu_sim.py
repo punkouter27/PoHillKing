@@ -41,9 +41,9 @@ def check_inputs(dim: int, n: int = 1000) -> np.ndarray:
     return np.random.default_rng(0).standard_normal((n, dim)).astype(np.float32) * 2
 
 
-def advance_phase(phase, ctrl_dt: float) -> np.float32:
-    """PolicyRunner's gait phase step in float32, wrapped once past 2 pi."""
-    p = np.float32(phase + np.float32(2 * np.pi * GAIT_FREQ_HZ * ctrl_dt))
+def advance_phase(phase, ctrl_dt: float, hz: float | None = None) -> np.float32:
+    """PolicyRunner's gait phase step in float32, wrapped once past 2 pi (hz: a brain's action_map gait_hz)."""
+    p = np.float32(phase + np.float32(2 * np.pi * (hz or GAIT_FREQ_HZ) * ctrl_dt))
     return np.float32(p - np.float32(2 * np.pi)) if p > 2 * np.pi else p
 
 

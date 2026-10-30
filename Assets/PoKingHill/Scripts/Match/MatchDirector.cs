@@ -77,10 +77,15 @@ namespace PoKingHill
         [Tooltip("The statistics gate plays with the get-up rule (duel_stats.py --getup, or --hill-rule with the game's values)")] public bool getupInStats;
         [Tooltip("Tale of the tape: crane shot length, then this many seconds per fighter (clamped to fit about 7 s)")] public float introCrane = 1.6f, introPerFighter = 1.6f;
 
-        /// <summary>Colour of each body's badge and team trim, in bodies[] order after seating.</summary>
-        public static readonly Color[] SeatColors =
+        /// <summary>Colour of each body's badge and team trim, in bodies[] order after seating; with
+        /// GameSettings.ColorSafe the Okabe-Ito palette, told apart with any colour vision.</summary>
+        public static Color[] SeatColors => GameSettings.ColorSafe ? SafeColors : VividColors;
+        static readonly Color[] VividColors =
             { new(0.95f, 0.36f, 0.30f), new(0.27f, 0.62f, 0.98f), new(0.98f, 0.78f, 0.25f), new(0.45f, 0.85f, 0.45f), new(0.80f, 0.50f, 0.95f),
               new(0.30f, 0.85f, 0.85f), new(0.98f, 0.52f, 0.72f) };
+        static readonly Color[] SafeColors =
+            { new(0.84f, 0.37f, 0.00f), new(0.34f, 0.71f, 0.91f), new(0.94f, 0.89f, 0.26f), new(0.00f, 0.62f, 0.45f), new(0.80f, 0.47f, 0.65f),
+              new(0.90f, 0.62f, 0.00f), new(0.00f, 0.45f, 0.70f) };
 
         public static MatchDirector Instance { get; private set; }
         public MatchState State { get; private set; } = MatchState.Booting;

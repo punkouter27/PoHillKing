@@ -10,7 +10,11 @@ buffer) and NaN/inf gradients in any update. --graduate-reward R exports the fin
 graduation.json beside model_final.pt (the bars); export_policy.py refuses a checkpoint whose run failed them.
 
 Action path (koth/action_map.py): --action-map tanh, --action-scale <scale json from scripts/action_scale.py>,
---torque-window. With --warm, a changed scale is folded into the warm-started actor (output rows, std, last-action
+--torque-window, --action-smooth k, --action-slew s (rate limit), --obs-delay n (reaction time in policy steps), --breath a
+(breathing sway, rad), --body-gait (the body's gait clock, env.BODY_GAIT_HZ); all travel in the exported _action.json.
+The resolved config (env, train, args, robot, git commit, input width) is written to runs/<rung>/<name>/config.json before
+the env is built, so a run that dies on start-up still leaves it; an older, different config.json there is kept as
+config.<time>.json. With --warm, a changed scale is folded into the warm-started actor (output rows, std, last-action
 normalizer), so it starts out with the same joint targets wherever the old one was inside its clamp.
 --self-play N with an --opponent entry "path.pt:live" (e.g. :slot1:live): that opponent is the learner itself, refreshed
 every N iterations, so a brain also practises breaking a deadlock against its own current style (mirror duels).
@@ -21,7 +25,7 @@ sys.stdout.reconfigure(line_buffering=True)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torch
 from rsl_rl.runners import OnPolicyRunner
-from koth.env import KothEnv, default_cfg
+from koth.env import BODY_GAIT_HZ, ROBOT, KothEnv, default_cfg, obs_dims
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -181,6 +185,10 @@ def main():
     ap.add_argument("--action-scale", default=None, help="per-joint action scale: a json from scripts/action_scale.py (or 29 comma-separated values)")
     ap.add_argument("--torque-window", action="store_true", help="clamp targets to the torque-feasible window at the current state")
     ap.add_argument("--action-smooth", type=float, default=None, help="action low-pass k (koth/action_map.py smooth; 0 = off)")
+    ap.add_argument("--action-slew", type=float, default=None, help="action rate limit per policy step after the low-pass (koth/action_map.py slew; 0 = off)")
+    ap.add_argument("--obs-delay", type=int, default=None, help="reaction time: act on the observation from this many policy steps ago (action_map delay)")
+    ap.add_argument("--breath", type=float, default=None, help="breathing sway of the waist_pitch rest pose in rad (action_map breath, 0.25 Hz)")
+    ap.add_argument("--body-gait", action="store_true", help="the body's own gait clock (env.BODY_GAIT_HZ) instead of 1.5 Hz (action_map gait_hz)")
     ap.add_argument("--no-reward-clip", action="store_true", help="do not clip the per-step shaped reward at zero")
     ap.add_argument("--self-play", type=int, default=0, help="every this many iterations, copy the learner's actor into the --opponent entries marked :live")
     ap.add_argument("--curriculum", default=None, help="koth/curriculum.py preset (ladder[:bar:demote]) or a spec json; needs --opponent (weakest first)")
@@ -197,19 +205,30 @@ def main():
     if a.rim_brake: cfg["goal_cmd"]["rim_brake"] = tuple(a.rim_brake)
     for kv in a.reward:
         k, v = kv.split("="); assert k in cfg["reward"], k; cfg["reward"][k] = float(v)
-    if a.action_map or a.action_scale or a.torque_window or a.action_smooth is not None:
+    if a.action_map or a.action_scale or a.torque_window or a.action_smooth is not None or a.action_slew or a.obs_delay or a.breath or a.body_gait:
         act = dict(cfg.get("action") or {})
         if a.action_map: act["map"] = a.action_map
         if a.action_scale:
             act["scale"] = json.load(open(a.action_scale))["scale"] if a.action_scale.endswith(".json") else [float(x) for x in a.action_scale.split(",")]
         if a.torque_window: act["window"] = True
+        if a.action_smooth is not None: act["smooth"] = a.action_smooth
+        if a.action_slew: act["slew"] = a.action_slew
+        if a.obs_delay: act["delay"] = a.obs_delay
+        if a.breath: act["breath"] = a.breath
+        if a.body_gait: act["gait_hz"] = BODY_GAIT_HZ[ROBOT]
         cfg["action"] = act
     if a.no_reward_clip: cfg["reward_clip"] = False
-    env = KothEnv(cfg, a.num_envs, seed=a.seed)
     run = a.name or time.strftime("%Y%m%d-%H%M%S")
     log_dir = os.path.join(ROOT, "runs", a.rung, run)
     os.makedirs(log_dir, exist_ok=True)
-    json.dump({"env": cfg, "train": train_cfg(), "args": vars(a)}, open(os.path.join(log_dir, "config.json"), "w"), indent=1)
+    conf = {"env": cfg, "train": train_cfg(), "args": vars(a), "robot": ROBOT, "git": git_commit(), "obs_dim": obs_dims(cfg)}
+    cpath = os.path.join(log_dir, "config.json")
+    if os.path.exists(cpath):                          # a rerun into the same folder: keep the config the older checkpoints came from
+        old = json.load(open(cpath))
+        if {k: old.get(k) for k in ("env", "train")} != json.loads(json.dumps({k: conf[k] for k in ("env", "train")})):
+            os.replace(cpath, os.path.join(log_dir, f"config.{time.strftime('%Y%m%d-%H%M%S', time.localtime(os.path.getmtime(cpath)))}.json"))
+    json.dump(conf, open(cpath, "w"), indent=1)       # before the env is built: a run that dies on start-up still leaves its config
+    env = KothEnv(cfg, a.num_envs, seed=a.seed)
     stamp = lambda t: datetime.datetime.fromtimestamp(t).isoformat(timespec="seconds")
     manifest = dict(rung=a.rung, name=run, robot=os.environ.get("KOTH_ROBOT", "g1"), git=git_commit(), seed=a.seed, args=vars(a),
                     env_cfg=cfg, train_cfg=train_cfg(), start_time=stamp(t_start), end_time=None, status="running")
@@ -268,8 +287,8 @@ def main():
             from koth.build_mjcf import UNITY_MODELS
             path = os.path.join(a.export_dir or UNITY_MODELS, f"{a.export_name or run}_policy.onnx")
             export(os.path.join(log_dir, "model_final.pt"), path); manifest["unity_export"] = path
-            from koth.action_map import write_sidecar
-            write_sidecar(path, env.amap)
+            from koth.action_map import ckpt_spec, write_sidecar
+            write_sidecar(path, ckpt_spec(os.path.join(log_dir, "model_final.pt")))     # the action path plus the fatigue model
         else:
             print("graduation: not passed, no Unity export")
     write_manifest()

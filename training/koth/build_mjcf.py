@@ -391,6 +391,28 @@ def build_game(bodies: list[str] | None = None):
     return build_mix(bodies, tag="koth_game")
 
 
+def build_rocks(n_rocks: int = 24, seed: int = 0):
+    """Training-only scene koth_1p_rocks (rung r2rocks, 2026-10-29): koth_1p plus n_rocks static boxes half buried in the
+    slope between the rim and r = 3.6 m, so a brain learns to step over and climb past obstacles. Rocks are ground
+    (contype 4, conaffinity 31, like the dome) with their own friction (0.9; env dr rock_friction randomises it per world).
+    Never imported into Unity and leaves every other scene, the arena mesh and joint_map.json untouched."""
+    src_root = ET.parse(SRC).getroot()
+    scene = build_scene(src_root, two_player=False, arena=True)
+    wb = scene.find("worldbody"); rng = np.random.default_rng(seed)
+    for i in range(n_rocks):
+        r = rng.uniform(PLATEAU_R + 0.3, 3.6); ang = rng.uniform(0, 2 * np.pi)
+        hx, hy, hz = rng.uniform(0.08, 0.22), rng.uniform(0.08, 0.22), rng.uniform(0.06, 0.14)
+        tilt = np.arctan(2 * SLOPE_K * (r - PLATEAU_R))                # lie along the local slope
+        z = -SLOPE_K * (r - PLATEAU_R) ** 2 + 0.35 * hz                 # about two thirds buried
+        yaw = ang + rng.uniform(-0.4, 0.4)                              # quat = yaw about z, then the tilt about the rock's own y
+        cz, sz, ct, st = np.cos(yaw / 2), np.sin(yaw / 2), np.cos(tilt / 2), np.sin(tilt / 2)
+        ET.SubElement(wb, "geom", name=f"rock{i}", type="box", size=f"{hx:.3f} {hy:.3f} {hz:.3f}",
+                      pos=f"{r * np.cos(ang):.4f} {r * np.sin(ang):.4f} {z:.4f}",
+                      quat=" ".join(f"{v:.5f}" for v in (cz * ct, -sz * st, cz * st, ct * sz)),
+                      contype="4", conaffinity="31", condim="3", friction="0.9", rgba="0.5 0.47 0.42 1")
+    return finish(scene, "koth_1p_rocks", PREFIXES[:1])
+
+
 def build_mix(bodies: list[str], tag: str | None = None):
     """A training scene with mixed bodies (cross-body training, env rungs <learner>_vs_<other> and <learner>_ffa):
     bodies[i] sits at PREFIXES[i] on the arena, two facing each other or a ring of more. Built on the G1 scene (so the
@@ -468,6 +490,8 @@ if __name__ == "__main__":
     import sys
     if sys.argv[1:2] == ["mix"]:              # cross-body training scenes: python -m koth.build_mjcf mix trump g1 [g1 g1]
         build_mix(sys.argv[2:]); sys.exit(0)
+    if sys.argv[1:2] == ["rocks"]:            # training-only rocks scene (rung r2rocks): python -m koth.build_mjcf rocks [n_rocks] [seed]
+        build_rocks(*map(int, sys.argv[2:4])); sys.exit(0)
     if sys.argv[1:2] == ["game"]:             # the game scene: python -m koth.build_mjcf game [kim kim trump trump ...]
         import shutil
         build_game(sys.argv[2:] or None)

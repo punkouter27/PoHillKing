@@ -35,6 +35,8 @@ namespace PoKingHill
         /// <summary>Particles, decals, post punch, shockwave, camera shake and cuts to a faller at the water, slow motion
         /// at the rim and hit stop (TimeWarp). Off = the plain picture.</summary>
         public static bool Cinematic { get => B("cinematic", true); set => Set("cinematic", value); }
+        /// <summary>Seat colours from a palette told apart with any colour vision (MatchDirector.SeatColors).</summary>
+        public static bool ColorSafe { get => B("colorSafe", false); set => Set("colorSafe", value); }
 
         // Sound: mix channels are multipliers on MasterVolume (hits and footsteps; the wind, surf, crowd and thunder bed)
         public static float MasterVolume { get => F("volume", 0.6f); set => Set("volume", Mathf.Clamp01(value)); }
@@ -57,7 +59,7 @@ namespace PoKingHill
         /// <summary>Caption lines from the Commentator.</summary>
         public static bool Commentary { get => DevTools && B("commentary", false); set => Set("commentary", value); }
 
-        static readonly string[] Keys = { "rounds", "seaPace", "intro", "replays", "targeting", "quality", "cinematic",
+        static readonly string[] Keys = { "rounds", "seaPace", "intro", "replays", "targeting", "quality", "cinematic", "colorSafe",
                                           "volume", "sfxVolume", "ambVolume", "devTools", "telemetryHud", "overlay", "intent", "winOdds", "commentary",
                                           // settings that were cut (2026-10-21): cleared by a reset too
                                           "camera", "effects", "slowmo", "cutaways", "hazards", "stamina", "tactician", "getup" };

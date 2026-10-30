@@ -63,10 +63,12 @@ Button { font-size: var(--fs-m); }
 
 /* ---- live strip: one row of fighter badges ----------------------------------------------------------------- */
 .scoreboard { flex-direction: row; justify-content: center; margin-top: 6px; flex-shrink: 0; }
-.badge { flex-grow: 1; flex-basis: 0; min-width: 0; max-width: 220px; align-items: center; background-color: var(--glass); border-radius: 24px; padding: 8px 8px 6px 8px; margin: 0 4px; border-width: 2px; border-color: var(--line); }
+.badge { flex-grow: 1; flex-basis: 0; min-width: 0; max-width: 220px; align-items: center; background-color: var(--glass); border-radius: 24px; padding: 8px 8px 6px 8px; margin: 0 4px; border-width: 2px; border-color: var(--line); transition-property: scale; transition-duration: 0.15s; }
 .badge.out { opacity: 0.45; }
 .badge.down { border-color: var(--bad); }
 .badge.edge { border-color: var(--bad); background-color: rgba(120, 24, 20, 0.72); }
+.badge.edge.pulse { scale: 1.06 1.06; }
+.badge.followed { border-color: var(--accent); }
 .avatar-wrap { width: 60px; height: 60px; }
 .avatar { width: 60px; height: 60px; border-radius: 30px; align-items: center; justify-content: center; }
 .avatar Label { font-size: var(--fs-s); -unity-font-style: bold; color: var(--accent-ink); -unity-text-align: middle-center; }

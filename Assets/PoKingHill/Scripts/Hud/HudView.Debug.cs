@@ -47,12 +47,14 @@ namespace PoKingHill
         /// <summary>
         /// What does not fit on this screen: an element outside the column, a label or button whose text is wider than
         /// its box (outside "clip" and "ellipsis" containers, which cut on purpose), a sheet that reaches the top bar
-        /// or the bottom corners, badges on more than one row, an intro card under the strip, the FPS pill on a cutout.
-        /// Empty = the HUD fits.
+        /// or the bottom corners, badges on more than one row, an intro card under the strip, the FPS pill on a cutout,
+        /// a button or badge smaller than MinTapPx screen pixels either way. Empty = the HUD fits.
         /// </summary>
+        public const float MinTapPx = 48f;
         public List<string> LayoutProblems()
         {
             var list = new List<string>(); var col = _column.worldBound;
+            float px = _root.worldBound.height > 0 ? ScreenSize.y / _root.worldBound.height : 1f;        // screen pixels per panel unit
             void Walk(VisualElement e, bool clipped)
             {
                 if (e.resolvedStyle.display == DisplayStyle.None || e.resolvedStyle.visibility == Visibility.Hidden) return;
@@ -70,6 +72,8 @@ namespace PoKingHill
                     var need = w.MeasureTextSize(w.text, w.contentRect.width + 2, VisualElement.MeasureMode.Exactly, 0, VisualElement.MeasureMode.Undefined);      // slack: a label sized to its text can wrap on rounding alone
                     if (need.y > w.contentRect.height + 2) list.Add($"{Describe(e)} needs {need.y:0} units of height, has {w.contentRect.height:0}");
                 }
+                if ((e is Button || e.ClassListContains("badge")) && b.width > 0.5f && (b.width * px < MinTapPx || b.height * px < MinTapPx))
+                    list.Add($"{Describe(e)} is a {b.width * px:0}x{b.height * px:0} px tap target (at least {MinTapPx:0})");
                 bool clip = clipped || e is TextField || e.ClassListContains("clip") || e.ClassListContains("ellipsis");
                 foreach (var c in e.Children()) Walk(c, clip);
             }

@@ -56,7 +56,10 @@ def default_cfg(rung: str = "r0") -> dict:
         # PPO iterations (steps_per_iter env steps each).
         push=dict(interval_s=[5.0, 10.0], vel=[0.5, 2.0]),
         projectile=dict(enabled=True, interval_s=[3.0, 8.0], speed=[3.0, 8.0], range=3.0, life_s=2.5),
-        dr=dict(mass=0.15, friction=[0.4, 0.9], kp=0.2, damping=0.2, latency_prob=0.5),
+        # ground_friction / rock_friction (opt-in, [lo, hi]): per-world friction of the floor / dome and of the rocks of a
+        # rocks scene (build_mjcf rocks). MuJoCo takes the larger of the two geoms' values, so the robot's own DR still
+        # sets a floor for every contact.
+        dr=dict(mass=0.15, friction=[0.4, 0.9], kp=0.2, damping=0.2, latency_prob=0.5, ground_friction=None, rock_friction=None),
         noise=dict(joint_pos=0.03, joint_vel=1.5, gravity=0.05, linvel=0.1, gyro=0.2),
         reset_noise=dict(joint_pos=0.05, joint_vel=0.3, yaw=math.pi),
         # Positive terms dominate once the robot stands (tracking 1.75 + alive 0.5); penalties stay small enough
@@ -66,8 +69,8 @@ def default_cfg(rung: str = "r0") -> dict:
                     lin_vel_z=-0.5, feet_air_time=2.0, feet_slip=-0.1, feet_phase=1.0, pose=-0.1, joint_deviation_hip=-0.25,
                     joint_deviation_knee=-0.1, dof_pos_limits=-1.0, action_rate=-0.01, joint_vel=-2e-4, stand_still=-0.1,
                     tracking_heading=1.0, plateau=0.0, off_rim=0.0, ring_advantage=0.0, opp_radius=0.0, self_edge=0.0, push_out=0.0, hand_push=0.0, win=0.0, draw=0.0, termination=-1.0,
-                    stalemate=0.0, belly_push=0.0, arm_contact=0.0, getup_height=0.0, getup_upright=0.0, getup_pose=0.0, getup_still=0.0, getup_rise=0.0,
-                    potential=0.0),
+                    stalemate=0.0, mirror_push_out=0.0, mirror_stalemate=0.0, mirror_standoff=0.0, belly_push=0.0, arm_contact=0.0, getup_height=0.0, getup_upright=0.0, getup_pose=0.0, getup_still=0.0, getup_rise=0.0,
+                    potential=0.0, arm_flail=0.0, action_jerk=0.0, balance=0.0),
         tracking_sigma=0.25, swing_height=0.12, terminate_on_leg_contact=True, max_radius=8.0, combat=False,
         contact_free=False,        # True: within reach of the opponent, arms/waist are exempt from the pose penalty
         gait_free=False,           # True: within reach of the opponent, the gait-clock rewards are off (feet may plant)
@@ -89,6 +92,7 @@ def default_cfg(rung: str = "r0") -> dict:
                                    # start, re-pinned 50 m up off the mountain every control step, as Unity parks unused bodies)
         fatigue=dict(enabled=False, tau_s=10.0, min_scale=0.6, gain=2.0, omega_ref=10.0, obs=False),
         getup=None,                # dict (rung "getup"): episodes start from drops in random orientations and never end on a fall
+        spawn_ramp=None,           # dict(iters, r_max[, steps_per_iter 24]): the spawn radius' upper bound widens from spawn r to r_max over iters
     )
     if rung == "r0":                       # stand only: zero command, disturbances on
         cfg["command"].update(zero_prob=1.0)
@@ -190,8 +194,16 @@ def default_cfg(rung: str = "r0") -> dict:
         cfg.update(scene="scene_koth_4p_train.xml", robots=["a_", "b_", "c_", "d_"], combat2=True, episode_length_s=20.0,
                    terminate_on_leg_contact=False)          # Unity's rule (no own-leg-contact ending)
         cfg["spawn"].update(r=[0.7, 1.2])
-    elif rung.split("_", 1)[0] in HUMANS and rung.split("_", 1)[1] in ("r0b", "r1b"):   # a human body's walking recipe (KOTH_ROBOT=<body>)
-        cfg.update(default_cfg(rung.split("_", 1)[1][:2]))
+    elif rung in ("r2slope", "r2rocks"):    # staged (2026-10-29): balance -> walk -> slopes. r2, but spawns walk down the slope
+        # over 600 iterations (2.6 m: the old eval --slope range), so the brain first holds the plateau, then climbs back from
+        # ever lower; r2rocks adds static rocks on the slope (build_mjcf rocks) and per-world ground / rock friction.
+        cfg.update(default_cfg("r2"))
+        cfg["spawn_ramp"] = dict(iters=600, r_max=2.6)
+        if rung == "r2rocks":
+            cfg.update(scene="scene_koth_1p_rocks_train.xml"); cfg["dr"].update(ground_friction=[0.5, 0.8], rock_friction=[0.7, 1.0])
+    elif rung.split("_", 1)[0] in HUMANS and rung.split("_", 1)[1] in ("r0b", "r1b", "r2slope", "r2rocks"):   # a human body's walking recipe (KOTH_ROBOT=<body>)
+        rest = rung.split("_", 1)[1]
+        cfg.update(default_cfg(rest if rest.startswith("r2") else rest[:2]))
         human_overrides(cfg, rung.split("_", 1)[0])
     elif "_att_" in rung:                 # cross-body attacker stage: push a standing frozen b_ of another body off (r4att, mixed scene)
         me, other = rung.split("_att_")
@@ -211,6 +223,7 @@ def default_cfg(rung: str = "r0") -> dict:
         # (slot2, slot3); half the worlds are duels against one of the three, so a sixth of them are mirror duels.
         me = rung[:-6]; bodies = [me, me] + [h for h in HUMANS if h != me]
         cfg.update(default_cfg(f"{me}_hill")); cfg.update(scene=mix_scene(bodies), robots=["a_", "b_", "c_", "d_"])
+        cfg["stalemate_rule"] = dict(dist=0.6, speed=0.5, seconds=2.0)     # mirror_stalemate: the shipped Kim's clinch sways at 0.28 m/s (median)
         cfg["goal_cmd"].update(vmax=[0.7 if b == "trump" else 1.0 for b in bodies])
     elif rung.endswith("_hill") and rung[:-5] in HUMANS:   # the game's one brain per body: duels and three-ways (2026-10-21)
         # Motion: the action low-pass (action_map "smooth" 0.6, carried in the exported brain's _action.json) and a 3x
@@ -238,10 +251,17 @@ def default_cfg(rung: str = "r0") -> dict:
         cfg["reward"].update(push_out=1.0, belly_push=4.0, arm_contact=-1.0, hand_push=0.0)
         cfg["goal_cmd"].update(vmax=0.7)
         cfg["terminate_on_leg_contact"] = False
+    # A human body never ends a round on its own foot-shin contact (human_overrides, Unity, duel_stats.py): r4league and the
+    # other G1-built rungs kept the G1's rule for KOTH_ROBOT=<human>, which counted 37 of 64 Kims as fallen in the first
+    # step (log 2026-10-29). One place for training, eval.py and reward_audit.py.
+    if ROBOT in HUMANS: cfg["terminate_on_leg_contact"] = False
     return cfg
 
 
 HUMANS = ("kim", "trump", "grandpa")         # human bodies (koth/build_<body>.py) with the G1's 29 joints
+# Gait clock per body (train.py --body-gait -> action_map gait_hz, carried in the brain's _action.json): a light body
+# steps quicker, a heavy or older one slower. 1.5 Hz = obs.GAIT_FREQ_HZ, every brain up to 2026-10-29.
+BODY_GAIT_HZ = {"g1": 1.5, "kim": 1.6, "trump": 1.3, "grandpa": 1.2}
 
 
 def mix_scene(bodies: list) -> str:
@@ -434,6 +454,9 @@ class KothEnv:
         owner = np.full(mjm.ngeom, -1); kind = np.zeros(mjm.ngeom, dtype=np.int64)
         for n in ("floor", "arena"):
             if gid(n) >= 0: kind[gid(n)] = 1
+        rocks = [g for g in range(mjm.ngeom) if gname(g).startswith("rock")]
+        kind[rocks] = 1                                               # rocks of a rocks scene are ground too
+        self.ground_geoms = T([gid(n) for n in ("floor", "arena") if gid(n) >= 0]); self.rock_geoms = T(rocks)
         for a, p in enumerate(prefixes):
             for g in range(mjm.ngeom):
                 if gname(g).startswith(p): owner[g] = a
@@ -457,6 +480,7 @@ class KothEnv:
         self.hip_idx = T([i for i, j in enumerate(self.joints) if "hip_roll" in j or "hip_yaw" in j])
         self.knee_idx = T([i for i, j in enumerate(self.joints) if "knee" in j])
         self.upper_idx = T([i for i, j in enumerate(self.joints) if any(k in j for k in ("waist", "shoulder", "elbow", "wrist"))])
+        self.arm_idx = T([i for i, j in enumerate(self.joints) if any(k in j for k in ("shoulder", "elbow", "wrist"))])
         self.hand_body = T([[bid(p + "left_wrist_yaw_link"), bid(p + "right_wrist_yaw_link")] for p in prefixes])
         assert self.hand_body.min() >= 0, "hand bodies missing"
         # Per-robot body data, (A, 29) / (A,) and repeated per row (M, ...): a mixed scene (cross-body training) holds
@@ -477,17 +501,20 @@ class KothEnv:
         self.amap = action_spec(cfg.get("action"))
         maps = [self.amap] + (self.frozen.amaps if self.frozen is not None else [])
         self.any_amap = not all(action_is_default(x) for x in maps)
+        self.any_slew = any(x["slew"] > 0 for x in maps); self.max_delay = max(x["delay"] for x in maps)
+        self.any_breath = any(x["breath"] > 0 for x in maps); self.any_gait = any(x["gait_hz"] > 0 for x in maps)
         if self.any_amap:
             self.win_kp = rows(T(mjm.actuator_gainprm[aid, 0], torch.float32)); self.win_kv = rows(T(-mjm.actuator_biasprm[aid, 2], torch.float32))
             self.win_tau = rows(T(mjm.actuator_forcerange[aid, 1], torch.float32))
-            to_t = lambda x: (torch.tensor(x["map"] == "tanh", device=device), torch.tensor(x["scale"] if x["scale"] is not None else [self.action_scale] * 29, dtype=torch.float32, device=device),
-                              torch.tensor(bool(x["window"]), device=device), torch.tensor(float(x["smooth"]), device=device))
-            self._amap_t = [to_t(x) for x in maps]                     # 0 = learner, 1.. = pool entries
-            lt, ls, lw, lk = self._amap_t[0]
-            self.row_tanh = lt.repeat(M).clone(); self.row_scale = ls.repeat(M, 1).clone(); self.row_window = lw.repeat(M).clone(); self.row_smooth = lk.repeat(M).clone()
-            if self.frozen is not None:
-                self.pool_tanh = torch.stack([x[0] for x in self._amap_t[1:]]); self.pool_scale = torch.stack([x[1] for x in self._amap_t[1:]])
-                self.pool_window = torch.stack([x[2] for x in self._amap_t[1:]]); self.pool_smooth = torch.stack([x[3] for x in self._amap_t[1:]])
+            f32 = lambda v: torch.tensor(float(v), device=device)
+            to_t = lambda x: dict(tanh=torch.tensor(x["map"] == "tanh", device=device), scale=torch.tensor(x["scale"] if x["scale"] is not None else [self.action_scale] * 29, dtype=torch.float32, device=device),
+                                  window=torch.tensor(bool(x["window"]), device=device), smooth=f32(x["smooth"]), slew=f32(x["slew"]),
+                                  delay=torch.tensor(x["delay"], dtype=torch.long, device=device), breath=f32(x["breath"]), breath_hz=f32(x["breath_hz"]),
+                                  gait_hz=f32(x["gait_hz"] or GAIT_FREQ_HZ))
+            amap_t = [to_t(x) for x in maps]                          # 0 = learner, 1.. = pool entries
+            self.row = {k: (v.repeat(M, 1) if v.dim() else v.repeat(M)).clone() for k, v in amap_t[0].items()}      # per row
+            if self.frozen is not None: self.pool = {k: torch.stack([x[k] for x in amap_t[1:]]) for k in amap_t[0]}
+        self.waist_pitch_idx = [i for i, j in enumerate(self.joints) if "waist_pitch" in j][0]
         rest = lambda f: float(mjd.xpos[f][2] - (0.0 if not self.arena else float(terrain_height(torch.tensor(mjd.xpos[f][:2], dtype=torch.float32), True))))
         self.foot_rest_z = rows(T([rest(int(self.feet_body[a, 0])) for a in range(A)], torch.float32))[:, None]
 
@@ -510,6 +537,8 @@ class KothEnv:
         self.latency = torch.zeros(M, dtype=torch.bool, device=device); self.pending_ctrl = z(M, 29)
         self.style = torch.zeros(M, dtype=torch.bool, device=device)      # rows fighting in the shove style
         self.act_f = z(M, 29); self.pose_offset = z(M, 29)
+        self.act_s = z(M, 29); self.breath_off = z(M, 29); self.prev_action2 = z(M, 29)      # slew state, breathing rest offset, a(t-2)
+        self.obs_hist = None; self.hist_head = 0; self.hist_fill = torch.ones(M, dtype=torch.bool, device=device)   # action_map delay
         self.out = torch.zeros(M, dtype=torch.bool, device=device)        # > 2 robots: eliminated this round (latched)
         self.bench = torch.zeros(N, dtype=torch.long, device=device)      # duel_share: bit k set = robot k sits this world out, 0 = none
         self.stale_t = z(M); self.push_out_sum = z(M)                    # anti-stalemate timer, push_out paid this episode
@@ -671,6 +700,9 @@ class KothEnv:
         rows = self._rows(ids)
         self.dr_params[rows] = torch.stack([ms, fr, ks], 2).reshape(-1, 3)
         self.latency[rows] = torch.rand(len(rows), device=self.device) < dr["latency_prob"]
+        for key, geoms in (("ground_friction", self.ground_geoms), ("rock_friction", self.rock_geoms)):
+            if dr.get(key) and len(geoms):
+                self.mp["geom_friction"][ids[:, None], geoms[None], 0] = self._rand((n, 1), *dr[key])
 
     def _rows(self, world_ids):
         return (world_ids[:, None] * self.A + torch.arange(self.A, device=self.device)).reshape(-1)
@@ -679,6 +711,10 @@ class KothEnv:
         """(n, A, 2) spawn positions. Flat scenes keep the keyframe position."""
         sp = self.cfg["spawn"]; rr = sp["r"]
         rr = rr if isinstance(rr[0], (list, tuple)) else [rr] * self.A
+        ramp = self.cfg.get("spawn_ramp")
+        if ramp:                                          # slope curriculum: the outer spawn bound walks down the slope
+            done_it = self.curriculum_offset_iters + self.common_step / ramp.get("steps_per_iter", 24)
+            u = min(1.0, done_it / ramp["iters"]); rr = [(lo, hi + (max(hi, ramp["r_max"]) - hi) * u) for lo, hi in rr]
         if max(h for _, h in rr) <= 0:
             return None
         r = torch.stack([torch.sqrt(self._rand(n, lo * lo, hi * hi)) for lo, hi in rr], 1); ang = self._rand((n, self.A), 0, 2 * math.pi)
@@ -724,7 +760,7 @@ class KothEnv:
         q[:, self.box_qcols] = self.box_qpark                   # park the pool
         self.qpos[ids] = q; self.qvel[ids] = v; self.box_life[ids] = 0
         self.ctrl[ids] = self.key_ctrl; self.pending_ctrl[rows] = self.key_ctrl[self.aid].repeat(n, 1)
-        self.last_action[rows] = 0; self.act_f[rows] = 0; self.pose_offset[rows] = 0; self.phase[rows] = 0; self.yaw_target[rows] = yaw.reshape(-1)
+        self.last_action[rows] = 0; self.act_f[rows] = 0; self.act_s[rows] = 0; self.prev_action2[rows] = 0; self.hist_fill[rows] = True; self.pose_offset[rows] = 0; self.phase[rows] = 0; self.yaw_target[rows] = yaw.reshape(-1)
         self.feet_air_time[rows] = 0; self.feet_contact[rows] = True
         self.out[rows] = False; self.stale_t[rows] = 0; self.push_out_sum[rows] = 0; self.fatigue[rows] = 0
         self.bench[ids] = bench
@@ -742,7 +778,7 @@ class KothEnv:
             self.frozen.resample(ids)
             if self.any_amap:                       # frozen rows take the action path of the opponent just drawn
                 ch = self.frozen.choice
-                self.row_tanh[self.orows] = self.pool_tanh[ch]; self.row_scale[self.orows] = self.pool_scale[ch]; self.row_window[self.orows] = self.pool_window[ch]; self.row_smooth[self.orows] = self.pool_smooth[ch]
+                for k in self.row: self.row[k][self.orows] = self.pool[k][ch]
         self._randomize(ids)
 
     def reset(self):
@@ -856,10 +892,10 @@ class KothEnv:
             full = torch.empty(M, 29, device=self.device); full[self.lrows] = actions.to(self.device)
             full[self.orows] = self.frozen(self._obs_full["policy"][self.orows]); actions = full
         raw = actions.to(self.device)
-        if self.any_amap: self.action = torch.where(self.row_tanh[:, None], torch.tanh(raw), torch.clamp(raw, -1, 1))
+        if self.any_amap: self.action = torch.where(self.row["tanh"][:, None], torch.tanh(raw), torch.clamp(raw, -1, 1))
         else: self.action = torch.clamp(raw, -1, 1)
         act = self.action
-        k = self.row_smooth if self.any_amap else None          # action low-pass per row (action_map.py "smooth")
+        k = self.row["smooth"] if self.any_amap else None       # action low-pass per row (action_map.py "smooth")
         if self.cfg["shove"] or (self.frozen is not None and self.frozen.any_shove):
             self.style[:] = self.cfg["shove"]
             if self.frozen is not None: self.style[self.orows] = self.frozen.shoves[self.frozen.choice]
@@ -871,12 +907,18 @@ class KothEnv:
             self.pose_offset = (((SHOVE_FAR - dist) / (SHOVE_FAR - SHOVE_NEAR)).clamp(0, 1) * self.style.float() * ramp)[:, None] * self.shove_offset
         if k is not None and bool((k > 0).any()):
             self.act_f = k[:, None] * self.act_f + (1 - k[:, None]) * self.action; act = self.act_f
+        if self.any_slew:                                       # rate limit after the low-pass (action_map.py "slew")
+            s = self.row["slew"][:, None]
+            act = torch.where(s > 0, self.act_s + torch.clamp(act - self.act_s, -s, s), act); self.act_s = act
+        if self.any_breath:                                     # breathing sway of the waist_pitch rest pose (action_map.py "breath")
+            t_s = self.episode_length_buf.repeat_interleave(A).float() * self.ctrl_dt
+            self.breath_off[:, self.waist_pitch_idx] = self.row["breath"] * torch.sin(2 * math.pi * self.row["breath_hz"] * t_s)
         if not self.any_amap: target = torch.clamp(self.default_pose + self.pose_offset + self.action_scale * act, self.ctrl_lo, self.ctrl_hi)
         else:
-            target = self.default_pose + self.pose_offset + self.row_scale * act
+            target = self.default_pose + self.pose_offset + self.breath_off + self.row["scale"] * act
             jq, jv = self._joints(); kvq = self.win_kv * jv            # torque-feasible window at the current state (action_map.py)
             windowed = torch.minimum(torch.maximum(target, jq + (kvq - self.win_tau) / self.win_kp), jq + (kvq + self.win_tau) / self.win_kp)
-            target = torch.clamp(torch.where(self.row_window[:, None], windowed, target), self.ctrl_lo, self.ctrl_hi)
+            target = torch.clamp(torch.where(self.row["window"][:, None], windowed, target), self.ctrl_lo, self.ctrl_hi)
         if A > 2: target = torch.where(self.out[:, None], 0.0, target)   # eliminated: limp, as Unity's paused runner (ctrl 0)
         # one-step actuation latency on a random subset of robots (DR)
         self._jitter = (target - self.pending_ctrl).abs().mean(1)      # mean joint-target change this step (rad), eval's jitter
@@ -887,7 +929,8 @@ class KothEnv:
         if self.cfg.get("getup") and self.cfg["getup"].get("assist", 0) > 0: self._getup_assist()
         self._step_sim()
         self.episode_length_buf += 1; self.common_step += 1
-        self.phase = torch.remainder(self.phase + 2 * math.pi * GAIT_FREQ_HZ * self.ctrl_dt, 2 * math.pi)
+        hz = self.row["gait_hz"] if self.any_gait else GAIT_FREQ_HZ             # action_map.py "gait_hz" (per-body gait clock)
+        self.phase = torch.remainder(self.phase + 2 * math.pi * hz * self.ctrl_dt, 2 * math.pi)
         feet, leg = self._foot_contacts()
         pos, quat, linv, angv = self._root()
         grav = quat_rotate_inverse(quat, down_like(quat))                # gravity direction in the pelvis frame
@@ -953,7 +996,7 @@ class KothEnv:
         if self.A >= 2:
             self.extras["log"]["ep/decided"] = (decided.float().sum() / world_done.float().sum().clamp(min=1))
             self.extras["log"]["ep/separation"] = self._sep.mean()
-        self.last_action = self.action.clone()
+        self.prev_action2 = self.last_action; self.last_action = self.action.clone()
         self.feet_contact = feet; self.prev_feet_xy = self._foot_xy.clone()
         if self.cfg["goal"] is None:
             resample = (self.episode_length_buf % int(self.cfg["command"]["resample_s"] / self.ctrl_dt) == 0).nonzero(as_tuple=True)[0]
@@ -1009,7 +1052,13 @@ class KothEnv:
         des = torch.stack([torch.sin(self.phase), torch.sin(self.phase + math.pi)], 1).clamp(min=0) * self.cfg["swing_height"]
         t["feet_phase"] = torch.exp(-((foot_z - des) ** 2).sum(1) / 0.01) * cmd_on * (1 - plant)
         # posture
-        dev = jpos - self.default_pose - self.pose_offset
+        dev = jpos - self.default_pose - self.pose_offset - self.breath_off
+        if R.get("arm_flail", 0.0) != 0.0:              # arm joint speed: flailing arms (weight < 0)
+            t["arm_flail"] = (jvel[:, self.arm_idx] ** 2).sum(1)
+        if R.get("action_jerk", 0.0) != 0.0:            # second difference of the action: jerk (weight < 0)
+            t["action_jerk"] = ((self.action - 2 * self.last_action + self.prev_action2) ** 2).sum(1)
+        if R.get("balance", 0.0) != 0.0:                # pelvis over the middle of the feet: balanced posture (weight > 0)
+            t["balance"] = torch.exp(-((pos[:, :2] - foot_xy.mean(1)) ** 2).sum(1) / 0.01)
         t["pose"] = (dev ** 2).sum(1) - free * (dev[:, self.upper_idx] ** 2).sum(1)
         t["joint_deviation_hip"] = dev[:, self.hip_idx].abs().sum(1)
         t["joint_deviation_knee"] = dev[:, self.knee_idx].abs().sum(1)
@@ -1035,7 +1084,11 @@ class KothEnv:
             u = to_opp / dist.clamp(min=0.1)[:, None]
             hands = self._flat(self.xpos[:, self.hand_body])[:, :, :2] - pos[:, None, :2]
             t["hand_push"] = ((hands * u[:, None]).sum(2).clamp(0.0, 0.35) / 0.35).mean(1) * (dist < 1.3).float()
-            if R.get("stalemate", 0.0) != 0.0:                # opt-in: both slow and close for too long
+            # more than 1 m from the nearest opponent after the first 3 s (read by mirror_standoff: kim_hill4b's mirror duels
+            # keep a median 2.5 m apart, stall_probe.py)
+            if R.get("mirror_standoff", 0.0) != 0.0:
+                t["standoff"] = ((dist > 1.0) & (self.episode_length_buf.repeat_interleave(self.A) * dt > 3.0)).float()
+            if R.get("stalemate", 0.0) != 0.0 or R.get("mirror_stalemate", 0.0) != 0.0:     # opt-in: both slow and close for too long
                 st = self.cfg["stalemate_rule"]
                 slow = torch.maximum(linv_w[:, :2].norm(dim=1), ovel[:, :2].norm(dim=1)) < st["speed"]
                 self.stale_t = torch.where((dist < st["dist"]) & slow, self.stale_t + dt, torch.zeros_like(self.stale_t))
@@ -1060,13 +1113,35 @@ class KothEnv:
         # tracking terms early on and the policy learns to end the episode fast: run r0_a went from episode
         # length 25 to 4.8 steps in 20 iterations while "reward" rose.
         total = torch.stack(list(self.reward_terms.values()), 0).sum(0); self._pre_clip = total
-        return total.clamp(min=0.0) if self.cfg.get("reward_clip", True) else total
+        total = total.clamp(min=0.0) if self.cfg.get("reward_clip", True) else total
+        # mirror_<term> (rung <body>_hill4): <term> paid only in the duels against b_, the body's own kind, outside the
+        # clip so that a stall penalty is not hidden by the positive terms (mirror duels stall at 0.004-0.45, log 2026-10-29)
+        mir = [k for k in R if k.startswith("mirror_") and R[k] != 0.0 and k[7:] in t]
+        if mir and self.A > 2:
+            mirror = (self.bench == ((1 << self.A) - 4)).repeat_interleave(self.A).float()      # a duel with keep == 1
+            for k in mir:
+                r = R[k] * t[k[7:]] * dt * mirror
+                if cap and k == "mirror_push_out":              # the same per-episode budget as push_out
+                    r = torch.minimum(r, (cap - self.push_out_sum).clamp(min=0.0)); self.push_out_sum += r.clamp(min=0.0)
+                self.reward_terms[k] = r; total = total + r; self._pre_clip = self._pre_clip + r
+        return total
 
     # ------------------------------------------------------------------ observations
     def get_observations(self) -> TensorDict:
         """Observations for the rows rsl_rl trains. The full per-robot set is cached for the frozen opponents."""
         self._obs_full = self._observe()
+        if self.max_delay > 0: self._delay_obs()
         return self._obs_full[self.lrows] if self.frozen is not None else self._obs_full
+
+    def _delay_obs(self):
+        """action_map.py "delay": every row's policy input is its observation from row["delay"] policy steps ago (a ring of
+        max_delay + 1 observations; a reset row's ring is filled with its first observation). The critic sees the present."""
+        p = self._obs_full["policy"]; L = self.max_delay + 1
+        if self.obs_hist is None: self.obs_hist = p.unsqueeze(0).repeat(L, 1, 1)
+        self.hist_head = (self.hist_head + 1) % L; self.obs_hist[self.hist_head] = p
+        self.obs_hist = torch.where(self.hist_fill[None, :, None], p[None], self.obs_hist); self.hist_fill[:] = False
+        idx = (self.hist_head - self.row["delay"]) % L
+        self._obs_full["policy"] = self.obs_hist[idx, torch.arange(self.M, device=self.device)]
 
     def _observe(self) -> TensorDict:
         pos, quat, linv_w, angv = self._root(); jpos, jvel = self._joints()

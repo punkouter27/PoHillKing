@@ -86,6 +86,7 @@ namespace PoKingHill
             Text("Cinematic: effects, camera cuts and slow motion at the rim.", "hint", _sheetBody);
             var grid = El("grid", _sheetBody);
             Chip(grid, "Cinematic", GameSettings.Cinematic, v => GameSettings.Cinematic = v);
+            Chip(grid, "Colour-safe", GameSettings.ColorSafe, v => { GameSettings.ColorSafe = v; RebuildScoreboard(); });
         }
 
         void BuildSoundSettings()

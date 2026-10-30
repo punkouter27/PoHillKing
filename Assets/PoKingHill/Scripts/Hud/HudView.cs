@@ -12,7 +12,8 @@ namespace PoKingHill
     /// (debug panel, layout audit), HudWidgets.cs (vitals strip, icons).
     ///   corners   TL title · TR menu · BR version; with GameSettings.DevTools also TC FPS (hold it for the debug
     ///             panel; it steps aside from a punch-hole camera, Screen.cutouts) and BL debug
-    ///   live      one row of fighter badges (seat-coloured initials, wins pip, status tag, vitals strip), round
+    ///   live      one row of fighter badges (seat-coloured initials, wins pip, status tag, vitals strip; it throbs
+    ///             at the edge, and a tap makes the camera follow that fighter, BroadcastCamera.FollowSeat), round
     ///             clock, sea bar and ties, knock-out feed, replay bar with a draggable playhead; with developer
     ///             tools also the win-odds bar and the caption line
     ///   intro     tale of the tape: one card per fighter (mass, strongest joint, Elo, record, knock-outs, brain)
@@ -386,7 +387,8 @@ namespace PoKingHill
                 var tag = Text("", "badge-tag", wrap); tag.style.display = DisplayStyle.None; _tags.Add(tag);
                 Text(director.BadgeOf(agent), "badge-name ellipsis", b);
                 var vit = new VitalsBar(); vit.style.display = bio != null ? DisplayStyle.Flex : DisplayStyle.None; b.Add(vit); _vitals.Add(vit);
-                b.tooltip = director.NameOf(agent, "Robot");
+                b.tooltip = director.NameOf(agent, "Robot") + " · tap to follow";
+                int seat = i; b.RegisterCallback<ClickEvent>(_ => BroadcastCamera.FollowSeat = BroadcastCamera.FollowSeat == seat ? -1 : seat);
                 _badges.Add(b);
                 var seg = El("odds-seg", _odds); seg.style.backgroundColor = MatchDirector.SeatColors[i % MatchDirector.SeatColors.Length]; seg.style.width = Length.Percent(100f / director.Playing);
                 _oddsSegs.Add(seg);
@@ -454,6 +456,8 @@ namespace PoKingHill
                 if (v != null && i < _vitals.Count) _vitals[i].Set(v, outNow);
                 bool down = director.IsDown(i), edge = v != null && v.doomed && !outNow;
                 _badges[i].EnableInClassList("down", down); _badges[i].EnableInClassList("edge", edge && !down);
+                _badges[i].EnableInClassList("pulse", edge && !down && (int)(Time.unscaledTime * 3f) % 2 == 0);      // a 3 Hz throb at the edge
+                _badges[i].EnableInClassList("followed", BroadcastCamera.FollowSeat == i && !outNow);
                 float left = director.DownLeft(i);
                 string tag = down ? (left >= 0 ? $"DOWN {left:0}" : "DOWN") : edge ? "EDGE" : "";
                 var t = _tags[i]; if (t.text != tag) t.text = tag; t.style.display = tag.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;

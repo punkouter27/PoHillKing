@@ -7,7 +7,7 @@ using UnityEngine.TestTools;
 namespace PoKingHill.Tests
 {
     /// <summary>The game's state flow in the real scene: Menu -> (Intro ->) Fight -> Result -> Menu, with no error or
-    /// exception logged (the test runner fails on any unexpected error log). Physics runs at 4x speed to keep the test
+    /// exception logged (the test runner fails on any unexpected error log), and in a plain quick match no warning either. Physics runs at 4x speed to keep the test
     /// short. The intro (tale of the tape, GameSettings.Intro) is skipped where the test is about the rounds.</summary>
     public class MatchFlowTests
     {
@@ -20,6 +20,7 @@ namespace PoKingHill.Tests
         [UnityTest, Timeout(240000)]
         public IEnumerator MenuFightResultMenu()
         {
+            using var guard = new ConsoleGuard(allWarnings: true);      // a normal match logs no warning at all
             SceneManager.LoadScene("Game");
             yield return Until(() => MatchDirector.Instance != null && MatchDirector.Instance.State == MatchState.Menu, 60, "the menu");
             var d = MatchDirector.Instance;
@@ -28,11 +29,13 @@ namespace PoKingHill.Tests
             d.QuickMatch(); d.SkipIntro();
             Assert.AreEqual(MatchState.Fight, d.State);
             Assert.GreaterOrEqual(d.Playing, 2);
+            BroadcastCamera.FollowSeat = 0;                             // a tapped badge: the camera follows seat 0
             yield return Until(() => d.State == MatchState.Result, 150, "the round to end");
             Assert.IsNotNull(d.LastResult.Agents); Assert.AreEqual(d.Playing, d.LastResult.Agents.Length);
             d.Continue();
             yield return Until(() => d.State == MatchState.Menu, 20, "the menu after one round");
             Time.timeScale = 1f;
+            guard.AssertClean("a quick match");
         }
 
         [UnityTest, Timeout(120000)]

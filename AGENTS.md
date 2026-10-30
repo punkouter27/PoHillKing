@@ -31,6 +31,10 @@ Standing directives for any coding agent working in this repo. Project-specific 
   *Here: `training/scripts/prune_runs.py [--apply]` and `tools/cleanup_unused.sh [--apply]`.*
 - **Telemetry:** Stream kinematics, actions, observations and metrics (win/loss) locally or to Azure Table Storage.
   *Here: `MatchLog` JSONL + Elo ladder in `persistentDataPath`; `ObsRecorder` / `RunObsDump` for observations; TensorBoard under `training/runs/`, started when training launches.*
+- **Logs in `/DOCS`:** Log training metrics, decisions and updates to `/DOCS` so later agents can track progress.
+  *Here: append to the bottom of `DOCS/rl_optimization_log.md` (newest last), one entry per run, measurement or decision.*
+- **Progress updates:** Estimate training time at startup, then send hourly updates: a status grid (run, iteration, key metrics), key improvements and a short summary.
+  *Here: queue scripts write timestamped lines to `training/runs/overnight/progress_*.txt` (`queue_hill.note`); the ETA and the hourly grid are the agent's job until a script prints them.*
 
 ## 3. Physics, Collisions & Verification Gates
 
@@ -38,6 +42,8 @@ Standing directives for any coding agent working in this repo. Project-specific 
   *Here: `training/scripts/collision_audit.py` → `SCREENSHOTS/collision-<YYMMDD>/report.html`.*
 - **Physical fidelity:** Gravity −9.81 m/s², anatomical mass, realistic joint and torque limits.
 - **Mesh & rig pipeline:** Validate skinned meshes and extract rig hierarchies before training.
+- **Action smoothing:** Promote human-like, fluid joint motion without jitter: torque/action-rate penalties, low-pass filtering of actions, or jerk minimisation in the reward.
+  *Here: the `action_rate` reward term (`koth/env.py`, -0.03 in the hill recipe) and the action low-pass `smooth` (`koth/action_map.py` = `ActionMap.cs`, carried in the brain's `_action.json`, `train.py --action-smooth`). Too much smoothing stalls mirror duels (log 2026-10-29, `scripts/sweep_smooth.py`): judge it by decided share, not only by jitter.*
 - **Graduation gate:** Export an ONNX policy only when mean reward meets the target for 100 consecutive episodes with zero NaN gradients.
   *Here: a checkpoint is trusted only after its Unity gate too (trajectory parity or statistical parity, see CLAUDE.md).*
 - **HTML milestones:** For runs over 30 min, write an HTML report with a 3-tier milestone breakdown (Toddler, Child, Adult), top-3 metric charts and run-over-run deltas.

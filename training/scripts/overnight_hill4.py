@@ -37,12 +37,39 @@ SELF_PLAY, ESTIMATE_MIN = 25, 110          # one run: ~77 min training at 1024 w
 def urgency(m): return max(0.0, MIRROR_FLOOR - m["mirror"]) + max(0.0, THREE_FLOOR - m["three"]) + JITTER_W * max(0.0, m["jitter"] / JITTER_REF - 1)
 
 
+def three_way(me, ckpt, ship):
+    """eval rows of `ckpt` in the game's three-way against the shipped other two."""
+    others = [b for b in q.HUMANS if b != me]
+    return q.evaluate(me, ["--rung", f"{me}_hill", "--ckpt", ckpt, "--opponent"] + [f"{ship[x]}:slot{i + 1}" for i, x in enumerate(others)] + ["--seconds", "20"])
+
+
 def measure(me, ckpt, ship):
     """mirror decided, three-way vs the shipped other two, jitter; plus the raw rows."""
-    others = [b for b in q.HUMANS if b != me]
-    three = q.evaluate(me, ["--rung", f"{me}_hill", "--ckpt", ckpt, "--opponent"] + [f"{ship[x]}:slot{i + 1}" for i, x in enumerate(others)] + ["--seconds", "20"])
+    three = three_way(me, ckpt, ship)
     mirror = q.evaluate(me, ["--rung", q.DUEL_RUNG[me], "--ckpt", ckpt, "--opponent", ckpt, "--seconds", "25"])
     return dict(mirror=h.decided(mirror), three=q.mean(three, "learner_last_one_in"), jitter=q.mean(three, "jitter_rad")), dict(mirror=mirror, three=three)
+
+
+def sweep_arm(me, name, ship, iters, num_envs, train_args, label, rows_path, row, warm=None):
+    """One sweep arm on rung <me>_hill4 (live self-play, warm from `warm`, default the shipped brain): train unless done,
+    measure, duel against the shipped brain, note and append a row to `rows_path`. `train_args` are the arm's extra
+    train.py flags. Returns the checkpoint, or None when training failed."""
+    others = [b for b in q.HUMANS if b != me]; rung = f"{me}_hill4"; warm = warm or ship[me]
+    ckpt = f"runs/{rung}/{name}/model_final.pt"; log = os.path.join(q.LOG_DIR, f"{name}.log")
+    opp = [f"{ship[me]}:slot1", f"{warm}:slot1:live"] + [f"{ship[x]}:slot{i + 2}" for i, x in enumerate(others)]
+    if not os.path.exists(os.path.join(q.ROOT, ckpt)):
+        q.note(f"{name}: training ({label}, self-play every {SELF_PLAY})")
+        p = q.run(["scripts/train.py", "--rung", rung, "--name", name, "--num-envs", str(num_envs), "--iters", str(iters),
+                   "--warm", warm, "--opponent"] + opp + ["--frozen-deterministic", "--critic-warmup", "15", "--self-play", str(SELF_PLAY)]
+                  + train_args, me, log)
+        if p.returncode != 0: q.note(f"{name}: training FAILED (rc {p.returncode}), see {log}"); return None
+    m, rows = measure(me, ckpt, ship)
+    duel_rows = q.evaluate(me, ["--rung", q.DUEL_RUNG[me], "--ckpt", ckpt, "--opponent", ship[me], "--seconds", "25"]); duel = q.share(duel_rows)
+    q.note(f"{name}: {label}: mirror {m['mirror']:.3f}, three-way {m['three']:.3f}, duel vs shipped {duel:.3f}, "
+           f"jitter {m['jitter']:.4f}, urgency {urgency(m):.3f}")
+    with open(rows_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(dict(row, run=name, body=me, iters=iters, m=m, duel=duel, eval=dict(rows, duel_vs_shipped=duel_rows))) + "\n")
+    return ckpt
 
 
 def report(runs, best, base, t0):

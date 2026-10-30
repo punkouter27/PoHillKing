@@ -12,6 +12,8 @@ namespace PoKingHill
     ///   winner   orbit around the winner while the result is up
     ///   crane    intro: a dolly along a spline from low over the sea up to the summit (Splines + CinemachineSplineDolly)
     ///   intro    intro: a close, slow orbit of the fighter whose tale-of-the-tape card is up
+    ///   follow   orbit around one fighter picked by tapping its HUD badge (FollowSeat), until it is out, the round
+    ///            ends or the badge is tapped again
     ///   summit   group framing of everyone still in, the fighter nearest the centre weighted double
     ///   menu     slow orbit of the empty summit
     /// Big impacts shake the active camera through a Cinemachine impulse (Cinematic setting).
@@ -33,7 +35,11 @@ namespace PoKingHill
 
         void OnEnable() { MatchEvents.Impact += OnImpact; MatchEvents.RoundStarted += OnRound; }
         void OnDisable() { MatchEvents.Impact -= OnImpact; MatchEvents.RoundStarted -= OnRound; }
-        void OnRound() { _shown.Clear(); _cut = null; }
+        void OnRound() { _shown.Clear(); _cut = null; FollowSeat = -1; }
+
+        /// <summary>Seat the camera follows during the fight (-1 = the summit group). Set by the HUD's badges.</summary>
+        public static int FollowSeat { get; set; } = -1;
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetFollow() => FollowSeat = -1;
 
         static Transform Pelvis(PolicyRunner r) => r != null ? r.PelvisTransform : null;
 
@@ -60,6 +66,8 @@ namespace PoKingHill
             else if (director.State == MatchState.Result && director.LastResult.Winner >= 0 && director.LastResult.Winner < director.bodies.Length)
             { Aim(winner, Pelvis(director.bodies[director.LastResult.Winner])); Spin(winner, 1f); next = winner; }
             else if (FallerShot(fallen)) next = faller;
+            else if (director.State == MatchState.Fight && FollowSeat >= 0 && FollowSeat < director.Playing && !director.IsOut(FollowSeat) && Pelvis(director.bodies[FollowSeat]) != null)
+            { Aim(winner, Pelvis(director.bodies[FollowSeat])); Spin(winner, 0.35f); next = winner; }
             else next = summit;
             Activate(next);
         }

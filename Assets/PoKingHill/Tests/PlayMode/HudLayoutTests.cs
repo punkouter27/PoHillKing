@@ -15,7 +15,8 @@ namespace PoKingHill.Tests
     /// </summary>
     public class HudLayoutTests
     {
-        static readonly Vector2Int[] Phones = { new(1080, 1920), new(1080, 2340), new(1080, 2520) };
+        // 16:9, 19.5:9 (and an iPhone's 1170x2532), 20:9 at 1440 wide (a big panel scale), 21:9
+        static readonly Vector2Int[] Phones = { new(1080, 1920), new(1080, 2340), new(1170, 2532), new(1440, 3200), new(1080, 2520) };
 
         static IEnumerator Until(System.Func<bool> ok, float seconds, string what)
         {

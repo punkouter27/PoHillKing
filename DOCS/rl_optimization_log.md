@@ -659,3 +659,170 @@ unsmoothed fighters 0.89-0.98. kim_hill4b is the first hill brain to beat its sh
 three-way +0.06) and the worst mirror of all (0.025). Restarts from the same brain spread widely (Grandpa mirror 0.13-0.45).
 Suspect: the low-pass and the action_rate penalty. Next: a smoothing sweep (smooth 0 / 0.3 / 0.6, 200 iterations, Kim and
 Grandpa), and in the game a round tie-break (e.g. the sea rising faster after 15 s) so a mirror stalemate still ends.
+
+## 2026-10-29 — smoothing sweep (no fix for the mirror), duel_stats vs eval.py, mirror-only shaping
+
+`scripts/sweep_smooth.py`: rung <body>_hill4 with live self-play, 200 iterations x 1024 worlds, warm from the shipped brain;
+arms smooth 0 / action_rate -0.01 and smooth 0.3 / -0.015 (`train.py --action-smooth`, which was parsed but ignored until
+now). eval.py, 25 s bell.
+
+| Run | Smooth | Mirror decided | 3-way | Duel vs shipped | Jitter rad/step |
+|---|---|---|---|---|---|
+| kim_hill4b (overnight) | 0.6 | 0.025 | 0.535 | 0.572 | 0.0499 |
+| kim_sm3 | 0.3 | 0.016 | 0.454 | 0.740 | 0.0725 |
+| kim_sm0 | 0 | 0.103 | 0.400 | 0.951 | 0.1123 |
+| grandpa_hill4f (overnight) | 0.6 | 0.449 | 0.271 | 0.206 | 0.0358 |
+| grandpa_sm3 | 0.3 | 0.637 | 0.277 | 0.481 | 0.0876 |
+| grandpa_sm0 | 0 | 0.603 | 0.302 | 0.517 | 0.1062 |
+
+Kim stalls in her mirror at every smoothing (0.016-0.103); less smoothing makes her beat the shipped Kim harder and lose
+three-ways. Grandpa's mirror rises from 0.13-0.45 to 0.60-0.64 without the strong low-pass, still far below his shipped
+fighter (0.981, three-way 0.125). The low-pass is not the main cause; for Kim it is not a cause at all.
+
+duel_stats.py (CPU MuJoCo, the Unity reference) on the shipped Kim mirror, 200 rounds: 0.11 decided with the plain rule and
+0.11 with `--getup --hill-rule` (10/12/178, median 21.2 s, identical: nobody falls, every decided round is a ring-out).
+eval.py says 0.479 for the same brain: the promotion bar overstates mirror decisiveness about 4x. In the game the sea
+(20-30 s x SeaPace, nearest the centre wins) settles the other 89 %; the tie-break already exists.
+
+Next (queued, `scripts/sweep_mirror.py`): env rewards `mirror_push_out` and `mirror_stalemate`, paid only in the duels
+against b_ (the body's own kind), outside the clip: the opponent's outward speed while I am on it, and a penalty once both
+stood within 0.6 m below 0.1 m/s for 2 s. kim/grandpa/trump_mir1, shipped recipe (smooth 0.6), push 1.0, stall -1.0.
+
+### 2026-10-29 (afternoon) — kim_mir1, stall probe, eval.py leg rule, standoff term
+
+kim_mir1 (mirror_push_out 1.0, mirror_stalemate -1.0 with the default rule 0.6 m / 0.1 m/s / 2 s): mirror 0.004,
+three-way 0.422, duel vs shipped 0.898, jitter 0.0668. `rew/mirror_stalemate` was 0 in all 200 iterations: the rule never
+matched. Queue stopped before Grandpa.
+
+`scripts/stall_probe.py` (eval.py's duel, 256 rounds, 25 s; pelvis separation and the larger horizontal speed after 5 s):
+
+| Brain | Decided | Separation q10/50/90 m | Speed q10/50/90 m/s |
+|---|---|---|---|
+| kim shipped | 0.488 | 0.38 / 0.42 / 0.47 | 0.16 / 0.28 / 0.49 |
+| kim_hill4b | 0.031 | 2.11 / 2.54 / 2.87 | 0.09 / 0.17 / 0.27 |
+| grandpa shipped | 0.988 | 0.35 / 0.40 / 0.50 | 0.34 / 0.69 / 1.17 |
+| grandpa_sm0 | 0.602 | 0.33 / 0.37 / 0.51 | 0.20 / 0.40 / 0.69 |
+
+The shipped brains clinch; the hill4 Kim does not engage a copy of herself at all (a 2.5 m standoff). A clinch rule below
+0.5 m/s covers 16 % of the shipped Kim's bell rounds and 2 % of her decided ones; nothing below 0.3 m/s fires.
+
+eval.py's default rule for Kim's and Grandpa's duels (rung r4league) was the G1's own-foot-shin ending (37 of 64 Kims
+"fallen" in the first step), while every human rung trains with Unity's rule; the queues always passed
+`--leg-contact-rule unity`, so their numbers stand. eval.py now uses Unity's rule for a human body by default. The gap to
+duel_stats.py (shipped Kim 0.488 vs 0.11) is GPU vs CPU MuJoCo, still open.
+
+Premise check: the game never seats a mirror unless the player ticks one agent. The roster has one agent per body (Kim,
+Trump, Grandpa); quick match seats each once, tournaments draw distinct agents ("two bodies of every kind" in the scene
+are spare bodies, not two seats). The mirror bar is dropped: `scripts/judge_hill.py` re-judges every hill4 candidate on
+the three-way (>= shipped + 0.03), the duel against each other body (decided share >= min(0.45, shipped - 0.03)) and jitter
+(<= 1.05 x shipped).
+
+New env term `mirror_standoff` (more than 1 m from the nearest opponent after the first 3 s, mirror duels only, outside the
+clip); <body>_hill4's stalemate_rule 0.6 m / 0.5 m/s / 2 s. Queued kim/grandpa/trump_mir2: push 1.0, stall -1.0,
+standoff -1.0, 200 iterations, shipped recipe.
+
+## 2026-10-29 — Opt-in realism switches (all off by default; no run uses them yet)
+
+Nothing below changes a shipped brain, a gate or a current rung: default `r0` steps are bit-identical to the previous
+env.py (r2/r4 differ only by the arena's own run-to-run contact noise, measured HEAD vs HEAD), and `duel_stats.py` gives the
+same rounds as before for a brain without the new sidecar keys.
+
+- **One leg-contact rule for humans** (`env.default_cfg`): a human body (`KOTH_ROBOT` kim/trump/grandpa) never ends a round
+  on its own foot-shin contact in any rung, so `train.py`, `eval.py` and `reward_audit.py` agree (it was patched into
+  eval.py only). eval.py's verdict line now tags `[leg-contact rule: unity]` whenever the rule was off, and its
+  `--leg-contact-rule train` means the rung's real training rule.
+- **Action path** (`koth/action_map.py` = `ActionMap.cs` = `PolicyRunner` = `duel_stats.py`, carried in `<name>_action.json`):
+  `slew` (rate limit after the low-pass; `train.py --action-slew`), `delay` (reaction time in policy steps, ring filled
+  with the first observation after a reset or a get-up; `--obs-delay`), `breath` / `breath_hz` (waist_pitch rest-pose sway;
+  `--breath`), `gait_hz` (per-body gait clock, `env.BODY_GAIT_HZ` g1 1.5 / kim 1.6 / trump 1.3 / grandpa 1.2; `--body-gait`).
+- **Fatigue** (`--fatigue on|obs`, trainable since earlier) now travels in the sidecar (from the run's config.json) and is
+  mirrored in Unity (`PolicyRunner.UpdateFatigue` / `ApplyFatigue` scale each actuator's force range; fatigue inputs last)
+  and in `duel_stats.py` (`action_map.NumpyFatigue`). A brain trained with it was never exported before; one would now run
+  the same model in all three places. Needs a Unity gate before it ships.
+- **Rewards** (weight 0 by default, computed only with a weight): `arm_flail` (arm joint speed²), `action_jerk` (second
+  difference of the action), `balance` (pelvis over the middle of the feet).
+- **Slopes and rocks**: `spawn_ramp` (spawn radius widens to r_max over N iterations); rungs `r2slope` and `r2rocks`
+  (and `<human>_r2slope` / `<human>_r2rocks`) = r2 with spawns walking down to 2.6 m over 600 iterations. `r2rocks` uses
+  `scene_koth_1p_rocks_train.xml` (`python -m koth.build_mjcf rocks [n] [seed]`: 24 static boxes half buried in the slope,
+  training only, never imported to Unity) and per-world `dr.ground_friction` / `dr.rock_friction`.
+- **Review fixes**: `_pre_clip` now includes the `mirror_*` terms (reward_audit's clip and shaped-return stats saw them
+  missing); `mirror_push_out` is held to `push_out_cap` like `push_out`.
+- **Runs and evals**: `config.json` is written before the env is built and carries `robot`, `git` and `obs_dim`; a
+  different older one in the same folder is kept as `config.<time>.json`. A graduated export writes its sidecar from that
+  config (so fatigue rides along). eval.py prints a `SUMMARY` line (not a `{` line, so queue parsers skip it): the mean and
+  Student-t 95 % half-width over seeds of each headline share, and a Wilson interval of the pooled decided-duel win share.
+
+Smoke tests only (8-16 worlds, a few steps; one 2-iteration `r2slope` training with every switch on, deleted). Unity side
+written, not compiled here.
+
+## 2026-10-29 evening: mirror shaping round 3, judge_hill verdicts
+
+Unity compiled the opt-in switches' C# (ActionMap, PolicyRunner): EditMode 45/45, PlayMode 7/7.
+
+`scripts/archive/queue_mir3.py` (warm from mir2, live self-play, 1024 worlds, shared the GPU with judge_hill at ~35 s per
+iteration instead of ~12 s):
+
+| run | terms (push, stall, standoff) | iters | mirror decided | three-way | jitter | duel vs shipped | judge |
+|---|---|---|---|---|---|---|---|
+| kim_mir3 | 2, -3, -0.5 | 200 | 0.072 (mir2 0.018) | 0.576 (shipped 0.479) | 0.0615 (bar 0.058) | 0.441 | fail (jitter) |
+| trump_mir3 | 1, -1, -1 | 100 more | 0.319 | 0.388 (shipped 0.421) | 0.0267 | 0.284 | fail (three-way) |
+
+Heavier mirror penalties barely move Kim's mirror stall and cost jitter: the mirror-only terms are not the lever.
+
+judge_hill.py (bars: three-way >= shipped + 0.03, duels >= min(0.45, shipped - 0.03), jitter <= 1.05 x shipped) PASS:
+- kim: kim_hill4b (0.535), kim_mir2 (0.576, but mirror 0.018).
+- trump: trump_hill4a (three-way 0.466 vs shipped 0.421, jitter 0.037 vs 0.087, vs kim 0.829 vs shipped 0.130).
+- grandpa: grandpa_hill4a best (three-way 0.431 vs shipped 0.145, jitter 0.055 vs 0.105, vs kim 0.955, vs trump 0.902);
+  also hill4d/f, mir2, sm0, sm3. Shipped Grandpa is the weakest brain in the game.
+Nothing exported; candidates for export + Unity gate: trump_hill4a, grandpa_hill4a.
+
+## 2026-10-29 23:38 — overnight_game: 10 h co-evolution judged on the game's matches (running)
+
+`scripts/overnight_game.py --hours 10` (detached, editor closed: back to ~12 s per iteration at 1024 worlds). One loop
+for the three humans: each round trains the body with the highest game urgency on rung `<body>_hill4` (hill4 self-play
+recipe: slot1 = its best + a live copy every 25 iterations, slot2/3 = the OTHER bodies' current best brains, so they
+co-evolve; 300 iterations, draw -20), then judges with judge_hill's yardstick (three-way and duels against the shipped
+fighters). Urgency = max(0, 0.5 - three-way) + 0.5 x duel shortfalls below 0.5 + 0.2 x jitter above 0.06, plus 0.02,
+divided by 1 + 0.5 x failed attempts. A new best needs three-way >= best + 0.03, jitter <= 1.05 x shipped, each duel
+>= min(0.45, shipped - 0.03), no NaN gradient. No mirror bar. Starts from the judge_hill PASSes: kim_mir2 (0.576),
+trump_hill4a (0.466), grandpa_hill4a (0.431; three-way + 0.1 x mean duel picks it over hill4b). At the end: round robin
+of the final brains, production weights in `runs/production/<body>/best.pt` + `production.json`, export over
+`Models/<body>/fighter_*` for every body whose best changed (old files in `runs/production/<body>/previous/`), report
+`SCREENSHOTS/training-<YYMMDD>-game/index.html` (`scripts/overnight_game_report.py`). Unity gates still pending after it.
+Progress (hourly status grid): `runs/overnight/progress_game.txt`.
+
+### 2026-10-30 08:50 — overnight_game result (9.2 h, 8 runs, 1 promotion, all three exported)
+
+| run | three-way (best before) | jitter | verdict |
+|---|---|---|---|
+| grandpa_g261029_01 | 0.522 (0.431) | 0.0638 | PROMOTED: vs kim 0.932, vs trump 0.946 |
+| kim_g261029_01 / 02 / 03 | 0.449 / 0.483 / 0.471 (0.576) | 0.044-0.058 | fail (three-way; 02 also jitter) |
+| trump_g261029_01 / 02 / 03 | 0.372 / 0.396 / 0.322 (0.466) | 0.024-0.028 | fail (three-way) |
+| grandpa_g261029_02 | 0.408 (0.522) | 0.0754 | fail (three-way) |
+
+Final brains (exported over `Models/<body>/fighter_*`, previous ONNX in `runs/production/<body>/previous/`):
+kim_mir2 (0.576 vs the shipped pair, shipped 0.479), trump_hill4a (0.466, shipped 0.421), grandpa_g261029_01 (0.522,
+shipped 0.145). Round robin of the final brains against each other (eval.py, 20 s): Kim 0.160, Trump 0.223, Grandpa
+0.557. Every number above is against the shipped fighters; against the new Grandpa, Kim and Trump fall far below a fair
+third: the yardstick hides co-evolution. Kim and Trump never improved on their warm brains in 3 attempts each (300
+iterations against the new Grandpa pulls their shipped-yardstick three-way down 0.09-0.14). Unity gates not run yet
+(RefreshBrains, RunHumanFfaStats, RunGetupDuelStats hill). Report: `SCREENSHOTS/training-261030-game/index.html`.
+Next: judge against the current best brains (round robin) instead of the shipped pair, and train Kim / Trump against the
+new Grandpa until the round robin is near a third each.
+
+### 2026-10-30 morning — only Grandpa's new brain ships; its Unity gates; balancing pass (running)
+
+Kim and Trump back on their committed fighters (`kim_mir2` / `trump_hill4a` beat the shipped pair but are crushed by the new
+Grandpa: round robin 0.16 / 0.22); Grandpa keeps `grandpa_g261029_01` (+ `fighter_action.json`). `GameScene.RefreshBrains`:
+roster Kim fighter + action, Trump fighter (no sidecar), Grandpa fighter + action.
+
+| gate (grandpa_g261029_01) | Python | Unity | verdict |
+|---|---|---|---|
+| three-way vs shipped Kim + Trump, 20 s (`RunHumanFfaStats`) | eval.py 0.522 (768 rounds) | 0.455 last one in, 0.005 undecided, median win 8.5 s (200) | pass: 1.7 SE apart; shipped Grandpa 0.145 |
+| mirror duel, hill rule (`RunGetupDuelStats(grandpa, 200, -1, -1, true)`) | duel_stats.py 0.185 decided (19/18/163), median 8.6 s (5.7 / 20.1) | 0.29 (23/34/143), median 13.0 s (5.8 / 20.5) | marginal: quartiles agree, decided 2.5 SE apart (Unity decides more); the game seats no mirror unless the player ticks one agent |
+
+ModelDumpCheck PASS. `scripts/balance_game.py --hours 6 --start grandpa=runs/grandpa_hill4/grandpa_g261029_01/model_final.pt`
+(09:36): overnight_game's recipe judged against the other bodies' CURRENT best brains (three-way share, duels; evals
+cached by checkpoints). Trains the body furthest below a third; promotes at share >= best + 0.03 and <= 0.43, duels >=
+min(0.45, current - 0.03), jitter <= 1.05 x shipped, no NaN; first re-judges the six Kim / Trump overnight runs; stops
+when every share >= 0.28. Progress: `runs/overnight/progress_balance.txt`; report `SCREENSHOTS/training-261030-balance/`.

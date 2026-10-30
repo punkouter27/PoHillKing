@@ -20,7 +20,9 @@ namespace PoKingHill.Tests
         };
         readonly List<string> _found = new();
 
-        public ConsoleGuard() { Application.logMessageReceived += OnLog; }
+        readonly bool _allWarnings;
+        /// <param name="allWarnings">Every warning counts, not only the UI Toolkit ones: a normal match logs nothing.</param>
+        public ConsoleGuard(bool allWarnings = false) { _allWarnings = allWarnings; Application.logMessageReceived += OnLog; }
         public void Dispose() { Application.logMessageReceived -= OnLog; }
 
         // PlayerTestAssemblyProvider.ResetStaticsOnLoad (SubsystemRegistration) calls m_LoadedAssemblies?.Clear()
@@ -34,6 +36,7 @@ namespace PoKingHill.Tests
         {
             if (type == LogType.Exception || type == LogType.Error || type == LogType.Assert) { _found.Add($"{type}: {text}"); return; }
             if (type != LogType.Warning) return;
+            if (_allWarnings) { _found.Add($"Warning: {text}"); return; }
             foreach (var w in UiWarnings) if (text.Contains(w)) { _found.Add($"Warning: {text}"); return; }
         }
 

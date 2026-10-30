@@ -21,6 +21,9 @@ namespace PoKingHill
     ///              wet     darker and glossy after the sea, drying over wetSeconds
     ///              flash   a short hot glow on the parts in contact with another fighter when a hit lands
     ///                      (MatchEvents.Impact), not while they merely lean on each other
+    ///              strain  a warm glow on a fighter working near its torque limits (mean actuator force over its limit,
+    ///                      smoothed over about 1 s; from strainFrom up), the cinematic cousin of the Strain overlay
+    ///              sweat   a slight sheen building up over a round (sweatMax at sweatSeconds), under the sea's wet
     ///              The humans' single skin takes the highest value of its bodies (no scratches on skin).
     /// Reads mjModel/mjData only; per-geom material instances are made once at start.
     /// </summary>
@@ -36,12 +39,15 @@ namespace PoKingHill
         public float surfaceHz = 30f, wetSeconds = 20f, flashSeconds = 0.3f;
         [Tooltip("Pushing impulse (N s) that wears a part fully")] public float wearImpulse = 2500f;
         [Tooltip("Impact strength (MatchEvents.Impact, 0..1) below which a hit does not flash")] public float flashFrom = 0.35f;
+        [Tooltip("Mean actuator force over its limit (0..1) from which a fighter glows warm")] public float strainFrom = 0.35f;
+        [Tooltip("Sweat: the wet sheen a round builds up (0..1) and the seconds it takes")] public float sweatMax = 0.3f, sweatSeconds = 40f;
 
         class Part { public Renderer r; public int body, robot; public Color baseColor, heat; public bool accent; }
         class Skin { public Renderer r; public int robot; }
         readonly List<Skin> _skins = new();
         float[] _wear = Array.Empty<float>(), _wet = Array.Empty<float>(), _flash = Array.Empty<float>(), _danger = Array.Empty<float>();
-        float[] _robotWet = Array.Empty<float>(), _robotFlash = Array.Empty<float>(), _hit = Array.Empty<float>(); bool[] _isFoot = Array.Empty<bool>(); float _nextSurface;
+        float[] _robotWet = Array.Empty<float>(), _robotFlash = Array.Empty<float>(), _hit = Array.Empty<float>(), _strain = Array.Empty<float>(), _strainNow = Array.Empty<float>();
+        int[] _strainN = Array.Empty<int>(); bool[] _isFoot = Array.Empty<bool>(); float _nextSurface;
         readonly List<Part> _parts = new(); MaterialPropertyBlock _mpb;
         float[] _bodyHeat; int[] _jointBody, _actJoint; int[] _robotOfBody;
         PolicyRunner[] _runners = Array.Empty<PolicyRunner>(); readonly List<int> _colliderGeoms = new();
@@ -105,6 +111,7 @@ namespace PoKingHill
             int nb = (int)m->nbody;
             _wear = new float[nb]; _wet = new float[nb]; _flash = new float[nb]; _isFoot = new bool[nb];
             _danger = new float[_runners.Length]; _robotWet = new float[_runners.Length]; _robotFlash = new float[_runners.Length]; _hit = new float[_runners.Length];
+            _strain = new float[_runners.Length]; _strainNow = new float[_runners.Length]; _strainN = new int[_runners.Length];
             for (int b = 0; b < nb; b++) _isFoot[b] = Name(m, MujocoLib.mjtObj.mjOBJ_BODY, b).EndsWith("ankle_roll_link");
             _bodyHeat = new float[(int)m->nbody];
             _jointBody = new int[(int)m->njnt]; for (int j = 0; j < (int)m->njnt; j++) _jointBody[j] = m->jnt_bodyid[j];
@@ -236,6 +243,22 @@ namespace PoKingHill
                 var v = bio != null && seat >= 0 && seat < director.Playing && director.State == MatchState.Fight && !director.IsOut(seat) ? bio.Of(_runners[k]) : null;
                 _danger[k] = v != null ? Mathf.Clamp01((0.12f - v.rim) / 0.25f) : 0f;      // from 12 cm inside the rim (as MatchFx's danger light) to 13 cm past it
             }
+            // strain: mean |actuator force| / limit per fighter, smoothed (~1 s)
+            Array.Clear(_strainNow, 0, _strainNow.Length); Array.Clear(_strainN, 0, _strainN.Length);
+            for (int a = 0; a < (int)m->nu; a++)
+            {
+                int j = _actJoint[a]; if (j < 0) continue; int k = _robotOfBody[_jointBody[j]]; if (k < 0) continue;
+                double lim = m->actuator_forcelimited[a] == 0 ? 100 : Math.Max(1e-6, Math.Max(Math.Abs(m->actuator_forcerange[2 * a]), Math.Abs(m->actuator_forcerange[2 * a + 1])));
+                _strainNow[k] += (float)(Math.Abs(d->actuator_force[a]) / lim); _strainN[k]++;
+            }
+            bool fight = director.State == MatchState.Fight;
+            float sweat = fight ? sweatMax * Mathf.Clamp01((float)director.RoundTime / Mathf.Max(1f, sweatSeconds)) : 0f;
+            for (int k = 0; k < _strain.Length; k++)
+            {
+                float now = fight && _strainN[k] > 0 ? _strainNow[k] / _strainN[k] : 0f;
+                _strain[k] += (now - _strain[k]) * Mathf.Clamp01(dt);
+                _robotWet[k] = Mathf.Max(_robotWet[k], sweat);
+            }
             float pulse = 0.65f + 0.35f * Mathf.Sin(Time.unscaledTime * 14f);
             foreach (var p in _parts)
             {
@@ -249,7 +272,8 @@ namespace PoKingHill
             {
                 s.r.GetPropertyBlock(_mpb);
                 _mpb.SetColor(RimColor, fx ? Rim(s.robot, 0.15f, 1.2f * pulse) : Color.clear);
-                _mpb.SetFloat(Wet, fx ? _robotWet[s.robot] : 0f); _mpb.SetFloat(Flash, fx ? 0.35f * _robotFlash[s.robot] : 0f);
+                float warm = Mathf.Clamp01((_strain[s.robot] - strainFrom) / Mathf.Max(0.05f, 1f - strainFrom));
+                _mpb.SetFloat(Wet, fx ? _robotWet[s.robot] : 0f); _mpb.SetFloat(Flash, fx ? Mathf.Max(0.35f * _robotFlash[s.robot], 0.3f * warm) : 0f);
                 s.r.SetPropertyBlock(_mpb);
             }
         }

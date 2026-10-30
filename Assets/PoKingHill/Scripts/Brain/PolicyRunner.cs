@@ -73,6 +73,11 @@ namespace PoKingHill
         float _phase;
         readonly float[] _cmd = new float[3];
         float[] _actF, _shoveOffset;
+        // action_map.py slew / delay / breath / fatigue (all off without a sidecar that asks for them)
+        float[] _actS, _fatigue, _obsRing, _obsDelayed;
+        double[] _frc0;                    // each actuator's nominal force range (lo, hi), for fatigue
+        int _ringHead, _ticks, _waistPitch = -1;
+        bool _ringFill = true, _fatigueFresh = true, _fatigueApplied;
         readonly System.Diagnostics.Stopwatch _sw = new();
 
         void OnEnable()
@@ -81,6 +86,8 @@ namespace PoKingHill
             LastAction = new float[_spec.joints.Length];
             RawAction = new float[_spec.joints.Length]; Ctrl = new double[_spec.joints.Length];
             _actF = new float[_spec.joints.Length]; _shoveOffset = new float[_spec.joints.Length];
+            _actS = new float[_spec.joints.Length]; _fatigue = new float[_spec.joints.Length];
+            _waistPitch = System.Array.FindIndex(_spec.joints, j => j.Contains("waist_pitch"));
             SetStyleOffsets();
             LoadBrain();
             MjScene.Instance.postInitEvent += OnSceneInit;
@@ -101,6 +108,8 @@ namespace PoKingHill
         void OnSceneInit(object sender, MjStepArgs args)
         {
             Map = new JointMap(MjScene.Instance.Model, _spec, robotPrefix);
+            var m = MjScene.Instance.Model; _frc0 = new double[2 * Map.N]; _fatigueApplied = false;
+            for (int i = 0; i < Map.N; i++) { _frc0[2 * i] = m->actuator_forcerange[2 * Map.ActId[i]]; _frc0[2 * i + 1] = m->actuator_forcerange[2 * Map.ActId[i] + 1]; }
             // The plugin's MjGlobalSettings has no ls_iterations field; mirror the training value directly.
             if (_spec.ls_iterations > 0) MjScene.Instance.Model->opt.ls_iterations = _spec.ls_iterations;
             if (Mathf.Abs(Time.fixedDeltaTime - _spec.sim_dt) > 1e-6f)
@@ -137,17 +146,21 @@ namespace PoKingHill
                 GoalCommand.Compute(q + 3, gx, gy, stop, goalVmax, _cmd);
                 command = new Vector3(_cmd[0], _cmd[1], _cmd[2]);
             }
+            var fat = _amap != null && _frc0 != null ? _amap.Fatigue : null;
+            if (fat != null) { if (!_fatigueFresh) UpdateFatigue(d, fat); _fatigueFresh = false; }
+            int core = policyObsDim - (fat != null && fat.Obs ? Map.N : 0);      // fatigue inputs come last (env.py _observe)
             ObsBuilder.Fill(Obs, d, Map, _cmd, LastAction, _phase);
-            if (policyObsDim > ObsBuilder.ObsDim && opponent != null && opponent.Map != null)
+            if (core > ObsBuilder.ObsDim && opponent != null && opponent.Map != null)
             {
                 ObsBuilder.FillCombat(Obs, ObsBuilder.ObsDim, d, Map, opponent.Map);
                 // free-for-all brains (121 inputs): the same 9 values again for the second-nearest fighter still in,
                 // or for the opponent again when it is the only one left (training/koth/env.py _refresh_nbr)
-                if (policyObsDim >= ObsBuilder.ObsDim + 18)
+                if (core >= ObsBuilder.ObsDim + 18)
                     ObsBuilder.FillCombat(Obs, ObsBuilder.ObsDim + 9, d, Map, opponent2 != null && opponent2.Map != null ? opponent2.Map : opponent.Map);
             }
+            if (core < policyObsDim) System.Array.Copy(_fatigue, 0, Obs, core, Map.N);
             _sw.Restart();
-            _input.Upload(Obs);
+            _input.Upload(_obsRing != null ? DelayedObs() : Obs);
             _worker.Schedule(_input);
             // CPU backend: wait for the jobs, then read the worker's own output in place (no clone, no managed array).
             var output = _worker.PeekOutput() as Tensor<float>;
@@ -161,6 +174,8 @@ namespace PoKingHill
                 double dist = System.Math.Sqrt((op[0] - me[0]) * (op[0] - me[0]) + (op[1] - me[1]) * (op[1] - me[1]));
                 blend = Mathf.Clamp01((ShoveFar - (float)dist) / (ShoveFar - ShoveNear));
             }
+            float slew = _amap != null ? _amap.Slew : 0f;
+            double breath = _amap != null && _amap.Breath > 0f ? _amap.Breath * System.Math.Sin(2.0 * System.Math.PI * _amap.BreathHz * _ticks * _spec.ctrl_dt) : 0.0;
             for (int i = 0; i < Map.N; i++)
             {
                 RawAction[i] = act[i];
@@ -168,13 +183,58 @@ namespace PoKingHill
                 LastAction[i] = a;
                 float k = Mathf.Max(shoveStyle ? ShoveSmooth : 0f, _amap != null ? _amap.Smooth : 0f);     // action low-pass (action_map.py)
                 float f = k > 0f ? k * _actF[i] + (1f - k) * a : a; _actF[i] = f;
-                double rest = Map.DefaultPose[i] + blend * _shoveOffset[i];
+                if (slew > 0f) f = _actS[i] + Mathf.Clamp(f - _actS[i], -slew, slew);      // rate limit (action_map.py slew)
+                _actS[i] = f;
+                double rest = Map.DefaultPose[i] + blend * _shoveOffset[i] + (i == _waistPitch ? breath : 0.0);
                 Ctrl[i] = _amap == null ? System.Math.Clamp(rest + _spec.action_scale * f, Map.CtrlMin[i], Map.CtrlMax[i])
                     : _amap.Target(i, rest, f, _spec.action_scale, d->qpos[Map.QposAdr[i]], d->qvel[Map.DofAdr[i]], Map.Kp[i], Map.Kv[i], Map.Tau[i], Map.CtrlMin[i], Map.CtrlMax[i]);
             }
-            _phase += 2f * Mathf.PI * ObsBuilder.GaitFreqHz * _spec.ctrl_dt;
+            if (fat != null) ApplyFatigue(fat);
+            _phase += 2f * Mathf.PI * (_amap != null && _amap.GaitHz > 0f ? _amap.GaitHz : ObsBuilder.GaitFreqHz) * _spec.ctrl_dt;
             if (_phase > 2f * Mathf.PI) _phase -= 2f * Mathf.PI;
+            _ticks++;
             OnPolicyStep?.Invoke(this);
+        }
+
+        // action_map.py delay: Obs goes into a ring of delay + 1 inputs and the brain gets the oldest; after a reset (or a
+        // get-up) the ring is filled with the first input, as env.py _delay_obs does.
+        float[] DelayedObs()
+        {
+            int D = policyObsDim, L = _amap.Delay + 1;
+            if (_ringFill) { for (int k = 0; k < L; k++) System.Array.Copy(Obs, 0, _obsRing, k * D, D); _ringHead = 0; _ringFill = false; }
+            else { _ringHead = (_ringHead + 1) % L; System.Array.Copy(Obs, 0, _obsRing, _ringHead * D, D); }
+            System.Array.Copy(_obsRing, ((_ringHead - _amap.Delay) % L + L) % L * D, _obsDelayed, 0, D);
+            return _obsDelayed;
+        }
+
+        // env.py _update_fatigue: F follows the normalized power |tau qd| / (tau_max omega_ref) of the last physics step.
+        void UpdateFatigue(MujocoLib.mjData_* d, ActionMap.FatigueSpec fz)
+        {
+            for (int i = 0; i < Map.N; i++)
+            {
+                double p = System.Math.Abs(d->actuator_force[Map.ActId[i]] * d->qvel[Map.DofAdr[i]]) / (_frc0[2 * i + 1] * fz.OmegaRef);
+                _fatigue[i] = Mathf.Clamp01(_fatigue[i] + _spec.ctrl_dt * (fz.Gain * (float)p - _fatigue[i]) / fz.TauS);
+            }
+        }
+
+        // env.py _apply_fatigue_limits: each actuator's force range scaled by 1 - (1 - min_scale) F until the next policy step.
+        void ApplyFatigue(ActionMap.FatigueSpec fz)
+        {
+            var m = MjScene.Instance.Model;
+            for (int i = 0; i < Map.N; i++)
+            {
+                double s = 1.0 - (1.0 - fz.MinScale) * _fatigue[i]; int a = Map.ActId[i];
+                m->actuator_forcerange[2 * a] = _frc0[2 * i] * s; m->actuator_forcerange[2 * a + 1] = _frc0[2 * i + 1] * s;
+            }
+            _fatigueApplied = true;
+        }
+
+        void RestoreForceRange()
+        {
+            if (!_fatigueApplied || _frc0 == null || !MjScene.InstanceExists || MjScene.Instance.Model == null) return;
+            var m = MjScene.Instance.Model;
+            for (int i = 0; i < Map.N; i++) { int a = Map.ActId[i]; m->actuator_forcerange[2 * a] = _frc0[2 * i]; m->actuator_forcerange[2 * a + 1] = _frc0[2 * i + 1]; }
+            _fatigueApplied = false;
         }
 
         // The get-up brain: the 103 locomotion inputs with a zero command, ctrl = default + scale * action (no style
@@ -190,11 +250,12 @@ namespace PoKingHill
             var act = output.AsReadOnlySpan(); LastInferenceMs = _sw.Elapsed.TotalMilliseconds;
             for (int i = 0; i < Map.N; i++)
             {
-                RawAction[i] = act[i]; float a = Mathf.Clamp(act[i], -1f, 1f); LastAction[i] = a; _actF[i] = a;
+                RawAction[i] = act[i]; float a = Mathf.Clamp(act[i], -1f, 1f); LastAction[i] = a; _actF[i] = a; _actS[i] = a;
                 Ctrl[i] = System.Math.Clamp(Map.DefaultPose[i] + _spec.action_scale * a, Map.CtrlMin[i], Map.CtrlMax[i]);
             }
             _phase += 2f * Mathf.PI * ObsBuilder.GaitFreqHz * _spec.ctrl_dt;
             if (_phase > 2f * Mathf.PI) _phase -= 2f * Mathf.PI;
+            _ringFill = true;          // the fight brain's delayed inputs restart from its first observation after the get-up
             OnPolicyStep?.Invoke(this);
         }
 
@@ -232,8 +293,10 @@ namespace PoKingHill
         // Policy clock, last action and shove filter back to the start of an episode (no allocation: ResetPose runs every step for parked bodies).
         void ResetClock()
         {
-            _substep = 0; _phase = 0;
+            _substep = 0; _phase = 0; _ticks = 0; _ringFill = true; _fatigueFresh = true;
             System.Array.Clear(LastAction, 0, LastAction.Length); System.Array.Clear(_actF, 0, _actF.Length);
+            System.Array.Clear(_actS, 0, _actS.Length); System.Array.Clear(_fatigue, 0, _fatigue.Length);
+            RestoreForceRange();
         }
 
         void LoadBrain()
@@ -242,6 +305,8 @@ namespace PoKingHill
             if (policy == null) return;
             _worker = new Worker(ModelLoader.Load(policy), BackendType.CPU);
             Obs = new float[policyObsDim]; _input = new Tensor<float>(new TensorShape(1, policyObsDim));
+            _obsRing = _amap != null && _amap.Delay > 0 ? new float[(_amap.Delay + 1) * policyObsDim] : null;
+            _obsDelayed = _obsRing != null ? new float[policyObsDim] : null;
         }
 
         /// <summary>Swap the brain at runtime (menu fighter selection). policy = null gives the passive stance.</summary>

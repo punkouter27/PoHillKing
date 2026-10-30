@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>UI 261029: colour-safe seats, badge follow and throb, tap-target audit</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#14161a;color:#e8e8ea;margin:24px;max-width:1200px}
+h1{font-size:22px}h2{font-size:17px;margin-top:28px}p,li{line-height:1.5;color:#c9cbd0}
+.row{display:flex;gap:16px;flex-wrap:wrap}figure{margin:0;flex:1;min-width:260px}
+img{width:100%;border:1px solid #333;border-radius:8px}figcaption{font-size:13px;color:#9aa;margin-top:6px}
+.note{background:#1e222a;border-left:3px solid #ffc440;padding:8px 12px;border-radius:4px}
+code{color:#ffc440}
+</style></head><body>
+<h1>UI changes, 2026-10-29</h1>
+<p>Captured in the editor's Game view at 1080x2340 (19.5:9). "Before" is the HUD before these edits. The 3D picture
+differs from shot to shot because each round starts from a new layout and time of day.</p>
+
+<h2>1. Settings → Picture: a Colour-safe switch (option 30)</h2>
+<div class="row">
+<figure><img src="before/settings_picture.png"><figcaption>Before: Quality and Cinematic only.</figcaption></figure>
+<figure><img src="after/settings_picture.png"><figcaption>After: a <b>Colour-safe</b> chip next to Cinematic (off by default). On,
+<code>MatchDirector.SeatColors</code> switches to the Okabe-Ito palette, which people with any kind of colour vision can tell apart. Badges, feed dots, the results table and the fighters' rim all use it.</figcaption></figure>
+</div>
+
+<h2>2. Fight badges: colour-safe seats, tap to follow, throb at the edge (options 24, 27, 30)</h2>
+<div class="row">
+<figure><img src="before/fight.png"><figcaption>Before: red / blue / yellow seats; a badge is
+inert.</figcaption></figure>
+<figure><img src="after/fight_colorsafe.png"><figcaption>After, Colour-safe on: vermillion / sky blue / yellow.
+A tap on a badge sets <code>BroadcastCamera.FollowSeat</code>: the camera orbits that fighter until the fighter is out, the round ends or
+the badge is tapped again, and the badge gets an accent border (<code>.badge.followed</code>). A badge in the EDGE state
+now throbs (scale 1.06 at 3 Hz, <code>.badge.edge.pulse</code>).</figcaption></figure>
+<figure><img src="after/fight_follow.png"><figcaption>After: a follow run (seat 1). The round ended in 3.7 s, before the
+capture, so this frame shows the winner shot and results sheet, which take over from the follow shot. The follow path
+is exercised by <code>MatchFlowTests.MenuFightResultMenu</code>.</figcaption></figure>
+</div>
+
+<h2>3. Layout audit</h2>
+<ul>
+<li><code>HudView.LayoutProblems()</code> now flags any visible button or badge smaller than 48 screen pixels either way
+(<code>HudView.MinTapPx</code>). At 1080x2340 today, segment buttons are 237x78 px, tabs 315x92 and icon buttons 102x102.</li>
+<li><code>HudLayoutTests</code> lays every screen out on 5 phones (1080x1920, 1080x2340, 1170x2532, 1440x3200,
+1080x2520), up from 3.</li>
+</ul>
+<p class="note">48 px is a floor against regressions, not the Material 48 dp guideline. On a 1080-wide phone, 78 px is
+about 30 dp, so the segment buttons are still below that guideline.</p>
+</body></html>

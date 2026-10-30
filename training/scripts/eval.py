@@ -14,7 +14,11 @@ r5ffa  four robots, learner a_ vs three frozen opponents (--opponent). Pass: the
 kim_r0b / kim_r1b are judged as r0 / r1 (KOTH_ROBOT=kim), with kicks scaled to the same impulse as on the G1
 (--push-vel defaults to 2 m/s x m_G1 / m_Kim).
 --leg-contact-rule unity: own foot-shin contact does not end a round (Unity / duel_stats.py); "train" keeps the rung's
-training rule (on for every rung up to r4*, off for the staged rungs).
+training rule (on for the G1's rungs up to r4*, off for the staged rungs and for every human body: env.default_cfg).
+The verdict line names the rule whenever a round could not end on leg contact.
+After the seeds a SUMMARY line gives each headline share's mean over seeds with a 95 % interval (Student t over the
+seeds, and Wilson over every round pooled for the decided share of duels): more seeds of fewer worlds narrow the first,
+more rounds in total narrow the second.
 Prints one JSON line per seed plus a verdict; exit code 0 on pass, 1 on fail.
 Duel and free-for-all rows also carry "flags" (reported, never part of the pass): stall (more than 30 % of rounds reach
 the bell: trump_bull1/2, xg2), contact_avoidance (in touch, < 0.7 m apart, for under 15 % of the open round time: the
@@ -193,9 +197,34 @@ def eval_cfg(rung, shove=False, rim_brake=None, slope=False, opponent=None, leg_
         cfg["push"] = dict(interval_s=[5.0, 5.0], vel=[v, v]); cfg["projectile"].update(speed=[6.0, 6.0])
     else:
         cfg["push"] = dict(interval_s=[1e6, 1e6], vel=[0.0, 0.0]); cfg["projectile"]["enabled"] = False
-    if leg_contact_rule == "unity": cfg["terminate_on_leg_contact"] = False
+    if leg_contact_rule == "unity": cfg["terminate_on_leg_contact"] = False    # human bodies are off already (env.default_cfg)
     if not noise: cfg["noise"] = {k: 0.0 for k in cfg["noise"]}
     return cfg
+
+
+T95 = {1: 12.71, 2: 4.30, 3: 3.18, 4: 2.78, 5: 2.57, 6: 2.45, 7: 2.36, 8: 2.31, 9: 2.26, 10: 2.23, 15: 2.13, 20: 2.09, 30: 2.04}
+SHARES = ("attacker_ejects_defender", "attacker_lost", "undecided", "learner_last_one_in", "learner_out", "impact_survival",
+          "envs_never_fell", "plateau_hold", "slope_return", "met_within_6s", "contact_share", "jitter_rad")
+
+
+def summary(rows) -> dict:
+    """Mean and 95 % half-width over seeds of each headline value, plus a Wilson interval of the pooled decided-duel win
+    share (wins / decided rounds over every seed)."""
+    n = len(rows); out = {}
+    t = T95[min((k for k in T95 if k >= n - 1), default=30)] if n > 1 else float("nan")
+    for k in SHARES:
+        v = [r[k] for r in rows if k in r]
+        if len(v) != n or not n: continue
+        m = sum(v) / n; sd = (sum((x - m) ** 2 for x in v) / (n - 1)) ** 0.5 if n > 1 else float("nan")
+        out[k] = dict(mean=round(m, 4), ci95=round(t * sd / n ** 0.5, 4) if n > 1 else None)
+    if all("duels" in r for r in rows) and n:
+        w = sum(r["attacker_ejects_defender"] * r["duels"] for r in rows); l = sum(r["attacker_lost"] * r["duels"] for r in rows)
+        dec = w + l
+        if dec > 0:
+            p = w / dec; z = 1.96; den = 1 + z * z / dec; c = (p + z * z / (2 * dec)) / den
+            h = z * ((p * (1 - p) / dec + z * z / (4 * dec * dec)) ** 0.5) / den
+            out["decided_win_share"] = dict(mean=round(p, 4), wilson95=[round(c - h, 4), round(c + h, 4)], decided_rounds=round(dec))
+    return out
 
 
 def main():
@@ -228,8 +257,9 @@ def main():
         else: row = (eval_flat if base in ("r0", "r1") else eval_arena)(env, policy, base, steps)
         row = dict(seed=seed, **row); rows.append(row); print(json.dumps(row), flush=True)
     ok = all(r["pass"] for r in rows)
+    print("SUMMARY", json.dumps(summary(rows)), flush=True)      # not a "{" line: queue scripts read only the seed rows
     print("VERDICT", a.rung, "PASS" if ok else "FAIL", f"({sum(r['pass'] for r in rows)}/{len(rows)} seeds)",
-          *([] if a.leg_contact_rule == "train" else ["[leg-contact rule: unity]"]))
+          *([] if cfg["terminate_on_leg_contact"] else ["[leg-contact rule: unity]"]))
     sys.exit(0 if ok else 1)
 
 
