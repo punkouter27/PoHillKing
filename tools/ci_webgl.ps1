@@ -12,6 +12,11 @@ $version = (Select-String -Path "$root/ProjectSettings/ProjectVersion.txt" -Patt
 $unity = "C:\Program Files\Unity\Hub\Editor\$version\Editor\Unity.exe"
 if (-not (Test-Path $unity)) { throw "Unity $version is not installed on this runner ($unity)." }
 
+# Keep the runner PC awake for the whole job: when it slept mid-build the runner lost GitHub and the run failed
+# ("lost communication with the server"). Holds while this thread runs; Windows drops it when the process exits.
+Add-Type -Namespace Po -Name Power -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint esFlags);'
+[void][Po.Power]::SetThreadExecutionState([uint32]'0x80000001')   # ES_CONTINUOUS | ES_SYSTEM_REQUIRED
+
 # One Unity build at a time on this PC, across every game: two at once starve each other of CPU and RAM.
 $lock = [System.Threading.Mutex]::new($false, 'Global\PoUnityBuild')
 "Waiting for the Unity build lock..."
