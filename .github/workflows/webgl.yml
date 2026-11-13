@@ -1,8 +1,12 @@
 name: Build & Deploy WebGL
 
-# Same workflow in every Po Unity game. It runs on the self-hosted `unity` runner (the dev PC), which has Unity,
-# its license and the az login. Push-only on purpose: the repo is public, and a pull_request trigger would let
-# anyone's fork run code on that PC. Never add one.
+# SAME FILE IN EVERY PO UNITY GAME. The reference copy is PoBox's; copy it with
+# PoPunkouterSoftware/scripts/sync-ci.ps1, never edit one game's copy. What differs per game
+# (builder method, Static Web App, resource group) lives in Tools/webgl.json.
+#
+# It runs on the self-hosted `unity` runner (the dev PC), which has Unity, its license and the az
+# login. Push-only on purpose: the repo is public, and a pull_request trigger would let anyone's
+# fork run code on that PC. Never add one.
 on:
   push:
     branches: [master]
@@ -27,4 +31,4 @@ jobs:
           lfs: true
       - name: Build, deploy and check the live page
         shell: pwsh
-        run: ./tools/ci_webgl.ps1 -Method PoKingHill.EditorTools.WebGLBuild.Build
+        run: ./Tools/ci_webgl.ps1
