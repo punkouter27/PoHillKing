@@ -6,6 +6,11 @@
 //   _Wet        0..1 darker, glossier surface after the sea; dries over about 20 s
 //   _Flash      0..1 a short hot glow on a part that was just hit
 // _BaseMap / _BumpMap are optional (the scanned humans have them, the G1 parts are plain colours).
+// Life layer (LifeSigns, the humans' skins only; all zero = off). The meshes have no face, hair or cloth bones, so
+// these are vertex offsets in world space, the same in every pass:
+//   _LifeChest / _LifeBreath   the rib cage swells along the normal with each breath
+//   _LifeJigC / _LifeJigD      three soft regions (belly, hair, chest) lag behind the body on springs
+//   _LifeHead, _LifeMouth, _LifeFace   the jaw drops, the brow moves, the open mouth is shaded dark, the face flushes
 Shader "PoKingHill/Fighter"
 {
     Properties
@@ -34,7 +39,45 @@ Shader "PoKingHill/Fighter"
             float4 _BaseMap_ST;
             half4 _BaseColor, _EmissionColor, _RimColor;
             half _BumpScale, _Metallic, _Smoothness, _RimPower, _Wear, _Wet, _Flash, _Cull;
+            float4x4 _LifeHead;          // world -> head frame (x forward, y up, z left), metres
+            float4 _LifeHeadUp;          // the head frame's up in world space
+            float4 _LifeMouth;           // xyz: the mouth in the head frame; w: head height (chin to crown, m), 0 = no face
+            float4 _LifeFace;            // x: jaw open 0..1, y: brow -1 (furrowed) .. 1 (raised), z: flush 0..1
+            float4 _LifeChest;           // xyz: world centre of the rib cage, w: radius (0 = off)
+            float4 _LifeBreath;          // xyz: the chest's forward in world space, w: swell (m)
+            float4 _LifeJigC[3];         // xyz: world centre, w: radius (0 = off)
+            float4 _LifeJigD[3];         // xyz: world offset at the centre
         CBUFFER_END
+
+        // Position in the head frame relative to the mouth, in head heights.
+        float3 LifeFaceCoord(float3 pWS) { return (mul(_LifeHead, float4(pWS, 1.0)).xyz - _LifeMouth.xyz) / max(_LifeMouth.w, 1e-4); }
+
+        float3 LifeDisplace(float3 p, float3 n)
+        {
+            if (_LifeChest.w > 0.0)
+            {
+                float3 d = p - _LifeChest.xyz; float w = saturate(1.0 - dot(d, d) / (_LifeChest.w * _LifeChest.w));
+                p += n * (_LifeBreath.w * w * w * (0.35 + 0.65 * saturate(dot(n, _LifeBreath.xyz))));
+            }
+            [unroll] for (int i = 0; i < 3; i++)
+                if (_LifeJigC[i].w > 0.0)
+                {
+                    float3 d = p - _LifeJigC[i].xyz; float w = saturate(1.0 - dot(d, d) / (_LifeJigC[i].w * _LifeJigC[i].w));
+                    p += _LifeJigD[i].xyz * (w * w);
+                }
+            if (_LifeMouth.w > 0.0)
+            {
+                float3 m = LifeFaceCoord(p); float front = smoothstep(-0.45, -0.12, m.x);
+                // jaw: everything below the mouth line near the chin drops
+                float3 c = m - float3(-0.06, -0.14, 0.0);
+                float jaw = smoothstep(0.02, -0.05, m.y) * saturate(1.0 - dot(c, c) / (0.30 * 0.30)) * front;
+                // brow: a band above the eyes
+                float3 b = (m - float3(-0.02, 0.37, 0.0)) * float3(1.0, 2.2, 0.75);
+                float brow = saturate(1.0 - dot(b, b) / (0.26 * 0.26)) * front;
+                p += _LifeHeadUp.xyz * (_LifeMouth.w * (-0.085 * _LifeFace.x * jaw + 0.012 * _LifeFace.y * brow));
+            }
+            return p;
+        }
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
         TEXTURE2D(_BumpMap); SAMPLER(sampler_BumpMap);
         ENDHLSL
@@ -63,7 +106,7 @@ Shader "PoKingHill/Fighter"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; float3 normalWS : TEXCOORD1; float4 tangentWS : TEXCOORD2;
-                float2 uv : TEXCOORD3; float3 positionOS : TEXCOORD4; half fog : TEXCOORD5;
+                float2 uv : TEXCOORD3; float3 positionOS : TEXCOORD4; half fog : TEXCOORD5; float3 face : TEXCOORD6;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -71,8 +114,10 @@ Shader "PoKingHill/Fighter"
             {
                 Varyings o = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(v); UNITY_TRANSFER_INSTANCE_ID(v, o);
-                VertexPositionInputs p = GetVertexPositionInputs(v.positionOS.xyz);
                 VertexNormalInputs n = GetVertexNormalInputs(v.normalOS, v.tangentOS);
+                float3 rest = TransformObjectToWorld(v.positionOS.xyz);
+                o.face = _LifeMouth.w > 0.0 ? LifeFaceCoord(rest) : float3(0, 9, 0);     // before the jaw moves: the mouth stays on the lips
+                VertexPositionInputs p = GetVertexPositionInputs(TransformWorldToObject(LifeDisplace(rest, n.normalWS)));
                 o.positionCS = p.positionCS; o.positionWS = p.positionWS; o.normalWS = n.normalWS;
                 o.tangentWS = float4(n.tangentWS, v.tangentOS.w * GetOddNegativeScale());
                 o.uv = TRANSFORM_TEX(v.uv, _BaseMap); o.positionOS = v.positionOS.xyz; o.fog = ComputeFogFactor(p.positionCS.z);
@@ -112,12 +157,24 @@ Shader "PoKingHill/Fighter"
                     n = normalize(TransformTangentToWorld(nTS, half3x3(i.tangentWS.xyz, bitan, n)));
                 #endif
 
-                half scratch = 0, grime = 0;
+                half scratch = 0, grime = 0, mouthDark = 0;
                 if (_Wear > 0.001) Scratches(i.positionOS, _Wear, scratch, grime);
                 albedo = lerp(albedo, albedo * 0.72, grime * 0.6);                    // grime darkens
                 albedo = lerp(albedo, half3(0.62, 0.62, 0.64), scratch * 0.85);        // bare metal shows through
                 metallic = lerp(metallic, 0.9, scratch); smooth = lerp(smooth * (1 - 0.35 * grime), 0.35, scratch);
                 albedo *= lerp(1.0, 0.62, _Wet); smooth = lerp(smooth, 0.93, _Wet);   // wet: darker and glossy
+                if (_LifeMouth.w > 0.0)
+                {
+                    float3 f = i.face; half front = smoothstep(-0.30, -0.08, f.x);
+                    // exertion: the face flushes and shines
+                    half skin = saturate(1.0 - length(f - float3(-0.12, 0.16, 0.0)) / 0.55) * front * _LifeFace.z;
+                    albedo = lerp(albedo, albedo * half3(1.22, 0.80, 0.78), skin * 0.7); smooth = lerp(smooth, max(smooth, 0.7), skin * 0.6);
+                    // the open mouth: a dark ellipse hanging from the lip line (the upper lip stays), growing with the jaw
+                    half tall = 0.004 + 0.030 * _LifeFace.x;
+                    half2 e = half2(f.z / (0.060 + 0.025 * _LifeFace.x), (f.y + 0.004 + tall) / tall);
+                    mouthDark = smoothstep(1.0, 0.6, dot(e, e)) * front * saturate(_LifeFace.x * 4.0);
+                    albedo = lerp(albedo, half3(0.05, 0.015, 0.015), mouthDark * 0.95); smooth = lerp(smooth, 0.1, mouthDark); metallic *= 1.0 - mouthDark;
+                }
 
                 InputData d = (InputData)0;
                 d.positionWS = i.positionWS; d.positionCS = i.positionCS; d.normalWS = n;
@@ -129,9 +186,10 @@ Shader "PoKingHill/Fighter"
 
                 SurfaceData s = (SurfaceData)0;
                 s.albedo = albedo; s.metallic = metallic; s.smoothness = smooth; s.occlusion = 1; s.alpha = 1; s.specular = 0;
-                half rim = pow(1.0 - saturate(dot(n, d.viewDirectionWS)), _RimPower) * _RimColor.a;
+                half rim = pow(1.0 - saturate(dot(n, d.viewDirectionWS)), _RimPower) * _RimColor.a * (1.0 - mouthDark);
                 s.emission = _EmissionColor.rgb + _RimColor.rgb * rim + half3(1.0, 0.62, 0.28) * (_Flash * _Flash * 4.0);
                 half4 c = UniversalFragmentPBR(d, s);
+                c.rgb *= 1.0 - 0.8 * mouthDark;                                     // no light gets in there
                 c.rgb = MixFog(c.rgb, i.fog);
                 return half4(c.rgb, 1);
             }
@@ -154,7 +212,7 @@ Shader "PoKingHill/Fighter"
             float4 vert(Attributes v) : SV_POSITION
             {
                 UNITY_SETUP_INSTANCE_ID(v);
-                float3 p = TransformObjectToWorld(v.positionOS.xyz), n = TransformObjectToWorldNormal(v.normalOS);
+                float3 n = TransformObjectToWorldNormal(v.normalOS), p = LifeDisplace(TransformObjectToWorld(v.positionOS.xyz), n);
                 #if defined(_CASTING_PUNCTUAL_LIGHT_SHADOW)
                     float3 l = normalize(_LightPosition - p);
                 #else
@@ -181,8 +239,12 @@ Shader "PoKingHill/Fighter"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
-            struct Attributes { float4 positionOS : POSITION; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            float4 vert(Attributes v) : SV_POSITION { UNITY_SETUP_INSTANCE_ID(v); return TransformObjectToHClip(v.positionOS.xyz); }
+            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            float4 vert(Attributes v) : SV_POSITION
+            {
+                UNITY_SETUP_INSTANCE_ID(v);
+                return TransformWorldToHClip(LifeDisplace(TransformObjectToWorld(v.positionOS.xyz), TransformObjectToWorldNormal(v.normalOS)));
+            }
             half frag() : SV_Target { return 0; }
             ENDHLSL
         }
@@ -198,7 +260,7 @@ Shader "PoKingHill/Fighter"
             #pragma multi_compile_instancing
             struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS : SV_POSITION; float3 normalWS : TEXCOORD0; };
-            Varyings vert(Attributes v) { UNITY_SETUP_INSTANCE_ID(v); Varyings o; o.positionCS = TransformObjectToHClip(v.positionOS.xyz); o.normalWS = TransformObjectToWorldNormal(v.normalOS); return o; }
+            Varyings vert(Attributes v) { UNITY_SETUP_INSTANCE_ID(v); Varyings o; o.normalWS = TransformObjectToWorldNormal(v.normalOS); o.positionCS = TransformWorldToHClip(LifeDisplace(TransformObjectToWorld(v.positionOS.xyz), o.normalWS)); return o; }
             half4 frag(Varyings i) : SV_Target { return half4(NormalizeNormalPerPixel(i.normalWS), 0); }
             ENDHLSL
         }

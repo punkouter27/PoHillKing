@@ -844,3 +844,33 @@ when every share >= 0.28. Progress: `runs/overnight/progress_balance.txt`; repor
 - Three-way result, three seeds x 128 worlds: Trump share 0.25783 -> 0.30470 (+4.69 percentage points), jitter 0.08823 -> 0.08513 (-3.51%). Candidate share's Student-t 95% half-width is 0.0846: this small evaluation is not strong statistical evidence of improvement. Undecided share rose to 0.1484.
 - Used the remaining window for preliminary duel checks (one seed x 64 worlds each, 25 s bell, identical frozen opponents). Against Kim: shipped win/loss/tie 0.0938/0.8594/0.0469; candidate 0/0.1094/0.8906, flagged `stall`. Against Grandpa: shipped 0.0312/0.9531/0.0156; candidate 0.0938/0.7656/0.1406. These are training-curriculum diagnostics, not the game's get-up-enabled Unity gate.
 - **Decision: do not promote.** The higher three-way score masks a severe Kim-duel stalling regression. All shipped fighter/get-up policies and sidecars remain byte-identical; no candidate ONNX exported, no Unity roster modified. Final report includes three metric charts, baseline/candidate deltas, milestone summary, raw duel results and caveats at `DOCS/20261113/training-90min/index.html`. Retain all fresh checkpoints (24-hour protection); the next experiment should target engagement against Kim while preserving the Grandpa improvement, rather than doing another full character retrain.
+
+## 2026-11-14 - motion prior added to the trainer (opt-in), no brain retrained
+
+- New: `koth/mocap.py` (BVH parser, per-body retargeting, discriminator features), `koth/amp.py` (`MotionPrior`: style
+  reward on the learner rows after the env's clip, LSGAN discriminator with gradient penalty trained after each PPO
+  update), `scripts/fetch_mocap.py` (17 CMU clips -> `assets/mocap/cmu_style_<body>.npz`), `scripts/test_amp.py`,
+  `train.py --amp [dataset] --amp-weight --amp-updates`. Without `--amp` the trainer takes the old path.
+- **Policy scope:** none changed. Observation 103/112, 29 actions, action map, 2 ms / 20 ms timing, physics: untouched.
+  A brain trained with `--amp` is a candidate for its body's fighter policy and needs the usual graduation and Unity gates.
+- Features per frame (52): pelvis height / standing height, gravity in the pelvis frame, pelvis linear velocity /
+  standing height and angular velocity in the pelvis frame, 21 joint angles and velocities (no wrists, no ankle roll).
+  A discriminator input is two consecutive frames (104). Pairs that cross an episode reset are neither rewarded nor
+  stored (`env.step` returns the post-reset state for done rows).
+- Retargeting: first attempt copied anatomical angles (limb hanging straight down = 0). Kim matched within 3 degrees,
+  Trump's arms were 17 off: his and Grandpa's arms rest 17 to 20 degrees out from their sides while their shoulder
+  axes stay square to the torso, so the angles do not transfer. Now each clip is fitted to each body's own chain
+  (zero-pose segment directions from its MJCF, batched Gauss-Newton inside the joint ranges). Checked against MuJoCo
+  kinematics: <= 2.3 degrees on all three bodies for the walk, <= 5.9 for Grandpa's arms in the boxing clip (joint limits).
+- Data: 200.2 s, 19 764 (Kim) / 19 768 (Trump, Grandpa) pairs with mirroring; about 111 glitch pairs dropped per body
+  (clip 07_12 has a pelvis jump; single-frame spins in 16_15 and 17_08). Boxing (87 s) and the heavyset walk (51 s) are
+  most of it: a walking-only set (`--clips ... --tag walk`) may suit the walker rungs better.
+- Smoke: `KOTH_ROBOT=kim train.py --rung kim_r1b --num-envs 256 --iters 8 --amp --checkpoint-only`: 5 019 steps/s,
+  `amp/style_reward` 0.33, `amp/d_expert` -0.13, `amp/d_policy` -0.64, loss 2.28 and falling. Run folder removed (8
+  iterations). Editor open, 3.0 GiB free RAM: no longer run was started.
+- Also this day (Unity, no policy change): render-only life layer, music, voice, and the post-round behaviour
+  (`PolicyRunner.SetPostRound`). Arms really raised after the bell made the winner fall in 8 of 8 trials (fight brain
+  2/2, joint hold 6/6); with the brain standing on a zero command and the arms raised on the skin only it stood in
+  6 of 6. Details: `DOCS/20261114/lifelike-features.md`.
+- Next for the prior: a walker fine-tune per body warm-started from the shipped walker with a small `--amp-weight`,
+  judged on tracking error, jitter and falls against the warm brain; only then the fighter rungs.

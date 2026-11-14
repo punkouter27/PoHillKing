@@ -54,13 +54,17 @@ namespace PoKingHill
         }
 
         /// <summary>Hold the water at the bottom (menu).</summary>
-        public void Park() { _parked = true; Level = -startDepth; }
-        bool _parked;
+        public void Park() { _parked = true; _held = false; Level = -startDepth; }
+        bool _parked, _held;
+
+        /// <summary>Stop the water where it is (the bell: the round clock is over; MatchDirector, the game only). Restart or
+        /// Park lets it go again. The buoyancy keeps acting at the held level.</summary>
+        public void Hold() { _held = true; }
 
         /// <summary>Start a new flood: water back at the bottom, new random arrival time.</summary>
         public void Restart()
         {
-            _parked = false; Duration = Random.Range(minSeconds, maxSeconds) * pace;
+            _parked = false; _held = false; Duration = Random.Range(minSeconds, maxSeconds) * pace;
             _t0 = MjScene.Instance.Data != null ? MjScene.Instance.Data->time : 0;
             Level = -startDepth;
         }
@@ -69,7 +73,7 @@ namespace PoKingHill
         {
             if (_bodies == null) return;
             var m = MjScene.Instance.Model; var d = MjScene.Instance.Data;
-            Level = _parked ? -startDepth : Mathf.Min(0.05f, -startDepth + startDepth * (float)((d->time - _t0) / Duration));
+            if (!_held) Level = _parked ? -startDepth : Mathf.Min(0.05f, -startDepth + startDepth * (float)((d->time - _t0) / Duration));
             double g = -m->opt.gravity[2];
             foreach (int b in _bodies)
             {

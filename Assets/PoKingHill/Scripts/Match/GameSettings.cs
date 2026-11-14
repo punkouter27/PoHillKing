@@ -42,6 +42,11 @@ namespace PoKingHill
         public static float MasterVolume { get => F("volume", 0.6f); set => Set("volume", Mathf.Clamp01(value)); }
         public static float SfxVolume { get => F("sfxVolume", 1f); set => Set("sfxVolume", Mathf.Clamp01(value)); }
         public static float AmbienceVolume { get => F("ambVolume", 0.7f); set => Set("ambVolume", Mathf.Clamp01(value)); }
+        /// <summary>The synthesized score (MusicBed) that builds through a round.</summary>
+        public static float MusicVolume { get => F("musVolume", 0.7f); set => Set("musVolume", Mathf.Clamp01(value)); }
+        /// <summary>The commentator's lines are spoken by the device's own speech synthesis (VoiceCaster: the browser on the
+        /// web, the system voice on Android; nothing is sent anywhere). Turns the caption line on with it.</summary>
+        public static bool Voice { get => B("voice", false); set => Set("voice", value); }
 
         // Advanced: extra rules, developer tools
         /// <summary>Who free-for-all brains go for (no effect with two fighters).</summary>
@@ -60,7 +65,7 @@ namespace PoKingHill
         public static bool Commentary { get => DevTools && B("commentary", false); set => Set("commentary", value); }
 
         static readonly string[] Keys = { "rounds", "seaPace", "intro", "replays", "targeting", "quality", "cinematic", "colorSafe",
-                                          "volume", "sfxVolume", "ambVolume", "devTools", "telemetryHud", "overlay", "intent", "winOdds", "commentary",
+                                          "volume", "sfxVolume", "ambVolume", "musVolume", "voice", "devTools", "telemetryHud", "overlay", "intent", "winOdds", "commentary",
                                           // settings that were cut (2026-10-21): cleared by a reset too
                                           "camera", "effects", "slowmo", "cutaways", "hazards", "stamina", "tactician", "getup" };
         /// <summary>Back to the defaults: deletes only this game's keys, never other PlayerPrefs.</summary>

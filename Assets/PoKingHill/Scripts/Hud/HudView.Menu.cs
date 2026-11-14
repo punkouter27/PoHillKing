@@ -108,6 +108,10 @@ namespace PoKingHill
             Labeled("Master", levels, Nearest(vols, GameSettings.MasterVolume), i => GameSettings.MasterVolume = vols[i]);
             Labeled("Hits", levels, Nearest(mix, GameSettings.SfxVolume), i => GameSettings.SfxVolume = mix[i]);
             Labeled("Ambience", levels, Nearest(mix, GameSettings.AmbienceVolume), i => GameSettings.AmbienceVolume = mix[i]);
+            Labeled("Music", levels, Nearest(mix, GameSettings.MusicVolume), i => GameSettings.MusicVolume = mix[i]);
+            // the commentator, spoken by the device's own voice where it has one (VoiceCaster.Available)
+            var grid = El("grid", _sheetBody);
+            Chip(grid, "Commentator voice", GameSettings.Voice, v => GameSettings.Voice = v, VoiceCaster.Available);
         }
 
         void BuildAdvancedSettings()

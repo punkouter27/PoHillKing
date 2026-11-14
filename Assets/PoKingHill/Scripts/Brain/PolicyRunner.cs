@@ -43,6 +43,22 @@ namespace PoKingHill
             ["bull"] = new[] { ("waist_pitch", 0.30f), ("shoulder_pitch", 0.35f), ("elbow", 0.60f), ("knee", 0.40f), ("hip_pitch", -0.30f), ("ankle_pitch", -0.10f) },
         };
 
+        /// <summary>What a fighter does once the round is over (MatchDirector.EndRound; never in a statistics gate, never
+        /// in training). Victory: the fight brain walks the winner to the middle of the summit and stands there on a zero
+        /// command, which it was trained to do. Defeat: it stands where it is. The joint targets are the brain's own
+        /// throughout: the raised arms and the hung head are drawn on the skin (SkinFollower.ArmsUp, LifeSigns), because
+        /// neither the brain nor a plain joint hold kept a fighter on its feet with its arms really up (8 falls in 8
+        /// trials, DOCS/20261114/lifelike-features.md).</summary>
+        public enum PostRound { None, Victory, Defeat }
+        // the walk ends VictoryRadius from the centre or after VictoryWait s; the celebration then comes in over PostRoundEase s
+        public const float PostRoundEase = 1.2f, VictoryRadius = 0.7f, VictoryVmax = 0.6f, VictoryWait = 2.5f;
+        public PostRound After => _after;
+        /// <summary>How far the winner's celebration is in, 0..1 (it starts when the walk to the centre is over).</summary>
+        public float PostRoundBlend => _afterBlend;
+        PostRound _after; float _afterBlend; int _afterTicks;
+
+        public void SetPostRound(PostRound mode) { if (mode != _after) { _after = mode; _afterBlend = 0f; _afterTicks = 0; } }
+
         public JointMap Map { get; private set; }
         public JointMapSpec Spec => _spec;
         /// <summary>The pelvis body's GameObject transform (moved by the MuJoCo plugin): what cameras and effects follow.</summary>
@@ -136,7 +152,16 @@ namespace PoKingHill
                 return;
             }
             _cmd[0] = command.x; _cmd[1] = command.y; _cmd[2] = command.z;
-            if (goal != GoalMode.None)
+            if (_after == PostRound.Victory)
+            {
+                double* q = d->qpos + Map.RootQposAdr; double r = System.Math.Sqrt(q[0] * q[0] + q[1] * q[1]);
+                GoalCommand.Compute(q + 3, -q[0], -q[1], 0.35f, Mathf.Min(goalVmax, VictoryVmax), _cmd);
+                if (r < VictoryRadius || _afterBlend > 0f || ++_afterTicks * _spec.ctrl_dt > VictoryWait)
+                { _cmd[0] = _cmd[1] = _cmd[2] = 0f; _afterBlend = Mathf.Min(1f, _afterBlend + _spec.ctrl_dt / PostRoundEase); }
+                command = new Vector3(_cmd[0], _cmd[1], _cmd[2]);
+            }
+            else if (_after == PostRound.Defeat) { _cmd[0] = _cmd[1] = _cmd[2] = 0f; command = Vector3.zero; }
+            else if (goal != GoalMode.None)
             {
                 double* q = d->qpos + Map.RootQposAdr; double gx = -q[0], gy = -q[1]; float stop = goalStopDist;
                 if (goal == GoalMode.Opponent && opponent != null && opponent.Map != null)
@@ -168,7 +193,7 @@ namespace PoKingHill
             var act = output.AsReadOnlySpan();
             LastInferenceMs = _sw.Elapsed.TotalMilliseconds;
             float blend = 0f;
-            if (shoveStyle && opponent != null && opponent.Map != null)
+            if (shoveStyle && _after == PostRound.None && opponent != null && opponent.Map != null)
             {
                 double* me = d->qpos + Map.RootQposAdr; double* op = d->qpos + opponent.Map.RootQposAdr;
                 double dist = System.Math.Sqrt((op[0] - me[0]) * (op[0] - me[0]) + (op[1] - me[1]) * (op[1] - me[1]));
@@ -293,7 +318,7 @@ namespace PoKingHill
         // Policy clock, last action and shove filter back to the start of an episode (no allocation: ResetPose runs every step for parked bodies).
         void ResetClock()
         {
-            _substep = 0; _phase = 0; _ticks = 0; _ringFill = true; _fatigueFresh = true;
+            _substep = 0; _phase = 0; _ticks = 0; _ringFill = true; _fatigueFresh = true; _after = PostRound.None; _afterBlend = 0f;
             System.Array.Clear(LastAction, 0, LastAction.Length); System.Array.Clear(_actF, 0, _actF.Length);
             System.Array.Clear(_actS, 0, _actS.Length); System.Array.Clear(_fatigue, 0, _fatigue.Length);
             RestoreForceRange();

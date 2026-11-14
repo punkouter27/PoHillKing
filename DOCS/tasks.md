@@ -147,5 +147,16 @@ Render and audio only: no physics input changes, every component inert in the st
 - [x] F.10 Self-collision audit (`training/scripts/collision_audit.py`, EditMode `CollisionTests`): G1 and Trump clean; Kim's foot boxes overlap 3.5 mm in her rest pose (fix at her next retrain).
 - Settings split again: Match (rules) and Show (picture, sound). UI report `SCREENSHOTS/gfx-261019/report.html`; audit `SCREENSHOTS/collision-261019/report.html`.
 
+## Phase G — Lifelike fighters, music, voice, motion prior (2026-11-14)
+
+Render and audio only except G.6 (after the round) and G.7 (training, opt-in). No shipped ONNX, sidecar or MJCF changed. Notes and measurements: `DOCS/20261114/lifelike-features.md`; captures `SCREENSHOTS/life-261114/report.html`.
+- [x] G.1 Head look-at (`LifeSigns`, `SkinFollower.Look`): opponent, the rim, the camera, the ground for the beaten. No eyes or lids to move.
+- [x] G.2 Breathing and exertion: chest swell and rate from `Biometrics.strain`, face flush.
+- [x] G.3 Soft parts: belly, hair, chest on springs (`SoftSpring`), as vertex offsets.
+- [x] G.4 Face: jaw, brow and a shaded mouth for pain, fear, strain, panting, triumph; mouth found per body from the mesh.
+- [x] G.5 `MusicBed` in `ImpactSynth` (Settings → Sound → Music) and `VoiceCaster` (Commentator voice; web and Android only, untested on a device).
+- [x] G.6 After the round: the winner walks to the centre and stands, arms up on the skin; the others stand. Upright 6/6 in controlled trials.
+- [~] G.7 Motion prior: `--amp` in `train.py`, per-body CMU datasets, checks pass, 8-iteration smoke run. No fighter retrained with it yet: that is the walker and fighter ladder per body plus the Unity gates.
+
 ## Deferred (out of scope this build)
-Unitree H1; custom skinned rigs; external map meshes; R6 victory dance (DeepMimic tracking); AMP motion prior; Android performance target.
+Unitree H1; custom skinned rigs; external map meshes; R6 victory dance (DeepMimic tracking); retraining the fighters with the motion prior (G.7); Android performance target.

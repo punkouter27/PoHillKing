@@ -19,7 +19,10 @@ normalizer), so it starts out with the same joint targets wherever the old one w
 --self-play N with an --opponent entry "path.pt:live" (e.g. :slot1:live): that opponent is the learner itself, refreshed
 every N iterations, so a brain also practises breaking a deadlock against its own current style (mirror duels).
 --curriculum ladder[:bar:demote] (koth/curriculum.py) draws the --opponent list (weakest first) by stages that advance
-on the learner's win share instead of on the iteration count."""
+on the learner's win share instead of on the iteration count.
+--amp [dataset.npz] adds a motion prior (koth/amp.py): a style reward for moving like the human motion capture in
+assets/mocap/cmu_style_<robot>.npz (scripts/fetch_mocap.py), weighted by --amp-weight per second. Observations,
+actions and the action path are unchanged, so the brain exports and gates as any other. Off unless given."""
 import argparse, datetime, json, math, os, socket, statistics, subprocess, sys, time
 sys.stdout.reconfigure(line_buffering=True)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -209,11 +212,17 @@ def main():
     ap.add_argument("--max-minutes", type=float, help="stop after this wall-clock budget, saving a resumable checkpoint after the current update")
     ap.add_argument("--save-interval", type=int, default=100, help="checkpoint interval in PPO updates")
     ap.add_argument("--checkpoint-only", action="store_true", help="save training checkpoints without exporting any ONNX or Unity assets")
+    ap.add_argument("--amp", nargs="?", const="auto", default=None, help="motion prior: a dataset from scripts/fetch_mocap.py (no value: assets/mocap/cmu_style_<robot>.npz)")
+    ap.add_argument("--amp-weight", type=float, default=1.0, help="style reward per second at a perfect score (the env's other terms are per second too)")
+    ap.add_argument("--amp-updates", type=int, default=2, help="discriminator minibatches per PPO update")
     a = ap.parse_args()
     if a.max_minutes is not None and (not math.isfinite(a.max_minutes) or a.max_minutes <= 0):
         ap.error("--max-minutes must be finite and positive")
     if a.save_interval <= 0: ap.error("--save-interval must be positive")
     if a.checkpoint_only and a.graduate_reward is not None: ap.error("--checkpoint-only cannot export a graduated policy")
+    if a.amp == "auto": a.amp = os.path.join(ROOT, "assets", "mocap", f"cmu_style_{ROBOT}.npz")
+    if a.amp and not os.path.exists(a.amp): ap.error(f"--amp: no dataset at {a.amp} (run scripts/fetch_mocap.py)")
+    if a.amp and (not math.isfinite(a.amp_weight) or a.amp_weight < 0 or a.amp_updates < 1): ap.error("--amp-weight must be >= 0 and --amp-updates >= 1")
     t_start = time.time()
     clock_start = time.monotonic()
     cfg = default_cfg(a.rung)
@@ -282,6 +291,14 @@ def main():
     if a.critic_warmup > 0:
         critic_warmup(runner, a.critic_warmup)
     env.curriculum_offset_iters = runner.current_learning_iteration      # disturbance curriculum continues on --resume
+    prior = None
+    if a.amp:
+        from koth.amp import MotionPrior
+        prior = MotionPrior(env, a.amp, weight=a.amp_weight, updates=a.amp_updates, seed=a.seed).attach(runner)
+        old = os.path.join(os.path.dirname(a.resume or a.warm or ""), "amp_disc.pt")
+        print(f"motion prior: {a.amp} ({len(prior.expert)} pairs), weight {a.amp_weight}/s, discriminator "
+              + ("continued from " + old if (a.resume or a.warm) and prior.load(old) else "from scratch"))
+        manifest["amp"] = dict(dataset=os.path.relpath(a.amp, ROOT), pairs=len(prior.expert), weight=a.amp_weight, updates=a.amp_updates); write_manifest()
     grad = Graduation(runner, a.graduate_reward)
     cur = None
     if a.curriculum:
@@ -317,6 +334,7 @@ def main():
                     iterations=runner.current_learning_iteration + 1, bars=grad.summary(), unity_export=None,
                     stop_reason="time_budget" if time_limited else "iterations")
     if cur is not None: manifest["curriculum"] = cur.summary()
+    if prior is not None: manifest["amp"].update(prior.stats)
     json.dump(dict(grad.summary(), checkpoint="model_final.pt", curriculum=cur.summary() if cur else None), open(os.path.join(log_dir, "graduation.json"), "w"), indent=1)
     if a.graduate_reward is not None:
         print("graduation:", json.dumps(grad.summary()))

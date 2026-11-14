@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>261114: lifelike fighters, music, voice, victory</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#14161a;color:#e8e8ea;margin:24px;max-width:1200px}
+h1{font-size:22px}h2{font-size:17px;margin-top:28px}p,li{line-height:1.5;color:#c9cbd0}
+.row{display:flex;gap:16px;flex-wrap:wrap}figure{margin:0;flex:1;min-width:220px}
+img{width:100%;border:1px solid #333;border-radius:8px}figcaption{font-size:13px;color:#9aa;margin-top:6px}
+.note{background:#1e222a;border-left:3px solid #ffc440;padding:8px 12px;border-radius:4px}
+code{color:#ffc440}table{border-collapse:collapse}td,th{border:1px solid #333;padding:6px 10px;text-align:left;color:#c9cbd0}
+</style></head><body>
+<h1>Lifelike fighters, music, voice, victory: 2026-11-14</h1>
+<p>Captured in the editor. The HUD shots are the Game view at 1080x2340; the close-ups come from a temporary camera
+in front of each fighter while all 16 stand in the tale of the tape, with the head turn switched off and every face
+held at one expression (<code>LifeSigns.FaceOverride</code>) so the three bodies can be compared. Measurements and
+what was not checked: <code>DOCS/20261114/lifelike-features.md</code>.</p>
+
+<h2>1. Settings → Sound: Music and Commentator voice</h2>
+<div class="row">
+<figure><img src="before/settings_sound.png"><figcaption>Before: Master, Hits, Ambience.</figcaption></figure>
+<figure><img src="after/settings_sound.png"><figcaption>After: a <b>Music</b> row (<code>GameSettings.MusicVolume</code>,
+Mid by default) and a <b>Commentator voice</b> chip (<code>GameSettings.Voice</code>, off by default). The chip is
+locked here because the editor and Windows have no voice (<code>VoiceCaster.Available</code>); it unlocks in the web
+and Android builds. The page fits all five test phones (<code>HudLayoutTests</code>, settings section 2).</figcaption></figure>
+</div>
+
+<h2>2. Faces: rest, fear, strain</h2>
+<p>None of the meshes has a jaw, brows or blendshapes: the jaw drop and brow are vertex offsets and the open mouth is
+shaded in <code>FX/Fighter.shader</code>. Fear = jaw 1, brow raised. Strain = jaw 0.35, brow furrowed, full flush.</p>
+<div class="row">
+<figure><img src="rest_kim.png"><figcaption>Kim, rest.</figcaption></figure>
+<figure><img src="fear_kim.png"><figcaption>Kim, fear.</figcaption></figure>
+<figure><img src="strain_kim.png"><figcaption>Kim, strain. The brow offset is small on purpose: a larger one bent her glasses.</figcaption></figure>
+</div>
+<div class="row">
+<figure><img src="rest_trump.png"><figcaption>Trump, rest.</figcaption></figure>
+<figure><img src="fear_trump.png"><figcaption>Trump, fear.</figcaption></figure>
+<figure><img src="strain_trump.png"><figcaption>Trump, strain. The mouth sits a little high, on the upper lip.</figcaption></figure>
+</div>
+<div class="row">
+<figure><img src="rest_grandpa.png"><figcaption>Grandpa, rest. His scan's head rests turned to his right.</figcaption></figure>
+<figure><img src="fear_grandpa.png"><figcaption>Grandpa, fear. The mouth follows the turned head; it also sits a little high.</figcaption></figure>
+<figure><img src="strain_grandpa.png"><figcaption>Grandpa, strain.</figcaption></figure>
+</div>
+<p class="note">The colour casts on some faces (red, green, purple) are the seat-colour rim that was already there,
+not the flush. No eyes move and nothing blinks: the meshes have no eyelids.</p>
+
+<h2>3. Victory: arms up, on the skin only</h2>
+<div class="row">
+<figure><img src="arms_up.png"><figcaption><code>SkinFollower.ArmsUp</code> forced to 1 on every fighter in the tale of the
+tape, to show the pose on all three bodies at once (in a match only the winner raises its arms, once it stands at
+the centre). The physics arms stay down: with them really raised the winner fell in 8 trials out of 8.</figcaption></figure>
+</div>
+<table>
+<tr><th>Design</th><th>Trials</th><th>Winner still upright</th></tr>
+<tr><td>Fight brain balances with its arms' rest pose raised</td><td>2 real rounds</td><td>0 of 2</td></tr>
+<tr><td>Brain walks to the centre and stops, then a joint hold raises the arms</td><td>6 controlled</td><td>0 of 6</td></tr>
+<tr><td>Brain walks to the centre and stands; arms raised on the skin (shipped)</td><td>6 controlled</td><td>6 of 6</td></tr>
+</table>
+
+<h2>4. Not shown here</h2>
+<ul>
+<li>Head look-at, breathing and the soft-part springs move; stills do not show them. Breathing and the springs were
+checked only with the chest swell exaggerated.</li>
+<li>Music is sound: in a fight with two left its intensity read 0.87, RMS 0.073.</li>
+<li>The voice was not heard: it needs a web or Android build.</li>
+</ul>
+</body></html>

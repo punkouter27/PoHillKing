@@ -22,6 +22,24 @@ namespace PoKingHill
 
         Transform[] _bone, _body; Vector3[] _posOff; Quaternion[] _rotOff;
 
+        // The spine above the waist, for LifeSigns: the bones on the body's centre line that follow torso_link, by height.
+        // The physics model has no neck joint, so the head and neck can turn freely on screen (Look).
+        public Transform HeadBone { get; private set; }
+        public Transform NeckBone { get; private set; }
+        public Transform ChestBone { get; private set; }
+        public Transform TorsoBody { get; private set; }
+        public Transform PelvisBody { get; private set; }
+        /// <summary>Crown of the head above the soles in the rest pose, estimated from the skeleton (m).</summary>
+        public float Stature { get; private set; } = 1.7f;
+        public bool Ready => _bone != null;
+        /// <summary>World-space turn of the head from where the torso carries it (LifeSigns): 40 % at the neck, the rest at the head.</summary>
+        [NonSerialized] public Quaternion Look = Quaternion.identity;
+        /// <summary>The winner's arms, 0 (where the physics has them) .. 1 (raised in a V). On screen only: the round is
+        /// over, the fight brain still balances the body with its arms down (PolicyRunner.PostRound).</summary>
+        [NonSerialized] public float ArmsUp;
+        public const float ArmsUpPitch = 160f, ArmsUpSpread = 24f;       // degrees: forward and up from hanging, then out
+        bool _neckTurns; Transform _armL, _armR;
+
         static Vector3 Mj(float[] p) => new(p[0], p[2], p[1]);     // MuJoCo x, y, z -> Unity x, z, y
 
         void Start()
@@ -54,6 +72,29 @@ namespace PoKingHill
                 _rotOff[i] = _bone[i].rotation;
             }
             foreach (var smr in skinRoot.GetComponentsInChildren<SkinnedMeshRenderer>()) smr.updateWhenOffscreen = true;
+            FindSpine(rows);
+        }
+
+        void FindSpine(Row[] rows)
+        {
+            var spine = new List<int>(); float top = 0f, low = float.MaxValue;
+            for (int i = 0; i < rows.Length; i++)
+            {
+                top = Mathf.Max(top, rows[i].bone_pos[2]); low = Mathf.Min(low, rows[i].bone_pos[2]);
+                if (rows[i].body == "torso_link" && Mathf.Abs(rows[i].bone_pos[1]) < 0.02f) spine.Add(i);
+                if (rows[i].body == "torso_link") TorsoBody = _body[i]; else if (rows[i].body == "pelvis") PelvisBody = _body[i];
+                // the first bone on each shoulder_yaw_link is the upper arm (rows are parents-first): the forearm and hand hang off it
+                else if (rows[i].body == "left_shoulder_yaw_link") _armL ??= _bone[i]; else if (rows[i].body == "right_shoulder_yaw_link") _armR ??= _bone[i];
+            }
+            spine.Sort((a, b) => rows[a].bone_pos[2].CompareTo(rows[b].bone_pos[2]));
+            if (spine.Count < 2 || TorsoBody == null) return;               // no head bone of its own: nothing to turn
+            HeadBone = _bone[spine[^1]]; NeckBone = _bone[spine[^2]]; ChestBone = _bone[spine[Mathf.Max(0, spine.Count - 3)]];
+            // the head bone sits at the base of the skull: the crown is about 0.9 of a head (13.5 % of the stature) above it
+            Stature = (top - Mathf.Max(0f, low - 0.09f)) / (1f - 0.9f * 0.135f);
+            // the neck turns only when the head is all it carries (a rig may hang the shoulders off the same bone)
+            _neckTurns = HeadBone.IsChildOf(NeckBone);
+            for (int i = 0; i < _bone.Length && _neckTurns; i++)
+                if (_bone[i] != HeadBone && _bone[i] != NeckBone && _bone[i].IsChildOf(NeckBone) && !_bone[i].IsChildOf(HeadBone)) _neckTurns = false;
         }
 
         void LateUpdate()
@@ -61,6 +102,20 @@ namespace PoKingHill
             if (_bone == null) return;
             for (int i = 0; i < _bone.Length; i++)       // rows are parents-first, so children overwrite what a parent moved
                 _bone[i].SetPositionAndRotation(_body[i].position + _body[i].rotation * _posOff[i], _body[i].rotation * _rotOff[i]);
+            if (ArmsUp > 0.001f && TorsoBody != null && _armL != null && _armR != null)
+            {
+                // in the torso's frame (x forward, y up, z left): swing about the left axis, then spread about the forward one
+                float e = Mathf.Clamp01(ArmsUp); e = e * e * (3f - 2f * e); Quaternion t = TorsoBody.rotation, back = Quaternion.Inverse(t);
+                _armL.rotation = t * Quaternion.AngleAxis(ArmsUpPitch * e, Vector3.forward) * Quaternion.AngleAxis(-ArmsUpSpread * e, Vector3.right) * back * _armL.rotation;
+                _armR.rotation = t * Quaternion.AngleAxis(ArmsUpPitch * e, Vector3.forward) * Quaternion.AngleAxis(ArmsUpSpread * e, Vector3.right) * back * _armR.rotation;
+            }
+            if (HeadBone == null || Look == Quaternion.identity) return;
+            if (_neckTurns)
+            {
+                NeckBone.rotation = Quaternion.Slerp(Quaternion.identity, Look, 0.4f) * NeckBone.rotation;       // carries the head with it
+                HeadBone.rotation = Quaternion.Slerp(Quaternion.identity, Look, 0.6f) * HeadBone.rotation;
+            }
+            else HeadBone.rotation = Look * HeadBone.rotation;
         }
     }
 }

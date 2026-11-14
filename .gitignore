@@ -76,3 +76,8 @@ Assets/_Recovery.meta
 # Local editor tooling (Aura visualizer graph, machine-specific MCP config)
 .aura/
 .vscode/mcp.json
+
+# Motion capture: clips fetched and datasets built by training/scripts/fetch_mocap.py (rebuilt in seconds; the .json
+# summaries beside the datasets are committed)
+training/assets/mocap/raw/
+training/assets/mocap/*.npz

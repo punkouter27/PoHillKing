@@ -538,7 +538,9 @@ namespace PoKingHill
         void Post(object s, MjStepArgs a)
         {
             _stepMs = 0.95 * _stepMs + 0.05 * _sw.Elapsed.TotalMilliseconds;
-            if (_pending || !Ready() || State != MatchState.Fight) return;
+            if (_pending || !Ready()) return;
+            if (State == MatchState.Result) { AfterBell(MjScene.Instance.Data); return; }
+            if (State != MatchState.Fight) return;
             var d = MjScene.Instance.Data;
             double t = d->time - _roundStart;
             if (t > 1.2) Shot("combat");
@@ -558,6 +560,38 @@ namespace PoKingHill
             if (statsRounds > 0 && FfaStats && (_out[0] || alive == 1 || bell)) { FfaRoundOver(t); return; }    // as eval.py: the candidate's round ends when it is out
             if (alive > 1 && !bell) return;
             EndRound(d, alive, last, t);
+        }
+
+        // After the bell (the game only): the result stands, nobody can be knocked out any more, but whoever is still on
+        // the summit keeps its feet. A fighter that is down, or falls now, gets its get-up brain as during the round, and
+        // takes up its post-round part once it stands: the winner walks to the centre and celebrates, the others stand.
+        // Without this the winner lay where it fell in most rounds (4 of 5 measured, DOCS/20261114). No events are raised:
+        // the feed, the commentary and the ladder are about the round, which is over.
+        void AfterBell(MujocoLib.mjData_* d)
+        {
+            if (statsRounds > 0) return;
+            double t = d->time - _roundStart; int winner = LastResult.Winner;
+            for (int i = 0; i < _playing; i++)
+            {
+                if (_out[i]) continue;
+                var r = bodies[i]; double* q = d->qpos + r.Map.RootQposAdr;
+                double rad = Math.Sqrt(q[0] * q[0] + q[1] * q[1]), h = q[2] - _arena.Ground(rad), up = ObsBuilder.Up(q + 3);
+                if (_downAt[i] >= 0)
+                {
+                    if (up > 0.9 && h > 0.85 * (r.Spec?.key_root_z ?? 0.75f))
+                    {
+                        if (_stoodAt[i] < 0) _stoodAt[i] = t;
+                        if (t - _stoodAt[i] < 0.4) continue;
+                        _downAt[i] = -1; _stoodAt[i] = -1; r.SetGetUp(false);
+                        r.SetPostRound(i == winner ? PolicyRunner.PostRound.Victory : PolicyRunner.PostRound.Defeat);
+                    }
+                    else _stoodAt[i] = -1;
+                }
+                else if ((up < _arena.fall_up || h < _arena.fall_height) && rad <= OutRadiusNow && r.SetGetUp(true))
+                {
+                    _downAt[i] = t; _stoodAt[i] = -1; r.SetPostRound(PolicyRunner.PostRound.None);
+                }
+            }
         }
 
         void EndRound(MujocoLib.mjData_* d, int alive, int last, double t)
@@ -606,6 +640,11 @@ namespace PoKingHill
                 return;
             }
             if (_bracket.Count > 0) RecordBracket(winner);
+            // after the round (the game only; the gates returned above): the sea stops where it is (it would float the
+            // winner off a rim it barely held), the winner celebrates, whoever else still stands gives up
+            if (sea != null) sea.Hold();
+            for (int i = 0; i < _playing; i++)
+                if (!_out[i] && !IsDown(i)) bodies[i].SetPostRound(i == winner ? PolicyRunner.PostRound.Victory : PolicyRunner.PostRound.Defeat);
             _resultUntil = Time.unscaledTime + pauseBetweenRounds;
             MatchEvents.RaiseRoundEnded(LastResult);       // first: the ladder and telemetry settle before the results sheet reads them
             SetState(MatchState.Result);

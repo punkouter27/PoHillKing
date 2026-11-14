@@ -5,8 +5,9 @@ using UnityEngine;
 namespace PoKingHill
 {
     /// <summary>
-    /// One-line captions for what happens on the hill (GameSettings.Commentary), picked offline from a small set of
-    /// templates: round start, big hits, falls and get-ups, knock-outs with their credit, the result.
+    /// One-line captions for what happens on the hill (GameSettings.Commentary, or GameSettings.Voice, which has
+    /// VoiceCaster speak them), picked offline from a small set of templates: round start, big hits, falls and
+    /// get-ups, knock-outs with their credit, the result.
     /// </summary>
     public class Commentator : MonoBehaviour
     {
@@ -39,7 +40,7 @@ namespace PoKingHill
             Say(Pick($"{who} is back up!", $"{who} is on their feet again!", $"Up again: {who} fights on."));
         }
 
-        bool On => GameSettings.Commentary && director != null && director.statsRounds == 0;
+        bool On => (GameSettings.Commentary || GameSettings.Voice) && director != null && director.statsRounds == 0;
 
         void OnStart()
         {
