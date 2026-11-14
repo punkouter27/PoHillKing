@@ -64,6 +64,8 @@ namespace PoKingHill
         [Tooltip("Out radius used for crowded 12+ fighter matches to give the larger field room to fight.")]
         public float crowdedOutRadius = 3.2f;
         [Tooltip("How long the winner panel stays up before the next round or the menu")] public float pauseBetweenRounds = 5f;
+        [Tooltip("The game only (not the statistics gates, which keep training's rule): when one fighter is left, the round waits this long (simulated s) before it is declared; if that fighter leaves the summit too, it is a draw. Without it the last one in was often already going over the edge as it was crowned (5 of 8 rounds, DOCS/20261114). 0 = off.")]
+        public float confirmSeconds = 1.5f;
         [Tooltip("Rounds per launch before returning to the menu. 0 = keep fighting. GameSettings overrides it at launch.")] public int roundsPerMatch = 1;
         [Tooltip("Skip the menu and start fighting immediately.")] public bool autoLaunch;
         [Tooltip("Statistical parity gate: play this many rounds fast, write duel_stats_unity.json, then stop. 0 = off.")]
@@ -140,6 +142,7 @@ namespace PoKingHill
         float _introStart, _introPer, _introLength;
         PolicyRunner[] _target = Array.Empty<PolicyRunner>();
         readonly List<double> _times = new();
+        double _lastStandingAt = -1;          // round time when one fighter was left (confirmSeconds), -1 = not yet
         int _draws, _roundsThisMatch; double _roundStart; float _resultUntil; string _status = ""; bool _pending, _knockout, _tournamentMatch;
         readonly System.Diagnostics.Stopwatch _sw = new(); double _stepMs;
         string _shotDir; readonly HashSet<string> _shots = new(); float _menuShotAt = -1, _launchAt = -1;
@@ -474,7 +477,7 @@ namespace PoKingHill
 
         void ClearOut()
         {
-            _alive.Clear(); _fallen.Clear();
+            _alive.Clear(); _fallen.Clear(); _lastStandingAt = -1;
             for (int i = 0; i < bodies.Length; i++)
             {
                 bool inPlay = i < _playing;
@@ -559,6 +562,12 @@ namespace PoKingHill
             bool bell = sea != null ? sea.ReachedSummit : t >= roundSeconds;
             if (statsRounds > 0 && FfaStats && (_out[0] || alive == 1 || bell)) { FfaRoundOver(t); return; }    // as eval.py: the candidate's round ends when it is out
             if (alive > 1 && !bell) return;
+            // the last one in must stay in for confirmSeconds (the game only): a fighter already on its way over is no king
+            if (alive == 1 && !bell && statsRounds == 0 && confirmSeconds > 0f)
+            {
+                if (_lastStandingAt < 0) _lastStandingAt = t;
+                if (t - _lastStandingAt < confirmSeconds) return;
+            }
             EndRound(d, alive, last, t);
         }
 
@@ -622,7 +631,7 @@ namespace PoKingHill
             else
             {
                 end = alive > 1 ? RoundEnd.FullTime : RoundEnd.NobodyLeft;
-                how = alive > 1 ? "full time" : "nobody was left on the summit";
+                how = alive > 1 ? "full time" : _lastStandingAt >= 0 ? "the last one in went over too" : "nobody was left on the summit";
                 _status = alive > 1 ? "Tie: full time" : "Tie: nobody left on the summit";
             }
             if (winner >= 0) Award(winner); else _draws++;
