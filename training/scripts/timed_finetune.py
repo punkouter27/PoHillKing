@@ -17,6 +17,27 @@ BODIES = ("kim", "trump", "grandpa")
 MODELS = ROOT.parent / "Assets" / "PoKingHill" / "Models"
 
 
+def stop_owned_process(proc):
+    # Windows venv launchers can have a real interpreter child; terminating only the launcher leaks the GPU job.
+    if os.name == "nt":
+        script = """
+        $ErrorActionPreference = 'Stop'
+        function Stop-OwnedTree([int]$ProcessId) {
+            $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $ProcessId")
+            foreach ($child in $children) { Stop-OwnedTree $child.ProcessId }
+            try { Stop-Process -Id $ProcessId -Force -ErrorAction Stop }
+            catch [Microsoft.PowerShell.Commands.ProcessCommandException] {
+                if (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) { throw }
+                Write-Output "Owned process $ProcessId already exited after its children"
+            }
+        }
+        Stop-OwnedTree """ + str(proc.pid)
+        subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", script], check=True)
+    else:
+        proc.terminate()
+    proc.wait(timeout=30)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--deadline", required=True, help="absolute ISO timestamp including timezone")
@@ -92,8 +113,7 @@ def main():
             report()
             while active.poll() is None:
                 if time.monotonic() >= end:
-                    active.terminate()
-                    active.wait(timeout=30)
+                    stop_owned_process(active)
                     raise TimeoutError(f"{label} exceeded its deadline; periodic checkpoints retained")
                 if time.monotonic() - last_report >= 60: report()
                 time.sleep(2)
@@ -157,11 +177,9 @@ def main():
         raise
     finally:
         if active is not None and active.poll() is None:
-            active.terminate()
-            active.wait(timeout=30)
+            stop_owned_process(active)
         if tensorboard is not None and tensorboard.poll() is None:
-            tensorboard.terminate()
-            tensorboard.wait(timeout=30)
+            stop_owned_process(tensorboard)
         state["shipped_assets_unchanged"] = hashes() == original
         report()
         if not state["shipped_assets_unchanged"]: raise RuntimeError("Shipped assets changed during candidate-only training")
