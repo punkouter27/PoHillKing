@@ -156,6 +156,7 @@ Render and audio only except G.6 (after the round) and G.7 (training, opt-in). N
 - [x] G.4 Face: jaw, brow and a shaded mouth for pain, fear, strain, panting, triumph; mouth found per body from the mesh.
 - [x] G.5 `MusicBed` in `ImpactSynth` (Settings → Sound → Music) and `VoiceCaster` (Commentator voice; web and Android only, untested on a device).
 - [x] G.6 After the round: the winner walks to the centre and stands, arms up on the skin; the others stand. Upright 6/6 in controlled trials.
+- [x] G.8 After the bell: the get-up rule keeps running, the sea stops; the last one in must stay in 1.5 s or the round is a draw (game only). Declared winners standing at the bell: 6/6 (was 3/8); draws 5 of 11 rounds.
 - [~] G.7 Motion prior: `--amp` in `train.py`, per-body CMU datasets, checks pass, 8-iteration smoke run. No fighter retrained with it yet: that is the walker and fighter ladder per body plus the Unity gates.
 
 ## Deferred (out of scope this build)

@@ -874,3 +874,14 @@ when every share >= 0.28. Progress: `runs/overnight/progress_balance.txt`; repor
   6 of 6. Details: `DOCS/20261114/lifelike-features.md`.
 - Next for the prior: a walker fine-tune per body warm-started from the shipped walker with a small `--amp-weight`,
   judged on tracking error, jitter and falls against the warm brain; only then the fighter rungs.
+
+## 2026-11-14 afternoon - game rule: the last one in must stay in 1.5 s (game only)
+
+- **Policy scope:** none retrained; no brain sees a difference. Training and `duel_stats.py` crown the last one in at
+  once and score a same-step double fall as a draw. The game now waits `MatchDirector.confirmSeconds` (1.5 s) and
+  scores a draw if the last one goes over within it. The statistics gates keep the old rule, so parity references
+  are unchanged. Listed with the leg-contact rule as a known rules mismatch (CLAUDE.md).
+- Why: winners were crowned while already going over (5 of 8 rounds; DOCS/20261114/lifelike-features.md).
+- Measured, 11 real 16-way rounds: 6 wins, every winner standing at the bell; 5 draws.
+- Motion-prior run (`scripts/archive/amp_kim_walker_261114.sh`, Kim's walker with and without `--amp`, then eval)
+  is prepared but not started: 1.5 GB free RAM with the editor open, below the 4 GB floor.

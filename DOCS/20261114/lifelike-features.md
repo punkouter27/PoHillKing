@@ -95,3 +95,29 @@ any Unity gate.
   slope at the bell: the last one in is often the last one to go over, a moment later. That is the game's rule, not
   something a celebration can fix.
 - Retraining with the prior: walker, then fighter, per body, then the gates.
+
+## Rule change: the last one in must stay in (2026-11-14, after the first commit)
+
+**Policy impact before the change:** none of the brains acts differently. The window only delays the result and
+re-scores a dead heat. Training already scores a double fall on the same step as a draw. The statistics gates
+(`statsRounds > 0`) keep the old rule, so the Python/Unity parity references stay valid. This is a documented
+game-only difference, like the leg-contact rule.
+
+`MatchDirector.confirmSeconds` = 1.5 s of simulated time. When one fighter is left, the round stays in Fight for that
+long; if the fighter leaves the summit within it, the round is a draw ("the last one in went over too"). The ladder
+records no win or loss for a draw. A tournament match replays a tie once, then decides it by rating, as before.
+
+Measured over 11 real 16-way rounds at the game's 5 s results pause:
+
+| | Before (8 rounds) | After (11 rounds) |
+|---|---|---|
+| Declared winner standing at the bell | 3 of 8 | 6 of 6 |
+| Draws | 0 | 5 |
+| Winner celebrating at the centre or walking in at the end of the results screen | 2 | 4 |
+
+Of the other two winners, one fell while walking in and was getting up; one started the walk at the rim (3.1 m) and
+slid off the slope. The cost of the rule is the draw share, about 45 % in this small sample. A shorter window would
+give fewer draws but let more fighters that are already going over be crowned.
+
+Tests on the rule change: PlayMode 8 of 9 and EditMode 52 of 53, the same two failures as before this work
+(`HudLayoutTests` "DOWN" badge, `HudStyleTests` font size). `MatchFlowTests` and `StateFlowSoakTests` pass.
