@@ -50,14 +50,19 @@ namespace PoKingHill
         public Sea sea;                                  // optional; without it the round lasts roundSeconds
         public ImpactSynth synth;                        // optional, for the audio counters in the verification file
         public Agent[] roster = Array.Empty<Agent>();
+        [Tooltip("The 16 agent seats shown in the menu; shuffled on first entry and by Shuffle players.")]
+        public int[] playerSlots = Array.Empty<int>();
+        public const int PlayersPerMatch = 16;
         public int selectedA, selectedB;
         public string[] maps = { "Summit (baseline)" };
         [Tooltip("Render-only scenery per map, same order as maps. Physics is the same dome for every map.")]
         public GameObject[] mapVisuals = Array.Empty<GameObject>();
         public int selectedMap;
         public Vector2 spawnRadiusA = new(0.5f, 1.2f), spawnRadiusB = new(0.5f, 1.2f);
-        const float MinSpawnGap = 0.9f;     // metres between neighbouring pelvises at the start of a round with more than two
+        const float MinSpawnGap = 1f;
         public float roundSeconds = 25f, outRadius = 1.7f;
+        [Tooltip("Out radius used for crowded 12+ fighter matches to give the larger field room to fight.")]
+        public float crowdedOutRadius = 3.2f;
         [Tooltip("How long the winner panel stays up before the next round or the menu")] public float pauseBetweenRounds = 5f;
         [Tooltip("Rounds per launch before returning to the menu. 0 = keep fighting. GameSettings overrides it at launch.")] public int roundsPerMatch = 1;
         [Tooltip("Skip the menu and start fighting immediately.")] public bool autoLaunch;
@@ -122,7 +127,7 @@ namespace PoKingHill
         public float OutRadiusNow { get; private set; }
         public bool LastRoundOfMatch => _bracket.Count == 0 && roundsPerMatch > 0 && _roundsThisMatch >= roundsPerMatch;
         public IReadOnlyList<BracketMatch> Bracket => _bracket;
-        public bool InTournament => _bracket.Count > 0;
+        public bool InTournament => _tournamentMatch || _bracket.Count > 0;
         public string TournamentChampion { get; private set; } = "";
 
         public class BracketMatch { public int a, b, winner = -1, tries; public string label; }
@@ -135,7 +140,7 @@ namespace PoKingHill
         float _introStart, _introPer, _introLength;
         PolicyRunner[] _target = Array.Empty<PolicyRunner>();
         readonly List<double> _times = new();
-        int _draws, _roundsThisMatch; double _roundStart; float _resultUntil; string _status = ""; bool _pending, _knockout;
+        int _draws, _roundsThisMatch; double _roundStart; float _resultUntil; string _status = ""; bool _pending, _knockout, _tournamentMatch;
         readonly System.Diagnostics.Stopwatch _sw = new(); double _stepMs;
         string _shotDir; readonly HashSet<string> _shots = new(); float _menuShotAt = -1, _launchAt = -1;
         ArenaSpec _arena = new();
@@ -180,6 +185,8 @@ namespace PoKingHill
                 _downAt = new double[bodies.Length]; _stoodAt = new double[bodies.Length]; _getups = new int[bodies.Length];
                 _agentWins = new int[Mathf.Max(1, roster.Length)];
                 _arena = bodies[0].Spec?.arena ?? new ArenaSpec();
+                MjScene.Instance.SyncTransformsOncePerFrame = bodies.Length == PlayersPerMatch;
+                if (playerSlots.Length != PlayersPerMatch) RandomizePlayerSlots(true);
                 if (autoLaunch) Launch(); else EnterMenu();
             }
             if (!_pending && _agentAt.Length > 0)
@@ -195,6 +202,17 @@ namespace PoKingHill
             if (bodies.Length < 2) return false;
             foreach (var f in bodies) if (f == null || f.Map == null) return false;
             return true;
+        }
+
+        public void CyclePlayerSlot(int slot)
+        {
+            if (slot < 0 || slot >= playerSlots.Length || playerSlots[slot] < 0 || playerSlots[slot] >= roster.Length) return;
+            string body = roster[playerSlots[slot]].body;
+            var compatible = new List<int>();
+            for (int i = 0; i < roster.Length; i++)
+                if (roster[i].available && roster[i].policy != null && roster[i].body == body) compatible.Add(i);
+            int current = compatible.IndexOf(playerSlots[slot]);
+            if (current >= 0 && compatible.Count > 1) playerSlots[slot] = compatible[(current + 1) % compatible.Count];
         }
 
         // A body nobody is seated on waits far above the sea, re-pinned before every physics step.
@@ -258,6 +276,7 @@ namespace PoKingHill
         {
             ReplaySystem.StopActive();          // a replay restores its saved state when it ends: end it before placing anyone
             _bracket.Clear();
+            _tournamentMatch = false;
             _resultUntil = 0; _roundsThisMatch = 0;
             foreach (var f in bodies) f.SetBrain(null, ObsBuilder.ObsDim, GoalMode.None, 0.3f, 0.8f);      // passive stance while the menu is up
             Seat(2);
@@ -268,6 +287,7 @@ namespace PoKingHill
             }
             Place(); ClearOut();
             if (sea != null) sea.Park();
+            if (playerSlots.Length != PlayersPerMatch) RandomizePlayerSlots(true);
             _menuShotAt = Time.unscaledTime + 1.5f;
             SetState(MatchState.Menu);
         }
@@ -276,55 +296,82 @@ namespace PoKingHill
         /// ticked than bodies = that many are drawn). The statistics gate keeps the pair it was started with.</summary>
         public void Launch()
         {
+            _tournamentMatch = false;
             var agents = new List<int>();
             if (roster.Length > 0)
             {
                 if (statsRounds > 0 && FfaStats) agents = FfaDraw();
                 else if (statsRounds > 0) { agents.Add(Mathf.Clamp(selectedA, 0, roster.Length - 1)); agents.Add(Mathf.Clamp(selectedB, 0, roster.Length - 1)); }
-                else
-                {
-                    var pool = InGame(); if (pool.Count == 0) return;
-                    if (pool.Count == 1) pool.Add(pool[0]);
-                    while (pool.Count > 0) { int k = UnityEngine.Random.Range(0, pool.Count); agents.Add(pool[k]); pool.RemoveAt(k); }
-                }
+                else { if (!RandomizePlayerSlots()) return; agents.AddRange(playerSlots); }
             }
             _bracket.Clear();
             StartMatch(agents);
         }
 
-        /// <summary>One tap from the menu: everyone with a brain at once, in random seats, on the first map.</summary>
+        /// <summary>One tap from the menu: fill all sixteen seats from available agents, in random seats.</summary>
         public void QuickMatch()
         {
-            _bracket.Clear(); selectedMap = 0;
-            var all = new List<int>();
-            for (int i = 0; i < roster.Length; i++) if (roster[i].available) all.Add(i);
-            for (int i = all.Count - 1; i > 0; i--) { int k = UnityEngine.Random.Range(0, i + 1); (all[i], all[k]) = (all[k], all[i]); }
-            StartMatch(all.Count > 0 ? all : new List<int> { 0 });
+            _bracket.Clear(); _tournamentMatch = false; TournamentChampion = ""; selectedMap = 0;
+            if (!RandomizePlayerSlots(true)) return;
+            StartMatch(new List<int>(playerSlots));
         }
 
-        /// <summary>Single elimination between up to four available agents (the ticked ones, or all when fewer than two
-        /// are ticked): semi-finals, then the final. A tie is replayed once; a second tie goes to the higher rating.</summary>
+        /// <summary>Randomize all sixteen seats from the selected agents, falling back to every available agent if the
+        /// selection cannot cover the body kinds present in this scene.</summary>
+        public bool RandomizePlayerSlots(bool allAvailable = false)
+        {
+            if (bodies.Length != PlayersPerMatch) { _status = "The game scene needs 16 fighter bodies"; return false; }
+            var selected = allAvailable ? Available() : InGame();
+            if (!CanFillSlots(selected)) selected = Available();
+            if (!CanFillSlots(selected)) { _status = "Available agents cannot fill all 16 body slots"; return false; }
+
+            var slots = new List<int>(PlayersPerMatch);
+            foreach (var body in bodies)
+            {
+                var compatible = new List<int>();
+                foreach (int i in selected) if (i >= 0 && i < roster.Length && roster[i].available && roster[i].policy != null && roster[i].body == body.body) compatible.Add(i);
+                slots.Add(compatible[UnityEngine.Random.Range(0, compatible.Count)]);
+            }
+            for (int i = slots.Count - 1; i > 0; i--) { int k = UnityEngine.Random.Range(0, i + 1); (slots[i], slots[k]) = (slots[k], slots[i]); }
+            playerSlots = slots.ToArray();
+            return true;
+        }
+
+        List<int> Available()
+        {
+            var result = new List<int>();
+            for (int i = 0; i < roster.Length; i++) if (roster[i].available && roster[i].policy != null) result.Add(i);
+            return result;
+        }
+
+        bool CanFillSlots(List<int> candidates)
+        {
+            if (candidates.Count == 0) return false;
+            foreach (var body in bodies)
+            {
+                bool found = false;
+                foreach (int i in candidates) if (i >= 0 && i < roster.Length && roster[i].available && roster[i].policy != null && roster[i].body == body.body) { found = true; break; }
+                if (!found) return false;
+            }
+            return true;
+        }
+
         public void StartTournament()
         {
-            var pool = InGame(); if (pool.Count < 2) { pool.Clear(); for (int i = 0; i < roster.Length; i++) if (roster[i].available) pool.Add(i); }
-            for (int i = pool.Count - 1; i > 0; i--) { int k = UnityEngine.Random.Range(0, i + 1); (pool[i], pool[k]) = (pool[k], pool[i]); }
-            if (pool.Count > 4) pool.RemoveRange(4, pool.Count - 4);
-            if (pool.Count < 2) { _status = "Need two agents with a brain for a tournament"; return; }
-            _bracket.Clear(); TournamentChampion = "";
-            if (pool.Count == 2) _bracket.Add(new BracketMatch { a = pool[0], b = pool[1], label = "Final" });
-            else
-            {
-                _bracket.Add(new BracketMatch { a = pool[0], b = pool[1], label = "Semi-final 1" });
-                if (pool.Count == 4) _bracket.Add(new BracketMatch { a = pool[2], b = pool[3], label = "Semi-final 2" });
-                _bracket.Add(new BracketMatch { a = -1, b = pool.Count == 3 ? pool[2] : -1, label = "Final" });     // filled by the semi-final winners
-            }
-            _bracketAt = 0; PlayBracketMatch();
+            if (!RandomizePlayerSlots(true)) return;
+            TournamentChampion = "";
+            _bracket.Clear();
+            _tournamentMatch = true;
+            StartMatch(new List<int>(playerSlots));
         }
 
         void PlayBracketMatch()
         {
             var m = _bracket[_bracketAt];
-            StartMatch(new List<int> { m.a, m.b });
+            var slots = new List<int> { m.a, m.b };
+            foreach (int agent in playerSlots) if (slots.Count < PlayersPerMatch && agent != m.a && agent != m.b) slots.Add(agent);
+            while (slots.Count < PlayersPerMatch) slots.Add(playerSlots[slots.Count % playerSlots.Length]);
+            StartMatch(slots);
             _status = m.label;
         }
 
@@ -343,13 +390,14 @@ namespace PoKingHill
                     if (k < 0) continue;
                     (bodies[seats.Count], bodies[k]) = (bodies[k], bodies[seats.Count]); seats.Add(agent);
                 }
-                if (seats.Count < 2) { _status = "That selection has only one body to fight with: tick another agent"; return; }
+                int required = statsRounds > 0 ? 2 : agents.Count >= PlayersPerMatch ? PlayersPerMatch : 2;
+                if (seats.Count < required) { _status = $"Need {required} compatible fighter bodies to start this match"; return; }
                 selectedA = seats[0]; selectedB = seats[1];
                 Seat(seats.Count);
                 for (int i = 0; i < _playing; i++) _agentAt[i] = seats[i];
             }
             else Seat(2);
-            if (statsRounds == 0 && !autoLaunch) roundsPerMatch = _bracket.Count > 0 ? 1 : GameSettings.RoundsPerMatch;   // PerfProbe/auto runs keep theirs
+            if (statsRounds == 0 && !autoLaunch) roundsPerMatch = _tournamentMatch || _bracket.Count > 0 ? 1 : GameSettings.RoundsPerMatch;   // PerfProbe/auto runs keep theirs
             _roundsThisMatch = 0;
             if (statsRounds == 0 && !autoLaunch && GameSettings.Intro && roster.Length > 0) { BeginIntro(); return; }
             ArmBrains();
@@ -397,15 +445,29 @@ namespace PoKingHill
 
         void Place()
         {
-            // Everyone starts on the summit, evenly spread around it (two fighters: opposite sides). Yaw is random,
-            // as in training and duel_stats.py. With more than two, neighbours start at least MinSpawnGap apart: six
-            // on the 0.5 m ring are 0.5 m apart, less than Trump is wide, and overlapping bodies burst off the summit.
             float bearing = UnityEngine.Random.Range(0f, 2f * Mathf.PI);
+            if (_playing == PlayersPerMatch)
+            {
+                // Rotate the generated, collision-checked center-ring layout as one and face every fighter inward.
+                double* qpos0 = MjScene.Instance.Model->qpos0;
+                for (int i = 0; i < _playing; i++)
+                {
+                    int root = bodies[i].Map.RootQposAdr;
+                    float x0 = (float)qpos0[root], y0 = (float)qpos0[root + 1];
+                    float radius = Mathf.Sqrt(x0 * x0 + y0 * y0);
+                    float angle = Mathf.Atan2(y0, x0) + bearing;
+                    bodies[i].ResetPose(radius * Mathf.Cos(angle), radius * Mathf.Sin(angle), angle + Mathf.PI);
+                }
+                return;
+            }
+
             float rMin = _playing > 2 ? MinSpawnGap / (2f * Mathf.Sin(Mathf.PI / _playing)) : 0f;
             for (int i = 0; i < _playing; i++)
             {
-                var band = i == 1 ? spawnRadiusB : spawnRadiusA; float lo = Mathf.Min(Mathf.Max(band.x, rMin), band.y);
-                float r = UnityEngine.Random.Range(lo, band.y), a = bearing + 2f * Mathf.PI * i / _playing;
+                var band = i == 1 ? spawnRadiusB : spawnRadiusA;
+                float lo = _playing >= 12 ? Mathf.Max(band.x, rMin) : Mathf.Min(Mathf.Max(band.x, rMin), band.y);
+                float hi = Mathf.Max(band.y, lo);
+                float r = UnityEngine.Random.Range(lo, hi), a = bearing + 2f * Mathf.PI * i / _playing;
                 bodies[i].ResetPose(r * Mathf.Cos(a), r * Mathf.Sin(a), UnityEngine.Random.Range(-Mathf.PI, Mathf.PI));
             }
         }
@@ -425,8 +487,9 @@ namespace PoKingHill
         public void NewRound()
         {
             ReplaySystem.StopActive();
+            OutRadiusNow = _playing >= 12 ? Mathf.Max(crowdedOutRadius, MinSpawnGap / (2f * Mathf.Sin(Mathf.PI / _playing)) + 0.5f) : outRadius;
             Place(); ClearOut(); _knockout = false;
-            _roundStart = MjScene.Instance.Data->time; OutRadiusNow = outRadius; _resultUntil = 0;
+            _roundStart = MjScene.Instance.Data->time; _resultUntil = 0;
             if (sea != null) { sea.pace = statsRounds > 0 ? 1f : GameSettings.SeaPace; sea.Restart(); }
             SetState(MatchState.Fight);
             MatchEvents.RaiseRoundStarted();
@@ -530,6 +593,11 @@ namespace PoKingHill
             }
             if (winner >= 0) Award(winner); else _draws++;
             _roundsThisMatch++;
+            if (_tournamentMatch)
+            {
+                TournamentChampion = winner >= 0 ? NameOf(_agentAt[winner], "Robot") : "";
+                _tournamentMatch = false;
+            }
             var agents = new int[_playing]; for (int i = 0; i < _playing; i++) agents[i] = _agentAt[i];
             LastResult = new RoundResult(winner, winner >= 0 ? BadgeOf(_agentAt[winner]) : "No winner", how, end, (float)t, agents);
             if (statsRounds > 0)
@@ -640,7 +708,7 @@ namespace PoKingHill
             if (Cli.Flag("-kothWaitSplash") && !_shots.Contains("splash")) return false;      // keep playing until the camera has cut to a faller at the water
             if (synth != null)
                 System.IO.File.WriteAllText(System.IO.Path.Combine(_shotDir, "audio.json"),
-                    $"{{\"thuds\": {synth.Thuds}, \"footfalls\": {synth.Clicks}, \"splashes\": {synth.Splashes}, \"peak_sample\": {synth.Peak.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}, \"audio_blocks\": {synth.Blocks}}}\n");
+                    $"{{\"thuds\": {synth.Thuds}, \"footfalls\": {synth.Clicks}, \"splashes\": {synth.Splashes}, \"voices\": {synth.Voices}, \"peak_sample\": {synth.Peak.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}, \"audio_blocks\": {synth.Blocks}}}\n");
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.Exit(0);
 #endif

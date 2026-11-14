@@ -18,12 +18,24 @@ namespace PoKingHill
         void BuildPlay()
         {
             Text("King of the hill", "h1", _sheetBody);
-            Text("Fallen fighters get back up: only the sea or a push off the mountain ends them. Last one on top wins.", "body", _sheetBody);
-            Btn("Quick match", "primary", () => director.QuickMatch(), _sheetBody);
+            Text("16 fighters at once. Fallen fighters get back up: only the sea or a push off the mountain ends them.", "body", _sheetBody);
+            Text("Players · shuffle the seats, or tap a slot to cycle its character.", "hint", _sheetBody);
+            var slots = El("player-slots", _sheetBody);
+            for (int i = 0; i < MatchDirector.PlayersPerMatch; i++)
+            {
+                int slot = i;
+                int agent = i < director.playerSlots.Length ? director.playerSlots[i] : -1;
+                string badge = agent >= 0 && agent < director.roster.Length ? director.BadgeOf(agent) : "Empty";
+                Btn($"{i + 1:00}  {badge}", "player-slot", () => { director.CyclePlayerSlot(slot); RebuildSheet(); }, slots);
+            }
+            Text("BYE · reserved slot for the next player you add.", "bye-slot", _sheetBody);
             var row = El("row", _sheetBody);
+            Btn("Shuffle 16", "secondary", () => { director.RandomizePlayerSlots(true); RebuildSheet(); }, row);
+            Btn("Quick match", "primary", () => director.QuickMatch(), _sheetBody);
+            var actions = El("row", _sheetBody);
             int ticked = director.TickedCount;
-            Btn(ticked == 0 ? "Custom (pick in Agents)" : $"Custom · {ticked} agents", "secondary", () => director.Launch(), row).SetEnabled(ticked > 0);
-            Btn("Tournament", "secondary", () => director.StartTournament(), row);
+            Btn(ticked == 0 ? "Custom (pick in Agents)" : $"Custom · {ticked} agents", "secondary", () => director.Launch(), actions).SetEnabled(ticked > 0);
+            Btn("16-player tournament", "secondary", () => director.StartTournament(), actions);
             if (director.Status.Length > 0) Text(director.Status, "body", _sheetBody);
         }
 
@@ -45,7 +57,7 @@ namespace PoKingHill
                 string meta = f.available ? $"Elo {Ladder.Rating(f.name):0} · {Ladder.Wins(f.name)}-{Ladder.Losses(f.name)} · {Ladder.Knockouts(f.name)} KOs" : "Locked: " + f.note;
                 if (f.available && f.note.Length > 0) meta += " · " + f.note;
                 Text(meta, "meta", card);
-                if (f.available) card.RegisterCallback<ClickEvent>(_ => { f.inGame = !f.inGame; RebuildSheet(); });
+                if (f.available) card.RegisterCallback<ClickEvent>(_ => { f.inGame = !f.inGame; director.RandomizePlayerSlots(); RebuildSheet(); });
                 card.tooltip = f.name;
             }
         }

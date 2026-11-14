@@ -7,7 +7,7 @@ Outputs (all under training/assets/):
   g1/scene_koth_4p.xml         four G1 on the arena (Unity free-for-all only; `python -m koth.build_mjcf 4p`)
   g1/scene_koth_5p.xml         four G1 (a_..d_) and Kim (e_) on the arena (`python -m koth.build_mjcf 5p`)
   g1/scene_koth_6p.xml         four G1, Kim (e_) and Trump (f_) (`python -m koth.build_mjcf 6p`)
-  g1/scene_koth_game.xml       the game scene: two Kim, two Trump, two Grandpa, no G1 (`python -m koth.build_mjcf game`)
+  g1/scene_koth_game.xml       the 16-player game: six Kim, five Trump, five Grandpa, no G1 (`python -m koth.build_mjcf game`)
   g1/scene_koth_7p.xml         four G1, Kim (e_), Trump (f_) and Grandpa (g_): the former game scene, kept for the free-for-all gate (`7p`)
   g1/scene_*_train.xml         MuJoCo-resolved canonical model + keyframe (what training loads)
   g1/scene_*_unity.xml         same text minus keyframe/sensor (what the Unity importer loads)
@@ -16,7 +16,7 @@ Outputs (all under training/assets/):
 
 Design constraints (from the org.mujoco 3.15 plugin audit): no <contact><pair>, no keyframes, no sensors,
 timestep/gravity come from Unity settings, no ls_iterations/eulerdamp knobs -> implicitfast + MuJoCo defaults.
-Collision bitmasks:  1=robot A  2=robot B  4=arena  8=box  16=foot/shin extra  32=robot C  64=robot D  128=Kim (e_)  256=Trump (f_)  512=Grandpa (g_)
+Collision bitmasks:  1=robot A  2=robot B  4=arena  8=box  16=foot/shin extra  32=robot C  64=robot D  128=robot E and onward through 262144=robot P
 """
 from __future__ import annotations
 import copy, json, os, struct, xml.etree.ElementTree as ET
@@ -196,8 +196,8 @@ def pool_park(i: int) -> tuple[float, float, float]:
     return (100.0 + 0.5 * i, 0.0, 50.0)
 
 
-ROBOT_BITS = [1, 2, 32, 64, 128, 256, 512, 1024]      # a_ .. h_ (4 ground, 8 boxes, 16 feet are taken)
-PREFIXES = ["a_", "b_", "c_", "d_", "e_", "f_", "g_", "h_"]
+ROBOT_BITS = [1, 2, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144]
+PREFIXES = [f"{chr(ord('a') + i)}_" for i in range(16)]
 
 
 def make_pool(n: int = POOL_N, robots_mask: int = 3) -> list[ET.Element]:
@@ -269,6 +269,10 @@ def default_qpos(m: mujoco.MjModel, prefixes: list[str], poses: dict | None = No
         low = min(d.geom_xpos[g][2] - m.geom_size[g][2] for g in feet)
         root = m.jnt_qposadr[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, p + "floating_base_joint")]
         d.qpos[root + 2] -= low
+        arena = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "arena")
+        if arena >= 0:
+            radius = np.hypot(d.qpos[root], d.qpos[root + 1])
+            d.qpos[root + 2] -= SLOPE_K * max(radius - PLATEAU_R, 0) ** 2
     return d.qpos.copy()
 
 
@@ -377,17 +381,17 @@ def build_mixed(n_extra: int = 1):
                   bodies={e[0]: e[2] for e in extras})
 
 
-# The game's fighters (Game.unity, GameScene.RefreshBodies): two bodies of every human kind, so each brain can
-# meet its own body (the only opponent it was trained against) as well as the others. A new rigged mesh joins here.
-GAME_BODIES = ["kim", "kim", "trump", "trump", "grandpa", "grandpa"]
+# The game's 16 simultaneous fighters. Each available body kind has enough physical seats for the menu to fill them.
+GAME_BODIES = ["kim"] * 6 + ["trump"] * 5 + ["grandpa"] * 5
+GAME_SPAWN_RINGS = ((4, 0.60, 0.0), (8, 1.05, np.pi / 8), (4, 1.45, np.pi / 4))
 
 
 def build_game(bodies: list[str] | None = None):
-    """The game scene koth_game: only human bodies (the G1 left the game on 2026-10-20), a ring on the summit, every
-    body colliding with every other one and the thrown boxes. Built as a mixed scene (build_mix) and then stripped of the
-    G1's mesh assets, which no body uses. Unity-only: no training rung reads it."""
+    """The game scene koth_game: 16 human bodies (the G1 left the game on 2026-10-20), every body colliding with every
+    other one and the thrown boxes. Built as a mixed scene (build_mix) and then stripped of the G1's mesh assets, which
+    no body uses. Unity-only: no training rung reads it."""
     bodies = bodies or GAME_BODIES
-    assert "g1" not in bodies and 2 <= len(bodies) <= len(PREFIXES), bodies
+    assert "g1" not in bodies and 16 <= len(bodies) <= len(PREFIXES), bodies
     return build_mix(bodies, tag="koth_game")
 
 
@@ -422,6 +426,17 @@ def build_mix(bodies: list[str], tag: str | None = None):
     assert ROBOT == "g1", "build mixed scenes with KOTH_ROBOT=g1 (the G1's meshes live in assets/g1)"
     n = len(bodies); scene = build_scene(ET.parse(SRC).getroot(), True, True, players=n if n > 2 else None)
     mask = sum(ROBOT_BITS[:n]); wb, acts, contact = scene.find("worldbody"), scene.find("actuator"), scene.find("contact")
+    if tag == "koth_game":
+        assert n == sum(count for count, _, _ in GAME_SPAWN_RINGS), n
+        seat = 0
+        for count, radius, phase in GAME_SPAWN_RINGS:
+            for ring_seat in range(count):
+                angle = phase + 2 * np.pi * ring_seat / count
+                pelvis = wb.find(f"body[@name='{PREFIXES[seat]}pelvis']")
+                pelvis.set("pos", f"{radius * np.cos(angle):.6f} {radius * np.sin(angle):.6f} {pelvis.get('pos').split()[2]}")
+                yaw = angle + np.pi
+                pelvis.set("quat", f"{np.cos(yaw / 2):.9f} 0 0 {np.sin(yaw / 2):.9f}")
+                seat += 1
     merged = set()
     for i, body in enumerate(bodies):
         if body == "g1": continue

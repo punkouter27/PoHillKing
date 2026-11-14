@@ -19,12 +19,12 @@ namespace PoKingHill
     {
         public MatchDirector director;
         public float criticTemperature = 6f, physicsTemperature = 2f, hz = 10f;
-        public float[] Odds { get; private set; } = new float[8];
+        public float[] Odds { get; private set; } = new float[MatchDirector.PlayersPerMatch];
         public bool FromCritic { get; private set; }
 
-        Worker[] _workers = new Worker[8]; ModelAsset[] _loaded = new ModelAsset[8];
-        Tensor<float>[] _in = new Tensor<float>[8]; float[][] _buf = new float[8][];
-        readonly float[] _score = new float[8]; float _next; int[] _footGeom; bool _footReady;
+        Worker[] _workers = new Worker[MatchDirector.PlayersPerMatch]; ModelAsset[] _loaded = new ModelAsset[MatchDirector.PlayersPerMatch];
+        Tensor<float>[] _in = new Tensor<float>[MatchDirector.PlayersPerMatch]; float[][] _buf = new float[MatchDirector.PlayersPerMatch][];
+        readonly float[] _score = new float[MatchDirector.PlayersPerMatch]; float _next; int[] _footGeom; bool _footReady;
 
         void OnDisable() { for (int i = 0; i < _workers.Length; i++) { _workers[i]?.Dispose(); _in[i]?.Dispose(); _workers[i] = null; _in[i] = null; _loaded[i] = null; } }
 
@@ -32,7 +32,7 @@ namespace PoKingHill
         {
             if (director == null || director.State != MatchState.Fight || !GameSettings.WinOdds || Time.unscaledTime < _next) return;
             _next = Time.unscaledTime + 1f / hz;
-            var d = MjScene.Instance.Data; int n = Mathf.Min(director.Playing, 8);
+            var d = MjScene.Instance.Data; int n = Mathf.Min(director.Playing, MatchDirector.PlayersPerMatch);
             bool allCritic = true;
             for (int i = 0; i < n; i++)
             {

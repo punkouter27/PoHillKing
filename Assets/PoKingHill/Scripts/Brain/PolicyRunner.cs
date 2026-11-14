@@ -336,7 +336,9 @@ namespace PoKingHill
         {
             ResetPose();
             var d = MjScene.Instance.Data; double* q = d->qpos + Map.RootQposAdr;
-            q[0] = x; q[1] = y; q[3] = System.Math.Cos(yaw / 2); q[4] = 0; q[5] = 0; q[6] = System.Math.Sin(yaw / 2);
+            q[0] = x; q[1] = y;
+            q[2] += (_spec.arena ?? new ArenaSpec()).Ground(System.Math.Sqrt(x * x + y * y));
+            q[3] = System.Math.Cos(yaw / 2); q[4] = 0; q[5] = 0; q[6] = System.Math.Sin(yaw / 2);
         }
     }
 }

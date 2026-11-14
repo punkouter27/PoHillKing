@@ -29,6 +29,7 @@ def drop(m, d, s, rng, default):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--policy", default="getup"); ap.add_argument("--drops", type=int, default=200)
     ap.add_argument("--seconds", type=float, default=8.0); ap.add_argument("--count", type=float, default=5.0); ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--out", help="write statistics here instead of overwriting the Unity gate reference")
     a = ap.parse_args()
     spec = cpu_sim.joint_map()
     sess = cpu_sim.session(os.path.join(UNITY_MODELS, f"{a.policy}_policy.onnx"))
@@ -57,7 +58,9 @@ def main():
     q = lambda f: round(float(np.percentile(times, f)), 2) if times else -1
     res = dict(drops=a.drops, success=round(len(times) / a.drops, 4), stood_within_seconds=round(stood_ever / a.drops, 4), count_s=a.count, seconds=a.seconds,
                median_time_s=q(50), p25_time_s=q(25), p75_time_s=q(75))
-    json.dump(res, open(os.path.join(ASSETS, "getup_stats_python.json"), "w"), indent=1); print(json.dumps(res))
+    with open(a.out or os.path.join(ASSETS, "getup_stats_python.json"), "w") as f:
+        json.dump(res, f, indent=1)
+    print(json.dumps(res))
 
 
 if __name__ == "__main__":

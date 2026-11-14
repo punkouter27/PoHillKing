@@ -20,7 +20,7 @@ normalizer), so it starts out with the same joint targets wherever the old one w
 every N iterations, so a brain also practises breaking a deadlock against its own current style (mirror duels).
 --curriculum ladder[:bar:demote] (koth/curriculum.py) draws the --opponent list (weakest first) by stages that advance
 on the learner's win share instead of on the iteration count."""
-import argparse, datetime, json, os, socket, statistics, subprocess, sys, time
+import argparse, datetime, json, math, os, socket, statistics, subprocess, sys, time
 sys.stdout.reconfigure(line_buffering=True)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torch
@@ -28,6 +28,20 @@ from rsl_rl.runners import OnPolicyRunner
 from koth.env import BODY_GAIT_HZ, ROBOT, KothEnv, default_cfg, obs_dims
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+class TrainingTimeLimit(Exception):
+    pass
+
+
+def limit_training_time(runner, deadline):
+    """Stop only after a completed, logged PPO update so the final checkpoint remains resumable."""
+    log = runner.logger.log
+    def log_limited(*args, **kwargs):
+        log(*args, **kwargs)
+        if time.monotonic() >= deadline:
+            raise TrainingTimeLimit()
+    runner.logger.log = log_limited
 
 
 def train_cfg(num_steps_per_env=24, save_interval=100):
@@ -192,8 +206,16 @@ def main():
     ap.add_argument("--no-reward-clip", action="store_true", help="do not clip the per-step shaped reward at zero")
     ap.add_argument("--self-play", type=int, default=0, help="every this many iterations, copy the learner's actor into the --opponent entries marked :live")
     ap.add_argument("--curriculum", default=None, help="koth/curriculum.py preset (ladder[:bar:demote]) or a spec json; needs --opponent (weakest first)")
+    ap.add_argument("--max-minutes", type=float, help="stop after this wall-clock budget, saving a resumable checkpoint after the current update")
+    ap.add_argument("--save-interval", type=int, default=100, help="checkpoint interval in PPO updates")
+    ap.add_argument("--checkpoint-only", action="store_true", help="save training checkpoints without exporting any ONNX or Unity assets")
     a = ap.parse_args()
+    if a.max_minutes is not None and (not math.isfinite(a.max_minutes) or a.max_minutes <= 0):
+        ap.error("--max-minutes must be finite and positive")
+    if a.save_interval <= 0: ap.error("--save-interval must be positive")
+    if a.checkpoint_only and a.graduate_reward is not None: ap.error("--checkpoint-only cannot export a graduated policy")
     t_start = time.time()
+    clock_start = time.monotonic()
     cfg = default_cfg(a.rung)
     if a.decimation: cfg["decimation"] = a.decimation
     if a.leg_contact_rule == "unity": cfg["terminate_on_leg_contact"] = False
@@ -221,7 +243,8 @@ def main():
     run = a.name or time.strftime("%Y%m%d-%H%M%S")
     log_dir = os.path.join(ROOT, "runs", a.rung, run)
     os.makedirs(log_dir, exist_ok=True)
-    conf = {"env": cfg, "train": train_cfg(), "args": vars(a), "robot": ROBOT, "git": git_commit(), "obs_dim": obs_dims(cfg)}
+    training = train_cfg(save_interval=a.save_interval)
+    conf = {"env": cfg, "train": training, "args": vars(a), "robot": ROBOT, "git": git_commit(), "obs_dim": obs_dims(cfg)}
     cpath = os.path.join(log_dir, "config.json")
     if os.path.exists(cpath):                          # a rerun into the same folder: keep the config the older checkpoints came from
         old = json.load(open(cpath))
@@ -231,11 +254,19 @@ def main():
     env = KothEnv(cfg, a.num_envs, seed=a.seed)
     stamp = lambda t: datetime.datetime.fromtimestamp(t).isoformat(timespec="seconds")
     manifest = dict(rung=a.rung, name=run, robot=os.environ.get("KOTH_ROBOT", "g1"), git=git_commit(), seed=a.seed, args=vars(a),
-                    env_cfg=cfg, train_cfg=train_cfg(), start_time=stamp(t_start), end_time=None, status="running")
+                    env_cfg=cfg, train_cfg=training, start_time=stamp(t_start), end_time=None, status="running")
     write_manifest = lambda: json.dump(manifest, open(os.path.join(log_dir, "manifest.json"), "w"), indent=1)
     write_manifest()
     if a.tensorboard: start_tensorboard(os.path.join(ROOT, "runs"))
-    runner = OnPolicyRunner(env, train_cfg(), log_dir=log_dir, device="cuda")
+    runner = OnPolicyRunner(env, training, log_dir=log_dir, device="cuda")
+    provenance = dict(interface=dict(obs_dims=obs_dims(cfg), actions=env.num_actions, control_dt=env.ctrl_dt),
+                      physics=dict(commit=conf["git"]["commit"], scene=cfg["scene"], timestep=env.mjm.opt.timestep))
+    save = runner.save
+    def save_tagged(path, infos=None):
+        return save(path, dict(infos or {}, provenance=provenance))
+    runner.save = save_tagged
+    manifest["provenance"] = provenance
+    write_manifest()
     store = runner.logger._store_code_state            # rsl_rl snapshots `git diff` of the repo; binary/non-UTF-8 diffs crash it
     def store_safely():
         try: return store()
@@ -270,14 +301,21 @@ def main():
                 env.frozen.refresh_live(runner.alg._raw_actor.state_dict()); print(f"self-play: live opponents = learner at iteration {it}")
             return log_s(*args, **kw)
         runner.logger.log = log_self
+    if a.max_minutes is not None: limit_training_time(runner, clock_start + a.max_minutes * 60)
+    time_limited = False
     try:
         runner.learn(a.iters, init_at_random_ep_len=True)
+    except TrainingTimeLimit:
+        time_limited = True
+        print("training time budget reached; saving the completed update")
     except BaseException:
         manifest.update(status="failed", end_time=stamp(time.time()), bars=grad.summary()); write_manifest(); raise
     runner.save(os.path.join(log_dir, "model_final.pt"))
-    runner.export_policy_to_onnx(log_dir, "policy.onnx")
+    if time_limited: runner.logger.stop_logging_writer()
+    if not a.checkpoint_only: runner.export_policy_to_onnx(log_dir, "policy.onnx")
     manifest.update(status="finished", end_time=stamp(time.time()), minutes=round((time.time() - t_start) / 60, 1),
-                    iterations=runner.current_learning_iteration + 1, bars=grad.summary(), unity_export=None)
+                    iterations=runner.current_learning_iteration + 1, bars=grad.summary(), unity_export=None,
+                    stop_reason="time_budget" if time_limited else "iterations")
     if cur is not None: manifest["curriculum"] = cur.summary()
     json.dump(dict(grad.summary(), checkpoint="model_final.pt", curriculum=cur.summary() if cur else None), open(os.path.join(log_dir, "graduation.json"), "w"), indent=1)
     if a.graduate_reward is not None:

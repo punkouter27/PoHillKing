@@ -12,7 +12,7 @@ namespace PoKingHill
     /// (debug panel, layout audit), HudWidgets.cs (vitals strip, icons).
     ///   corners   TL title · TR menu · BR version; with GameSettings.DevTools also TC FPS (hold it for the debug
     ///             panel; it steps aside from a punch-hole camera, Screen.cutouts) and BL debug
-    ///   live      one row of fighter badges (seat-coloured initials, wins pip, status tag, vitals strip; it throbs
+    ///   live      one row of fighter badges, or two compact rows for 12+ seats (seat-coloured initials, wins pip, status tag, vitals strip; it throbs
     ///             at the edge, and a tap makes the camera follow that fighter, BroadcastCamera.FollowSeat), round
     ///             clock, sea bar and ties, knock-out feed, replay bar with a draggable playhead; with developer
     ///             tools also the win-odds bar and the caption line
@@ -374,6 +374,7 @@ namespace PoKingHill
         {
             if (director == null) return;
             _scoreboard.Clear(); _badges.Clear(); _odds.Clear(); _oddsSegs.Clear(); _vitals.Clear(); _tags.Clear(); _pips.Clear();
+            _scoreboard.EnableInClassList("crowded", director.Playing >= 12);
             _ties.style.display = DisplayStyle.None;
             if (director.InMenu) return;
             for (int i = 0; i < director.Playing; i++)

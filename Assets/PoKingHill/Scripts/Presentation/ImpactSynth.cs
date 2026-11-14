@@ -38,15 +38,15 @@ namespace PoKingHill
 
         // Verification counters. Triggers are counted where the physics raises them; Blocks and Peak come from the
         // audio thread, which the editor only runs while it has focus.
-        public int Thuds, Clicks, Splashes, Clanks, Smacks, Grunts, Blocks; public float Peak, Slide, Grind;
+        public int Thuds, Clicks, Splashes, Clanks, Smacks, Grunts, Voices, Blocks; public float Peak, Slide, Grind;
         /// <summary>RMS of each ambience bed over the last audio block, after the mix (verification and tuning).</summary>
         public float WindRms, SurfRms, CrowdRms;
-        double[][] _prevVel; double[] _prevFootVz; bool[] _wasUnder; int[] _footBody; int[] _robotOfBody; bool[] _isFoot; double[] _gruntAt;
+        double[][] _prevVel; double[] _prevFootVz; bool[] _wasUnder; int[] _footBody; int[] _robotOfBody; bool[] _isFoot; double[] _gruntAt, _fearAt;
         // triggers written by the physics callback, consumed by the audio thread (strength, pan -1..1)
-        volatile float _thud, _thudPitch = 70f, _thudPan, _click, _clickPan, _clank, _clankPan, _splash, _splashPan, _under;
+        volatile float _thud, _thudPitch = 70f, _thudPan, _click, _clickPan, _clank, _clankPan, _splash, _splashPan, _under, _voice, _voicePan, _voiceHz = 170f, _voiceDecay = 0.18f;
         // sustained levels (targets) and ambience, written by the main thread
         volatile float _slide, _slidePan, _grind, _grindMetal, _wind, _surf, _crowd, _muffle, _sfxGain = 1f, _ambGain = 1f;
-        float _eThud, _eClick, _eClank, _eSplash, _pThud, _pClick, _pClank, _pSplash, _phase, _lp, _bp1, _bp2, _c1, _c2, _c3;
+        float _eThud, _eClick, _eClank, _eSplash, _eVoice, _pThud, _pClick, _pClank, _pSplash, _pVoice, _voicePhase, _phase, _lp, _bp1, _bp2, _c1, _c2, _c3;
         float _sSlide, _sGrind, _sWind, _sSurf, _sCrowd, _sMuffle, _wl, _wr, _brown, _mL, _mR, _gb1, _gb2, _surfPh, _lfo1, _lfo2, _lfo3;
         float _swell, _gasp; bool[] _gasped = System.Array.Empty<bool>();
         Reson _crowdA, _crowdB, _crowdC;
@@ -71,9 +71,24 @@ namespace PoKingHill
 
         void OnInit(object s, MjStepArgs a) { _prevVel = null; }
         bool Gate => director != null && director.statsRounds > 0;
-        void OnKo(PolicyRunner r) { if (!Gate) _swell = Mathf.Max(_swell, 1f); }
-        void OnEnd(RoundResult r) { if (!Gate && r.Winner >= 0) _swell = Mathf.Max(_swell, 0.9f); }
-        void OnRound() { if (_gasped.Length > 0) System.Array.Clear(_gasped, 0, _gasped.Length); }
+        void OnKo(PolicyRunner r)
+        {
+            if (Gate) return;
+            _swell = Mathf.Max(_swell, 1f);
+            if (r.body != "g1") Voice(r, SoundPool.Emotion.Fear, r.transform.position + Vector3.up * 0.6f, 0.8f);
+        }
+        void OnEnd(RoundResult result)
+        {
+            if (Gate || result.Winner < 0 || director == null || result.Winner >= director.Playing) return;
+            _swell = Mathf.Max(_swell, 0.9f);
+            var winner = director.bodies[result.Winner];
+            if (winner.body != "g1") Voice(winner, SoundPool.Emotion.Triumph, winner.transform.position + Vector3.up * 0.6f, 0.8f);
+        }
+        void OnRound()
+        {
+            if (_gasped.Length > 0) System.Array.Clear(_gasped, 0, _gasped.Length);
+            if (_fearAt != null) System.Array.Clear(_fearAt, 0, _fearAt.Length);
+        }
 
         /// <summary>A lightning strike at a world position: thunder from there, delayed by the distance (343 m/s).</summary>
         public void Thunder(Vector3 strike, float strength)
@@ -103,7 +118,15 @@ namespace PoKingHill
                 for (int i = 0; i < director.Playing; i++)
                 {
                     var v = bio.Of(director.bodies[i]);
-                    if (v != null && v.rim < 0.25f && !director.IsOut(i) && !_gasped[i]) { _gasped[i] = true; _gasp = 1f; }
+                    if (v != null && v.rim < 0.25f && !director.IsOut(i) && !_gasped[i])
+                    {
+                        _gasped[i] = true; _gasp = 1f;
+                        if (_fearAt != null && i < _fearAt.Length && director.bodies[i].body != "g1" && MjScene.Instance.Data->time > _fearAt[i])
+                        {
+                            _fearAt[i] = MjScene.Instance.Data->time + 2.0;
+                            Voice(director.bodies[i], SoundPool.Emotion.Fear, director.bodies[i].transform.position + Vector3.up * 0.6f, 0.65f);
+                        }
+                    }
                 }
             }
             float crowd = live ? 0.10f + 0.55f * _swell + 0.3f * _gasp : director != null && director.State == MatchState.Menu ? 0.04f : 0f;
@@ -127,7 +150,7 @@ namespace PoKingHill
         void Setup(MujocoLib.mjModel_* m, int n)
         {
             robots = (PolicyRunner[])robots.Clone();
-            _prevVel = new double[n][]; _prevFootVz = new double[2 * n]; _wasUnder = new bool[n]; _footBody = new int[2 * n]; _gruntAt = new double[n];
+            _prevVel = new double[n][]; _prevFootVz = new double[2 * n]; _wasUnder = new bool[n]; _footBody = new int[2 * n]; _gruntAt = new double[n]; _fearAt = new double[n];
             for (int i = 0; i < n; i++)
             {
                 _prevVel[i] = new double[3];
@@ -214,10 +237,23 @@ namespace PoKingHill
                 Place(p, out float pan, out float gain);
                 _thud = Mathf.Max(_thud, strength * gain); _thudPitch = Mathf.Lerp(55f, 110f, Mathf.Clamp01(dv / 3f)); _thudPan = pan;
                 if (other >= 0) { _clank = Mathf.Max(_clank, strength * gain); _clankPan = pan; Clanks++; }
+                if (human && strength > 0.25f && d->time > _gruntAt[i])
+                {
+                    _gruntAt[i] = d->time + 1.2;
+                    Voice(robots[i], other >= 0 ? SoundPool.Emotion.Pain : SoundPool.Emotion.Strain, p + Vector3.up * 0.6f, strength);
+                }
                 return;
             }
             pool.Play(SoundPool.Kind.Thud, p, strength * g, pitch * (robots[i].body == "trump" ? 0.85f : robots[i].body == "grandpa" ? 0.9f : 1f));
-            if (other < 0) return;
+            if (other < 0)
+            {
+                if (human && strength > 0.65f && d->time > _gruntAt[i])
+                {
+                    _gruntAt[i] = d->time + 1.2;
+                    Voice(robots[i], SoundPool.Emotion.Strain, p + Vector3.up * 0.6f, strength);
+                }
+                return;
+            }
             if (!human && !otherHuman) { pool.Play(SoundPool.Kind.Clank, p, strength * g * 0.8f, pitch); Clanks++; }
             else if (human)
             {
@@ -225,10 +261,26 @@ namespace PoKingHill
                 if (strength > 0.25f && d->time > _gruntAt[i])
                 {
                     _gruntAt[i] = d->time + 1.2;
-                    pool.Play(robots[i].body == "kim" ? SoundPool.Kind.GruntHigh : SoundPool.Kind.GruntLow, p + Vector3.up * 0.6f, Mathf.Lerp(0.5f, 0.9f, strength) * g); Grunts++;
+                    Voice(robots[i], SoundPool.Emotion.Pain, p + Vector3.up * 0.6f, Mathf.Lerp(0.5f, 0.9f, strength));
+                    Grunts++;
                 }
             }
             else { pool.Play(SoundPool.Kind.Clank, p, strength * g * 0.4f, pitch * 0.9f); Clanks++; }    // a human shoving a G1: duller metal
+        }
+
+        void Voice(PolicyRunner body, SoundPool.Emotion emotion, Vector3 position, float strength)
+        {
+            float gain = Mathf.Clamp01(strength) * volume * _sfxGain;
+            if (pool != null) pool.PlayVoice(body.body, emotion, position, gain);
+            else
+            {
+                Place(position, out float pan, out float distanceGain);
+                _voiceHz = (body.body == "kim" ? 235f : body.body == "trump" ? 118f : body.body == "grandpa" ? 148f : 172f) *
+                           (emotion == SoundPool.Emotion.Fear ? 1.25f : emotion == SoundPool.Emotion.Triumph ? 1.15f : 1f);
+                _voiceDecay = emotion == SoundPool.Emotion.Triumph ? 0.34f : emotion == SoundPool.Emotion.Fear ? 0.10f : emotion == SoundPool.Emotion.Strain ? 0.22f : 0.16f;
+                _voicePan = pan; _voice = Mathf.Max(_voice, Mathf.Clamp01(strength) * distanceGain);
+            }
+            Voices++;
         }
 
         // Sliding feet and fighters rubbing, from the contact list every 20 ms.
@@ -283,9 +335,12 @@ namespace PoKingHill
             float c = _click; if (c > 0) { _eClick = Mathf.Max(_eClick, c); _pClick = _clickPan; _click = 0; }
             float k = _clank; if (k > 0) { _eClank = Mathf.Max(_eClank, k); _pClank = _clankPan; _clank = 0; }
             float sp = _splash; if (sp > 0) { _eSplash = Mathf.Max(_eSplash, sp); _pSplash = _splashPan; _splash = 0; }
+            float voice = _voice; if (voice > 0) { _eVoice = Mathf.Max(_eVoice, voice); _pVoice = _voicePan; _voice = 0; }
             float dThud = Mathf.Exp(-1f / (0.09f * _rate)), dClick = Mathf.Exp(-1f / (0.012f * _rate));
             float dClank = Mathf.Exp(-1f / (0.28f * _rate)), dSplash = Mathf.Exp(-1f / (0.35f * _rate));
             float w = 2f * Mathf.PI * _thudPitch / _rate, under = _under;
+            float voiceW = 2f * Mathf.PI * _voiceHz / _rate;
+            float dVoice = Mathf.Exp(-1f / (Mathf.Max(0.08f, _voiceDecay) * _rate));
             float w1 = 2f * Mathf.PI * 330f / _rate, w2 = w1 * 2.76f, w3 = w1 * 5.40f;
             // sustained voices glide to their targets (about 60 ms); ambience over about 0.5 s
             float glide = 1f - Mathf.Exp(-1f / (0.06f * _rate)), drift = 1f - Mathf.Exp(-1f / (0.5f * _rate));
@@ -300,6 +355,7 @@ namespace PoKingHill
                 _bp1 += 0.35f * (nz - _bp1); _bp2 += 0.35f * (_bp1 - _bp2);      // band-passed noise for the rock scrape
                 float scrape = _bp1 - _bp2;
                 _phase += w; if (_phase > 2f * Mathf.PI) _phase -= 2f * Mathf.PI;
+                _voicePhase += voiceW; if (_voicePhase > 6.2831853f) _voicePhase -= 6.2831853f;
                 _c1 += w1; _c2 += w2; _c3 += w3; if (_c1 > 6.2831853f) _c1 -= 6.2831853f; if (_c2 > 6.2831853f) _c2 -= 6.2831853f; if (_c3 > 6.2831853f) _c3 -= 6.2831853f;
                 _sSlide += glide * (slideT - _sSlide); _sGrind += glide * (grindT - _sGrind);
                 _sWind += drift * (windT - _sWind); _sSurf += drift * (surfT - _sSurf); _sCrowd += drift * (crowdT - _sCrowd);
@@ -311,7 +367,8 @@ namespace PoKingHill
                 float sThud = _eThud * (0.8f * Mathf.Sin(_phase) + 0.25f * nz), sClick = _eClick * 0.5f * nz;
                 float sClank = _eClank * 0.35f * (Mathf.Sin(_c1) + 0.6f * Mathf.Sin(_c2) + 0.35f * Mathf.Sin(_c3));
                 float sSplash = _eSplash * 1.6f * _lp, sUnder = under * 0.05f * _lp;
-                _eThud *= dThud; _eClick *= dClick; _eClank *= dClank; _eSplash *= dSplash;
+                float sVoice = _eVoice * (0.58f * Mathf.Sin(_voicePhase) + 0.28f * Mathf.Sin(2.4f * _voicePhase) + 0.12f * nz);
+                _eThud *= dThud; _eClick *= dClick; _eClank *= dClank; _eSplash *= dSplash; _eVoice *= dVoice;
                 // friction: a sliding foot scrapes, rubbing fighters grind (metal: a ringing partial over the noise)
                 float sSlide = _sSlide * 0.8f * scrape;
                 _gb1 += 0.5f * (nz2 - _gb1); _gb2 += 0.5f * (_gb1 - _gb2);
@@ -329,8 +386,8 @@ namespace PoKingHill
                 float windL = _sWind * 6f * _wl * gust, windR = _sWind * 6f * _wr * gust;
 
                 // equal-power-ish pan per voice: g = 0.5 (1 ± pan) + 0.5
-                float L = sThud * (1 - 0.5f * _pThud) + sClick * (1 - 0.5f * _pClick) + sSlide * (1 - 0.5f * slidePan) + sClank * (1 - 0.5f * _pClank) + sSplash * (1 - 0.5f * _pSplash) + sUnder + sGrind;
-                float R = sThud * (1 + 0.5f * _pThud) + sClick * (1 + 0.5f * _pClick) + sSlide * (1 + 0.5f * slidePan) + sClank * (1 + 0.5f * _pClank) + sSplash * (1 + 0.5f * _pSplash) + sUnder + sGrind;
+                float L = sThud * (1 - 0.5f * _pThud) + sClick * (1 - 0.5f * _pClick) + sSlide * (1 - 0.5f * slidePan) + sClank * (1 - 0.5f * _pClank) + sSplash * (1 - 0.5f * _pSplash) + sVoice * (1 - 0.5f * _pVoice) + sUnder + sGrind;
+                float R = sThud * (1 + 0.5f * _pThud) + sClick * (1 + 0.5f * _pClick) + sSlide * (1 + 0.5f * slidePan) + sClank * (1 + 0.5f * _pClank) + sSplash * (1 + 0.5f * _pSplash) + sVoice * (1 + 0.5f * _pVoice) + sUnder + sGrind;
                 eW += windL * windL * amb * amb; eS += sSurf * sSurf * amb * amb; eC += sCrowd * sCrowd * amb * amb;
                 L = L * sfx + (windL + sSurf + sCrowd) * amb; R = R * sfx + (windR + sSurf * 0.9f + sCrowd * 0.95f) * amb;
                 // muffle: a one-pole low-pass from 20 kHz down to ~650 Hz under water or in slowed time

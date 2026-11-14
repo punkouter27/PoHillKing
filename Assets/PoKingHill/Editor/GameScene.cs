@@ -13,7 +13,7 @@ namespace PoKingHill.EditorTools
     /// the lights, the camera, the match logic on KothRig and the Presentation prefab instance are tuned by hand and never
     /// rebuilt. Code only refreshes what comes out of training, in place:
     ///   RefreshBrains   the roster (one Agent per brain in Models/) and the get-up brains: after export_policy.py
-    ///   RefreshBodies   the MuJoCo model, the runners and the skins, taken from the imported testbed
+    ///   RefreshBodies   the 16-body MuJoCo model, runners and skins, taken from the imported testbed
     ///                   Testbed_koth_game.unity: after python -m koth.build_mjcf game and ParityBatch.ImportOne
     ///   Compose         a gate scene: a copy of the game scene with the bodies of another testbed (koth_2p, koth_4p, ...)
     /// Unity CLI: unity command eval --code 'PoKingHill.EditorTools.GameScene.RefreshBrains(); return "ok";'
@@ -100,6 +100,8 @@ namespace PoKingHill.EditorTools
             finally { EditorSceneManager.CloseScene(testbed, true); }
 
             var runners = rig.GetComponentsInChildren<PolicyRunner>(true).OrderBy(r => r.robotPrefix).ToArray();
+            if (tag == GameTag && runners.Length != MatchDirector.PlayersPerMatch)
+                throw new Exception($"Testbed_{tag} has {runners.Length} bodies; expected {MatchDirector.PlayersPerMatch}");
             // body kinds from the model dump: testbeds imported before PolicyRunner had a body field say "g1" for Kim too
             var dump = AssetDatabase.LoadAssetAtPath<TextAsset>($"{ParityBatch.ModelsOf(robot)}/model_dump_{tag}.json");
             if (dump != null)

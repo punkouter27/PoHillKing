@@ -88,7 +88,7 @@ namespace PoKingHill
         public MatchDirector director;
         public ContactLedger ledger;                    // optional: knock-out credits in the telemetry and the ladder
         public QualityTier perf;                        // optional: frame rate, frame time and quality tier per round
-        const int Hz = 10, MaxSeconds = 90, MaxBodies = 8;
+        const int Hz = 10, MaxSeconds = 90, MaxBodies = MatchDirector.PlayersPerMatch;
         readonly float[,] _kin = new float[MaxBodies, MaxSeconds * Hz * 4];     // x, y, z, up per sample
         readonly double[] _path = new double[MaxBodies], _topSpeed = new double[MaxBodies], _effort = new double[MaxBodies], _koAt = new double[MaxBodies];
         readonly double[] _lastX = new double[MaxBodies], _lastY = new double[MaxBodies];

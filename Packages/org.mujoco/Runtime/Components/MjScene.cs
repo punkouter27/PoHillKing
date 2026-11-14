@@ -30,6 +30,7 @@ public class PhysicsRuntimeException : Exception {
   public PhysicsRuntimeException(string message) : base(message) {}
 }
 
+[DefaultExecutionOrder(-50)]
 public class MjScene : MonoBehaviour {
 
   public unsafe MujocoLib.mjModel_* Model = null;
@@ -77,6 +78,12 @@ public class MjScene : MonoBehaviour {
   private static MjScene _instance = null;
 
   private List<MjComponent> _orderedComponents;
+  private List<MjComponent> _transformComponents;
+  private List<MjComponent> _stepComponents;
+  private bool _transformsPending;
+
+  // Opt-in: native physics/control still sync every step; visual poses sync before presentation Update.
+  public bool SyncTransformsOncePerFrame;
 
   public event EventHandler<MjStepArgs> postInitEvent;
   public event EventHandler<MjStepArgs> preUpdateEvent;
@@ -103,6 +110,12 @@ public class MjScene : MonoBehaviour {
   private MjStepArgs _stepArgs;
 
   public bool SceneRecreationAtLateUpdateRequested = false;
+
+  protected void Update() {
+    if (!_transformsPending) return;
+    SyncComponents(_transformComponents);
+    _transformsPending = false;
+  }
 
   protected unsafe void LateUpdate() {
     if (SceneRecreationAtLateUpdateRequested) {
@@ -146,6 +159,15 @@ public class MjScene : MonoBehaviour {
     _orderedComponents = new List<MjComponent>();
     foreach (var root in hierarchyRoots) {
       _orderedComponents.AddRange(MjHierarchyTool.LinearizeHierarchyBFS(root));
+    }
+    _transformComponents = new List<MjComponent>();
+    _stepComponents = new List<MjComponent>();
+    foreach (var component in _orderedComponents) {
+      if (component is MjBody || component is MjGeom || component is MjSite) {
+        _transformComponents.Add(component);
+      } else {
+        _stepComponents.Add(component);
+      }
     }
 
     XmlDocument sceneMjcf = null;
@@ -197,7 +219,12 @@ public class MjScene : MonoBehaviour {
   }
 
   public unsafe void SyncUnityToMjState() {
-    foreach (var component in _orderedComponents) {
+    SyncComponents(_orderedComponents);
+    _transformsPending = false;
+  }
+
+  private unsafe void SyncComponents(List<MjComponent> components) {
+    foreach (var component in components) {
       if (component != null && component.isActiveAndEnabled) {
         component.OnSyncState(Data);
       }
@@ -313,6 +340,7 @@ public class MjScene : MonoBehaviour {
 
   // Destroys the Mujoco scene.
   public unsafe void DestroyScene() {
+    _transformsPending = false;
     preDestroyEvent?.Invoke(this, new MjStepArgs(Model, Data));
     if (Model != null) {
       MujocoLib.mj_deleteModel(Model);
@@ -343,7 +371,12 @@ public class MjScene : MonoBehaviour {
     CheckForPhysicsException();
 
     Profiler.BeginSample("MjStep.OnSyncState");
-    SyncUnityToMjState();
+    if (SyncTransformsOncePerFrame) {
+      SyncComponents(_stepComponents);
+      _transformsPending = true;
+    } else {
+      SyncUnityToMjState();
+    }
     Profiler.EndSample(); // MjStep.OnSyncState
     Profiler.EndSample(); // MjStep
   }

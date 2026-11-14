@@ -85,6 +85,46 @@ public class MjSceneGenerationTests {
   }
 
   [Test]
+  public unsafe void DeferredTransformsPreservePhysicsAndActuatorSynchronization() {
+    _actuator.enabled = true;
+    _actuator.Control = 0.25f;
+    _scene.CreateScene();
+    _scene.Data->qvel[_joint.DofAddress] = 1;
+    _scene.SyncUnityToMjState();
+    var initial = MujocoLib.mj_makeData(_scene.Model);
+    try {
+      MujocoLib.mj_copyData(initial, _scene.Model, _scene.Data);
+      for (int step = 0; step < 20; step++) _scene.StepScene();
+      var expected = new double[(int)_scene.Model->nq];
+      for (int i = 0; i < expected.Length; i++) expected[i] = _scene.Data->qpos[i];
+
+      MujocoLib.mj_copyData(_scene.Data, _scene.Model, initial);
+      MujocoLib.mj_kinematics(_scene.Model, _scene.Data);
+      _scene.SyncUnityToMjState();
+      var before = _body.transform.rotation;
+      _scene.SyncTransformsOncePerFrame = true;
+      for (int step = 0; step < 20; step++) _scene.StepScene();
+
+      for (int i = 0; i < expected.Length; i++) {
+        Assert.That(_scene.Data->qpos[i], Is.EqualTo(expected[i]).Within(1e-12));
+      }
+      Assert.That(_scene.Data->ctrl[_actuator.MujocoId], Is.EqualTo(_actuator.Control));
+      Assert.That(_joint.RawConfiguration, Is.EqualTo(_scene.Data->qpos[_joint.QposAddress]).Within(1e-12));
+      Assert.That(_body.transform.rotation, Is.EqualTo(before));
+
+      typeof(MjScene).GetMethod("Update",
+          System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+          .Invoke(_scene, null);
+      var expectedRotation = MjEngineTool.UnityQuaternion(
+          MjEngineTool.MjQuaternionAtEntry(_scene.Data->xquat, _body.MujocoId));
+      Assert.That(Quaternion.Angle(_body.transform.rotation, expectedRotation), Is.LessThan(0.01f));
+      Assert.That(Quaternion.Angle(_body.transform.rotation, before), Is.GreaterThan(0.01f));
+    } finally {
+      MujocoLib.mj_deleteData(initial);
+    }
+  }
+
+  [Test]
   public unsafe void PhysicsRuntimeError() {
     _scene.CreateScene();
     _scene.Data->qpos[0] = float.PositiveInfinity;

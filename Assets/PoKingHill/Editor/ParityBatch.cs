@@ -14,6 +14,7 @@ namespace PoKingHill.EditorTools
     /// needs a licence this project does not have, so automated runs use a normal editor launch and -kothExit):
     ///   Unity.exe -projectPath . -executeMethod PoKingHill.EditorTools.ParityBatch.ImportAll -kothExit
     ///   Unity.exe -projectPath . -executeMethod PoKingHill.EditorTools.ParityBatch.RunHold -kothScene flat_1p -kothExit
+    ///   Unity.exe -projectPath . -executeMethod PoKingHill.EditorTools.ParityBatch.ImportAndRefreshGame -kothExit
     /// Import uses the plugin's own MJCF importer on training/assets/g1/scene_&lt;tag&gt;_unity.xml, so the Unity
     /// hierarchy (MjBody / MjGeom / MjHingeJoint / MjActuator) is derived from the exact training model.
     /// </summary>
@@ -32,6 +33,10 @@ namespace PoKingHill.EditorTools
 
         /// <summary>Import one testbed scene only: -kothScene &lt;tag&gt; (for example koth_4p), -kothRobot as usual.</summary>
         public static void ImportOne() => ImportOrExit(() => Import(Cli.Arg("-kothScene", "koth_4p"), Robot));
+
+        [MenuItem("PoKingHill/Import and refresh 16-player game")]
+        public static void ImportAndRefreshGame() =>
+            ImportOrExit(() => { Import("koth_game", Robot); GameScene.RefreshBodies(); });
 
         static void ImportOrExit(Action import)
         {

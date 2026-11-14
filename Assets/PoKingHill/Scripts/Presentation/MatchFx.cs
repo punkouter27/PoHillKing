@@ -141,8 +141,9 @@ namespace PoKingHill
         void OnEnd(RoundResult r)
         {
             if (!On || confetti == null || r.Winner < 0 || r.Winner >= director.bodies.Length) return;
-            var t = director.bodies[r.Winner].PelvisTransform; if (t == null) return;
-            confetti.transform.position = t.position + Vector3.up * 1.6f; confetti.Play();
+            var winner = director.bodies[r.Winner]; if (winner.Map == null) return;
+            var position = MjEngineTool.UnityVector3(MjScene.Instance.Data->xpos + 3 * winner.Map.PelvisBodyId);
+            confetti.transform.position = position + Vector3.up * 1.6f; confetti.Play();
         }
 
         void Update()

@@ -63,6 +63,12 @@ Button { font-size: var(--fs-m); }
 
 /* ---- live strip: one row of fighter badges ----------------------------------------------------------------- */
 .scoreboard { flex-direction: row; justify-content: center; margin-top: 6px; flex-shrink: 0; }
+.scoreboard.crowded { flex-wrap: wrap; }
+.scoreboard.crowded .badge { flex-grow: 0; flex-basis: 10%; max-width: none; padding: 4px; margin: 2px 3px; }
+.scoreboard.crowded .avatar-wrap, .scoreboard.crowded .avatar { width: 42px; height: 42px; }
+.scoreboard.crowded .avatar { border-radius: 21px; }
+.scoreboard.crowded .badge-name { font-size: 18px; margin-top: 4px; }
+.scoreboard.crowded .vitals { height: 12px; }
 .badge { flex-grow: 1; flex-basis: 0; min-width: 0; max-width: 220px; align-items: center; background-color: var(--glass); border-radius: 24px; padding: 8px 8px 6px 8px; margin: 0 4px; border-width: 2px; border-color: var(--line); transition-property: scale; transition-duration: 0.15s; }
 .badge.out { opacity: 0.45; }
 .badge.down { border-color: var(--bad); }
@@ -73,7 +79,7 @@ Button { font-size: var(--fs-m); }
 .avatar { width: 60px; height: 60px; border-radius: 30px; align-items: center; justify-content: center; }
 .avatar Label { font-size: var(--fs-s); -unity-font-style: bold; color: var(--accent-ink); -unity-text-align: middle-center; }
 .wins-pip { position: absolute; right: -14px; top: -8px; min-width: 32px; height: 32px; border-radius: 16px; background-color: var(--glass-strong); border-width: 2px; border-color: var(--line); font-size: var(--fs-xs); -unity-font-style: bold; -unity-text-align: middle-center; padding: 0 6px; }
-.badge-tag { position: absolute; bottom: -10px; align-self: center; font-size: var(--fs-xs); -unity-font-style: bold; color: var(--accent-ink); background-color: var(--accent); border-radius: 10px; padding: 0 8px; }
+.badge-tag { position: absolute; bottom: -10px; align-self: center; font-size: var(--fs-xs); -unity-font-style: bold; -unity-text-align: middle-center; color: var(--accent-ink); background-color: var(--accent); border-radius: 10px; padding: 0 8px; }
 .badge.down .badge-tag, .badge.edge .badge-tag { background-color: var(--bad); color: var(--ink); }
 .badge-name { font-size: var(--fs-xs); margin-top: 8px; max-width: 100%; -unity-text-align: middle-center; }
 .vitals { height: 20px; margin-top: 4px; width: 100%; }
@@ -160,6 +166,10 @@ Button { font-size: var(--fs-m); }
 .agent .meta { font-size: var(--fs-s); color: var(--ink-dim); white-space: normal; }
 .agent-top { flex-direction: row; align-items: center; }
 .agent .avatar { width: 54px; height: 54px; border-radius: 27px; margin-right: 14px; flex-shrink: 0; }
+.player-slots { flex-direction: row; flex-wrap: wrap; justify-content: space-between; margin: 4px 0 8px 0; }
+.player-slot { width: 24%; height: 52px; min-height: 52px; margin: 2px 0; padding: 0 6px; border-radius: 14px; background-color: rgba(255, 255, 255, 0.08); border-width: 1px; border-color: var(--line); color: var(--ink); font-size: var(--fs-xs); }
+.player-slot:hover { border-color: var(--accent); }
+.bye-slot { font-size: var(--fs-xs); color: var(--ink-dim); white-space: normal; margin: 4px 0 8px 4px; }
 
 /* results: one table, the replay strip under the winner, one button */
 .winner-stripe { height: 12px; border-radius: 6px; margin: 12px 0 18px 0; }

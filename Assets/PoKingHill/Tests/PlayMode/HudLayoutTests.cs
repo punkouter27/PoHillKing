@@ -8,7 +8,7 @@ namespace PoKingHill.Tests
 {
     /// <summary>
     /// The HUD fits every portrait phone from 16:9 to 21:9 without scrolling or clipping: every menu tab, the intro
-    /// card, a six-way fight (one row of badges), the debug panel on each tab during a fight, and the results sheet. HudView lays
+    /// card, a 16-way fight (two rows of badges), the debug panel on each tab during a fight, and the results sheet. HudView lays
     /// itself out for a simulated screen (SimulateScreen) and lists what does not fit (LayoutProblems): elements outside
     /// the column, text wider than its box, a sheet reaching the top bar or the bottom corners, badges on two rows, the
     /// top bar on a cutout. The console stays clean throughout (ConsoleGuard).
@@ -54,7 +54,7 @@ namespace PoKingHill.Tests
                 hud.Tab = HudView.TabCount - 1;
                 for (int s = 0; s < HudView.SectionCount; s++) { hud.Section = s; yield return FitsEveryPhone(hud, $"settings section {s}"); }
 
-                // six-way: intro card, fight, results
+                // 16-way: intro card, fight, results
                 foreach (var f in d.roster) f.inGame = f.available;
                 GameSettings.Intro = true;
                 d.Launch();

@@ -1,6 +1,8 @@
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Globalization;
+using System.Xml;
 using NUnit.Framework;
 using Unity.Cinemachine;
 using UnityEditor;
@@ -29,7 +31,7 @@ namespace PoKingHill.Tests
                 Assert.Zero(missing, "GameObjects with missing scripts");
 
                 var d = One<MatchDirector>(scene); Assert.NotNull(d, "MatchDirector");
-                Assert.GreaterOrEqual(d.bodies.Length, 2); Assert.NotNull(d.sea); Assert.NotNull(d.synth);
+                Assert.AreEqual(MatchDirector.PlayersPerMatch, d.bodies.Length); Assert.NotNull(d.sea); Assert.NotNull(d.synth);
                 foreach (var f in d.roster.Where(f => f.available)) Assert.NotNull(f.policy, f.name + " has no policy");
                 // the hill rule: every fall gets up again, no count, no limit; out only off the mountain top
                 Assert.AreEqual(0f, d.getupSeconds, "no get-up count"); Assert.AreEqual(0, d.maxGetups, "no get-up limit"); Assert.IsFalse(d.getupOnPlateauOnly);
@@ -39,6 +41,7 @@ namespace PoKingHill.Tests
 
                 var hud = One<HudView>(scene); Assert.NotNull(hud, "HudView");
                 Assert.NotNull(hud.style, "HUD stylesheet"); Assert.NotNull(hud.director); Assert.NotNull(hud.odds); Assert.NotNull(hud.replay);
+                Assert.AreEqual(MatchDirector.PlayersPerMatch, hud.odds.Odds.Length, "win-odds buffer covers every seat");
                 Assert.NotNull(hud.log); Assert.NotNull(hud.bio); Assert.NotNull(hud.ledger);
                 var doc = hud.GetComponent<UIDocument>(); Assert.NotNull(doc.panelSettings, "panel settings");
                 Assert.AreEqual(PanelScaleMode.ScaleWithScreenSize, doc.panelSettings.scaleMode);
@@ -82,6 +85,22 @@ namespace PoKingHill.Tests
         }
 
         [Test]
+        public void PlayerSlotsRandomizeSixteenAvailableBodyCompatibleEntries()
+        {
+            var scene = EditorSceneManager.OpenScene(Game, OpenSceneMode.Additive);
+            try
+            {
+                var d = One<MatchDirector>(scene);
+                Assert.IsTrue(d.RandomizePlayerSlots(true), d.Status);
+                Assert.AreEqual(MatchDirector.PlayersPerMatch, d.playerSlots.Length);
+                var entries = d.playerSlots.Select(i => d.roster[i]).ToArray();
+                Assert.IsTrue(entries.All(a => a.available && a.policy != null));
+                CollectionAssert.AreEqual(new[] { 5, 5, 6 }, entries.GroupBy(a => a.body).Select(g => g.Count()).OrderBy(n => n));
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
         public void ArenaRuleMatchesTheTrainingConstants()
         {
             var a = new ArenaSpec();
@@ -97,11 +116,40 @@ namespace PoKingHill.Tests
             }
         }
 
+        [Test]
+        public void GameModelStartsAllSixteenFightersInTheCenteredRingsFacingInward()
+        {
+            var xml = new XmlDocument();
+            xml.Load("training/assets/g1/scene_koth_game.xml");
+            var radii = new float[MatchDirector.PlayersPerMatch];
+
+            for (int i = 0; i < radii.Length; i++)
+            {
+                string prefix = $"{(char)('a' + i)}_";
+                var body = xml.SelectSingleNode($"//body[@name='{prefix}pelvis']");
+                Assert.NotNull(body, prefix + "pelvis");
+                var attrs = body.Attributes;
+                var pos = attrs["pos"].Value.Split(' ').Select(v => float.Parse(v, CultureInfo.InvariantCulture)).ToArray();
+                var quat = attrs["quat"].Value.Split(' ').Select(v => float.Parse(v, CultureInfo.InvariantCulture)).ToArray();
+                radii[i] = Mathf.Sqrt(pos[0] * pos[0] + pos[1] * pos[1]);
+                Assert.LessOrEqual(radii[i], 1.5f, prefix + " must start on the flat summit");
+
+                float forwardX = quat[0] * quat[0] - quat[3] * quat[3];
+                float forwardY = 2f * quat[0] * quat[3];
+                float facingCenter = (forwardX * -pos[0] + forwardY * -pos[1]) / radii[i];
+                Assert.Greater(facingCenter, 0.999f, prefix + " must face the center");
+            }
+
+            Assert.AreEqual(4, radii.Count(r => Mathf.Abs(r - 0.60f) < 0.001f), "inner ring");
+            Assert.AreEqual(8, radii.Count(r => Mathf.Abs(r - 1.05f) < 0.001f), "middle ring");
+            Assert.AreEqual(4, radii.Count(r => Mathf.Abs(r - 1.45f) < 0.001f), "outer ring");
+        }
+
         [TestCase("Assets/PoKingHill/Models", "flat_1p", "g1", "a_")]
         [TestCase("Assets/PoKingHill/Models", "koth_2p", "g1", "a_ b_")]
         [TestCase("Assets/PoKingHill/Models", "koth_4p", "g1", "a_ b_ c_ d_")]
         [TestCase("Assets/PoKingHill/Models", "koth_7p", "g1", "a_ b_ c_ d_ e_:kim f_:trump g_:grandpa")]
-        [TestCase("Assets/PoKingHill/Models", "koth_game", "g1", "a_:kim b_:kim c_:trump d_:trump e_:grandpa f_:grandpa")]
+        [TestCase("Assets/PoKingHill/Models", "koth_game", "g1", "a_:kim b_:kim c_:kim d_:kim e_:kim f_:kim g_:trump h_:trump i_:trump j_:trump k_:trump l_:grandpa m_:grandpa n_:grandpa o_:grandpa p_:grandpa")]
         [TestCase("Assets/PoKingHill/Models/kim", "koth_2p", "kim", "a_:kim b_:kim")]
         [TestCase("Assets/PoKingHill/Models/trump", "koth_2p", "trump", "a_:trump b_:trump")]
         [TestCase("Assets/PoKingHill/Models/grandpa", "koth_2p", "grandpa", "a_:grandpa b_:grandpa")]

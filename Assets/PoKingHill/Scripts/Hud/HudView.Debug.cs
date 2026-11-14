@@ -38,7 +38,7 @@ namespace PoKingHill
             for (int i = 0; i < director.Playing && i < director.bodies.Length; i++) sb.Append($"{director.bodies[i].robotPrefix} {director.bodies[i].LastInferenceMs:0.00} ms  ");
             sb.Append($"\nGC {GC.CollectionCount(0)} gen0 · telemetry {MatchLog.Folder}");
             if (quality != null) sb.Append($"\nframe {quality.FrameMs:0.0} ms (p95 {quality.FrameP95Ms:0.0}) · {quality.GcKbPerFrame:0.00} KB/frame · quality {quality.Label}, {quality.Downgrades} auto steps");
-            if (synth != null) sb.Append($"\naudio: wind {synth.WindRms:0.000} surf {synth.SurfRms:0.000} crowd {synth.CrowdRms:0.000} · slide {synth.Slide:0.00} grind {synth.Grind:0.00} · {synth.Clanks} clanks {synth.Smacks} smacks {synth.Grunts} grunts");
+            if (synth != null) sb.Append($"\naudio: wind {synth.WindRms:0.000} surf {synth.SurfRms:0.000} crowd {synth.CrowdRms:0.000} · slide {synth.Slide:0.00} grind {synth.Grind:0.00} · {synth.Clanks} clanks {synth.Smacks} smacks {synth.Grunts} grunts {synth.Voices} voices");
             if (warp != null) sb.Append($" · {warp.SlowMos} slow-mos {warp.HitStops} hit stops");
             return sb.ToString();
         }
@@ -47,7 +47,7 @@ namespace PoKingHill
         /// <summary>
         /// What does not fit on this screen: an element outside the column, a label or button whose text is wider than
         /// its box (outside "clip" and "ellipsis" containers, which cut on purpose), a sheet that reaches the top bar
-        /// or the bottom corners, badges on more than one row, an intro card under the strip, the FPS pill on a cutout,
+        /// or the bottom corners, the wrong number of badge rows, an intro card under the strip, the FPS pill on a cutout,
         /// a button or badge smaller than MinTapPx screen pixels either way. Empty = the HUD fits.
         /// </summary>
         public const float MinTapPx = 48f;
@@ -64,7 +64,7 @@ namespace PoKingHill
                 if (!clipped && e is TextElement t && !(e is TextField) && !string.IsNullOrEmpty(t.text) && !e.ClassListContains("ellipsis") && t.resolvedStyle.whiteSpace == WhiteSpace.NoWrap)
                 {
                     var need = t.MeasureTextSize(t.text, 0, VisualElement.MeasureMode.Undefined, 0, VisualElement.MeasureMode.Undefined);
-                    if (need.x > t.contentRect.width + 2) list.Add($"{Describe(e)} needs {need.x:0} units, has {t.contentRect.width:0}");
+                    if (need.x > t.contentRect.width + 2) list.Add($"{Describe(e)} needs {need.x:0} units, has {t.contentRect.width:0} (width {e.resolvedStyle.width:0}, bounds {b.width:0})");
                 }
                 else if (!clipped && e is TextElement w && !(e is TextField) && !string.IsNullOrEmpty(w.text) && w.contentRect.width > 0)
                 {
@@ -92,7 +92,15 @@ namespace PoKingHill
             }
             if (_peekRow.resolvedStyle.display == DisplayStyle.Flex && _peek.worldBound.yMax > _bottomBar.worldBound.yMin + 1) list.Add("peek pill covers the bottom corners");
             if (_badges.Count > 1)
-                foreach (var b in _badges) if (Mathf.Abs(b.worldBound.yMin - _badges[0].worldBound.yMin) > 1) { list.Add("badges wrap onto a second row"); break; }
+            {
+                var rows = new List<float>();
+                foreach (var b in _badges)
+                    if (!rows.Exists(y => Mathf.Abs(y - b.worldBound.yMin) <= 4f)) rows.Add(b.worldBound.yMin);
+                int expected = director.Playing >= 12 ? 2 : 1;
+                if (rows.Count != expected)
+                    list.Add($"badges use {rows.Count} rows (expected {expected}): " +
+                             string.Join("; ", _badges.ConvertAll(b => $"{b.worldBound.xMin:0},{b.worldBound.yMin:0} {b.worldBound.width:0}x{b.worldBound.height:0}")));
+            }
             if (_intro.resolvedStyle.display == DisplayStyle.Flex && _intro.worldBound.yMin < _scoreboard.worldBound.yMax - 1) list.Add("intro card overlaps the badges");
             foreach (var c in Cutouts)
             {

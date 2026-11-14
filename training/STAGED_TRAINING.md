@@ -13,6 +13,13 @@ no update had a NaN gradient; no target value is known for the new rungs, so lea
 each and set it from that run's `Train/mean_reward` once its eval passes. Prune afterwards with
 `uv run python scripts/prune_runs.py` (dry run) / `--delete`.
 
+For bounded candidate-only runs, use `--max-minutes N --checkpoint-only --save-interval 25`.
+The budget includes environment initialization and stops after the current completed PPO update, then saves
+`model_final.pt` and flushes TensorBoard. No ONNX is exported in checkpoint-only mode. Every new checkpoint
+carries interface dimensions/timing and physics scene/commit provenance. This does not constitute graduation:
+task/realism regressions, the consecutive-episode gate and Unity parity are still required before deployment.
+When port 6006 belongs to another project, launch this project's TensorBoard separately on a free loopback port.
+
 ## Order
 
 | # | what | why first |
