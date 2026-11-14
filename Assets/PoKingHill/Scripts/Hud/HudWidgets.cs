@@ -72,4 +72,74 @@ namespace PoKingHill
                 }
         }
     }
+
+    /// <summary>Procedural vector country flag badge rendered cleanly with Painter2D (#16).</summary>
+    public class FlagBadge : VisualElement
+    {
+        string _code = "UN";
+
+        public FlagBadge(string countryCode = "UN")
+        {
+            _code = string.IsNullOrEmpty(countryCode) ? "UN" : countryCode.ToUpperInvariant();
+            AddToClassList("flag-badge");
+            pickingMode = PickingMode.Ignore;
+            generateVisualContent += Draw;
+        }
+
+        public void SetCode(string code)
+        {
+            string next = string.IsNullOrEmpty(code) ? "UN" : code.ToUpperInvariant();
+            if (next == _code) return;
+            _code = next;
+            MarkDirtyRepaint();
+        }
+
+        void Draw(MeshGenerationContext ctx)
+        {
+            var r = contentRect;
+            if (r.width < 4 || r.height < 4) return;
+            var p = ctx.painter2D;
+            float w = r.width, h = r.height;
+            if (_code == "KR")
+            {
+                Rect(p, 0, 0, w, h, Color.white);
+                p.fillColor = new Color(0.80f, 0.14f, 0.22f); p.BeginPath(); p.Arc(new Vector2(w * 0.5f, h * 0.5f), h * 0.28f, 180, 360); p.Fill();
+                p.fillColor = new Color(0.08f, 0.24f, 0.58f); p.BeginPath(); p.Arc(new Vector2(w * 0.5f, h * 0.5f), h * 0.28f, 0, 180); p.Fill();
+            }
+            else if (_code == "US")
+            {
+                for (int s = 0; s < 5; s++)
+                    Rect(p, 0, s * h / 5f, w, h / 5f, s % 2 == 0 ? new Color(0.76f, 0.14f, 0.20f) : Color.white);
+                Rect(p, 0, 0, w * 0.46f, h * 0.56f, new Color(0.10f, 0.22f, 0.48f));
+            }
+            else if (_code == "GB")
+            {
+                Rect(p, 0, 0, w, h, new Color(0.05f, 0.18f, 0.48f));
+                Rect(p, 0, h * 0.34f, w, h * 0.32f, Color.white);
+                Rect(p, w * 0.38f, 0, w * 0.24f, h, Color.white);
+                Rect(p, 0, h * 0.41f, w, h * 0.18f, new Color(0.80f, 0.12f, 0.18f));
+                Rect(p, w * 0.43f, 0, w * 0.14f, h, new Color(0.80f, 0.12f, 0.18f));
+            }
+            else if (_code == "BR")
+            {
+                Rect(p, 0, 0, w, h, new Color(0.05f, 0.52f, 0.26f));
+                p.fillColor = new Color(0.98f, 0.82f, 0.12f);
+                p.BeginPath(); p.MoveTo(new Vector2(w * 0.5f, h * 0.12f)); p.LineTo(new Vector2(w * 0.88f, h * 0.5f));
+                p.LineTo(new Vector2(w * 0.5f, h * 0.88f)); p.LineTo(new Vector2(w * 0.12f, h * 0.5f)); p.ClosePath(); p.Fill();
+                p.fillColor = new Color(0.08f, 0.20f, 0.52f); p.BeginPath(); p.Arc(new Vector2(w * 0.5f, h * 0.5f), h * 0.18f, 0, 360); p.Fill();
+            }
+            else
+            {
+                Color a = _code == "CN" ? new Color(0.84f, 0.16f, 0.16f) : new Color(0.16f, 0.46f, 0.78f);
+                Rect(p, 0, 0, w, h, a);
+                p.fillColor = new Color(0.98f, 0.84f, 0.22f); p.BeginPath(); p.Arc(new Vector2(w * 0.28f, h * 0.36f), h * 0.16f, 0, 360); p.Fill();
+            }
+        }
+
+        static void Rect(Painter2D p, float x, float y, float w, float h, Color c)
+        {
+            p.fillColor = c; p.BeginPath(); p.MoveTo(new Vector2(x, y)); p.LineTo(new Vector2(x + w, y));
+            p.LineTo(new Vector2(x + w, y + h)); p.LineTo(new Vector2(x, y + h)); p.ClosePath(); p.Fill();
+        }
+    }
 }

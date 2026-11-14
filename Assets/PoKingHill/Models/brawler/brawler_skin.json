@@ -1,0 +1,298 @@
+{
+ "bones": [
+  {
+   "bone": "Hips",
+   "body": "pelvis",
+   "bone_pos": [
+    0.0,
+    0.0,
+    0.96
+   ],
+   "body_pos": [
+    0.0,
+    0.0,
+    0.96
+   ]
+  },
+  {
+   "bone": "Spine",
+   "body": "torso_link",
+   "bone_pos": [
+    0.0,
+    0.0,
+    1.07
+   ],
+   "body_pos": [
+    0.0,
+    0.0,
+    1.07
+   ]
+  },
+  {
+   "bone": "Chest",
+   "body": "torso_link",
+   "bone_pos": [
+    0.01,
+    0.0,
+    1.24
+   ],
+   "body_pos": [
+    0.0,
+    0.0,
+    1.07
+   ]
+  },
+  {
+   "bone": "Neck",
+   "body": "torso_link",
+   "bone_pos": [
+    0.0,
+    0.0,
+    1.5
+   ],
+   "body_pos": [
+    0.0,
+    0.0,
+    1.07
+   ]
+  },
+  {
+   "bone": "Head",
+   "body": "torso_link",
+   "bone_pos": [
+    0.0,
+    0.0,
+    1.6
+   ],
+   "body_pos": [
+    0.0,
+    0.0,
+    1.07
+   ]
+  },
+  {
+   "bone": "Shoulder.L",
+   "body": "torso_link",
+   "bone_pos": [
+    0.0,
+    0.14,
+    1.46
+   ],
+   "body_pos": [
+    0.0,
+    0.0,
+    1.07
+   ]
+  },
+  {
+   "bone": "UpperArm.L",
+   "body": "left_shoulder_yaw_link",
+   "bone_pos": [
+    0.0,
+    0.24,
+    1.46
+   ],
+   "body_pos": [
+    0.0,
+    0.24,
+    1.46
+   ]
+  },
+  {
+   "bone": "LowerArm.L",
+   "body": "left_elbow_link",
+   "bone_pos": [
+    0.01,
+    0.27,
+    1.17
+   ],
+   "body_pos": [
+    0.01,
+    0.27,
+    1.17
+   ]
+  },
+  {
+   "bone": "Hand.L",
+   "body": "left_wrist_yaw_link",
+   "bone_pos": [
+    0.04,
+    0.28,
+    0.91
+   ],
+   "body_pos": [
+    0.04,
+    0.28,
+    0.91
+   ]
+  },
+  {
+   "bone": "UpperLeg.L",
+   "body": "left_hip_yaw_link",
+   "bone_pos": [
+    0.0,
+    0.125,
+    0.95
+   ],
+   "body_pos": [
+    0.0,
+    0.125,
+    0.95
+   ]
+  },
+  {
+   "bone": "LowerLeg.L",
+   "body": "left_knee_link",
+   "bone_pos": [
+    0.01,
+    0.13,
+    0.51
+   ],
+   "body_pos": [
+    0.01,
+    0.13,
+    0.51
+   ]
+  },
+  {
+   "bone": "Foot.L",
+   "body": "left_ankle_roll_link",
+   "bone_pos": [
+    -0.01,
+    0.13,
+    0.085
+   ],
+   "body_pos": [
+    -0.01,
+    0.13,
+    0.085
+   ]
+  },
+  {
+   "bone": "Toe.L",
+   "body": "left_ankle_roll_link",
+   "bone_pos": [
+    0.08,
+    0.13,
+    0.035
+   ],
+   "body_pos": [
+    -0.01,
+    0.13,
+    0.085
+   ]
+  },
+  {
+   "bone": "Shoulder.R",
+   "body": "torso_link",
+   "bone_pos": [
+    0.0,
+    -0.14,
+    1.46
+   ],
+   "body_pos": [
+    0.0,
+    0.0,
+    1.07
+   ]
+  },
+  {
+   "bone": "UpperArm.R",
+   "body": "right_shoulder_yaw_link",
+   "bone_pos": [
+    0.0,
+    -0.24,
+    1.46
+   ],
+   "body_pos": [
+    0.0,
+    -0.24,
+    1.46
+   ]
+  },
+  {
+   "bone": "LowerArm.R",
+   "body": "right_elbow_link",
+   "bone_pos": [
+    0.01,
+    -0.27,
+    1.17
+   ],
+   "body_pos": [
+    0.01,
+    -0.27,
+    1.17
+   ]
+  },
+  {
+   "bone": "Hand.R",
+   "body": "right_wrist_yaw_link",
+   "bone_pos": [
+    0.04,
+    -0.28,
+    0.91
+   ],
+   "body_pos": [
+    0.04,
+    -0.28,
+    0.91
+   ]
+  },
+  {
+   "bone": "UpperLeg.R",
+   "body": "right_hip_yaw_link",
+   "bone_pos": [
+    0.0,
+    -0.125,
+    0.95
+   ],
+   "body_pos": [
+    0.0,
+    -0.125,
+    0.95
+   ]
+  },
+  {
+   "bone": "LowerLeg.R",
+   "body": "right_knee_link",
+   "bone_pos": [
+    0.01,
+    -0.13,
+    0.51
+   ],
+   "body_pos": [
+    0.01,
+    -0.13,
+    0.51
+   ]
+  },
+  {
+   "bone": "Foot.R",
+   "body": "right_ankle_roll_link",
+   "bone_pos": [
+    -0.01,
+    -0.13,
+    0.085
+   ],
+   "body_pos": [
+    -0.01,
+    -0.13,
+    0.085
+   ]
+  },
+  {
+   "bone": "Toe.R",
+   "body": "right_ankle_roll_link",
+   "bone_pos": [
+    0.08,
+    -0.13,
+    0.035
+   ],
+   "body_pos": [
+    -0.01,
+    -0.13,
+    0.085
+   ]
+  }
+ ]
+}

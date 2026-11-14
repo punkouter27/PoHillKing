@@ -85,6 +85,21 @@ namespace PoKingHill
             }
         }
 
+        public float LastKoScore { get; private set; }
+        public float BestMatchKoScore { get; private set; }
+        public double BestMatchKoTime { get; private set; } = -1;
+        public PolicyRunner BestMatchKoVictim { get; private set; }
+        public PolicyRunner BestMatchKoKiller { get; private set; }
+
+        public void ResetMatchHighlight()
+        {
+            LastKoScore = 0f;
+            BestMatchKoScore = 0f;
+            BestMatchKoTime = -1;
+            BestMatchKoVictim = null;
+            BestMatchKoKiller = null;
+        }
+
         void OnKnockout(PolicyRunner victim)
         {
             if (!_ready || director == null || director.statsRounds > 0) return;
@@ -98,7 +113,25 @@ namespace PoKingHill
             }
             if (best >= 0) _kos[best]++;
             if (second >= 0) _assists[second]++;
-            MatchEvents.RaiseKnockoutCredited(victim, best >= 0 ? _runners[best] : null, second >= 0 ? _runners[second] : null);
+            var killerRunner = best >= 0 ? _runners[best] : null;
+            float impulse = (float)(best >= 0 ? _recent[v, best] : minImpulse);
+            LastKoScore = impulse;
+            if (impulse >= BestMatchKoScore)
+            {
+                BestMatchKoScore = impulse;
+                BestMatchKoTime = now;
+                BestMatchKoVictim = victim;
+                BestMatchKoKiller = killerRunner;
+            }
+            if (killerRunner != null && GameSettings.Modifier == ArenaModifier.Standard)
+            {
+                int kb = Array.IndexOf(director.bodies, killerRunner);
+                int vb = Array.IndexOf(director.bodies, victim);
+                string killerName = kb >= 0 ? director.AgentNameAtBody(kb) : killerRunner.body;
+                string victimName = vb >= 0 ? director.AgentNameAtBody(vb) : victim.body;
+                RivalryBook.RecordKnockout(killerName, victimName);
+            }
+            MatchEvents.RaiseKnockoutCredited(victim, killerRunner, second >= 0 ? _runners[second] : null);
         }
 
         // ------------------------------------------------------------------ queries (fighters by runner, any seat order)

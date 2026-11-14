@@ -10,6 +10,10 @@ namespace PoKingHill
     /// <summary>Render budget (QualityTier): Auto starts High on desktop, Medium on phones, and steps down in a player
     /// build when the frame rate stays low.</summary>
     public enum Quality { Auto, Low, Medium, High }
+    /// <summary>Sky lighting preset for AtmosphereController (#5).</summary>
+    public enum AtmosphereMode { Auto, Dawn, Noon, Sunset, Night, Storm }
+    /// <summary>Unranked arena physics/gameplay modifiers (#17); always Standard during graduation gates.</summary>
+    public enum ArenaModifier { Standard, MoonGravity, IceSummit, HeavyKnockback }
 
     /// <summary>
     /// Every optional setting, saved in PlayerPrefs. The defaults are the plain game, with the least on screen: one
@@ -48,6 +52,18 @@ namespace PoKingHill
         /// web, the system voice on Android; nothing is sent anywhere). Turns the caption line on with it.</summary>
         public static bool Voice { get => B("voice", false); set => Set("voice", value); }
 
+        // Feel, atmosphere, live APIs & unranked modifiers
+        /// <summary>Gamepad rumble and mobile vibration on heavy impacts and knockouts (#4).</summary>
+        public static bool Haptics { get => B("haptics", true); set => Set("haptics", value); }
+        /// <summary>Sky lighting preset or automatic round variation (#5).</summary>
+        public static AtmosphereMode Atmosphere { get => (AtmosphereMode)Mathf.Clamp(I("atmosphere", (int)AtmosphereMode.Auto), 0, 5); set => Set("atmosphere", (int)value); }
+        /// <summary>Optional Open-Meteo live weather & wind sync for visual atmosphere (#14).</summary>
+        public static bool LiveWeather { get => B("liveWeather", false); set => Set("liveWeather", value); }
+        /// <summary>Unranked physics modifier for casual play (#17); disables Ladder & Rivalries recording while non-Standard.</summary>
+        public static ArenaModifier Modifier { get => (ArenaModifier)Mathf.Clamp(I("modifier", (int)ArenaModifier.Standard), 0, 3); set => Set("modifier", (int)value); }
+        /// <summary>Optional Azure Function endpoint for Daily Challenge global leaderboard (#15).</summary>
+        public static string DailyApiUrl { get => S("dailyApiUrl", ""); set => SetS("dailyApiUrl", value ?? ""); }
+
         // Advanced: extra rules, developer tools
         /// <summary>Who free-for-all brains go for (no effect with two fighters).</summary>
         public static Targeting Targeting { get => (Targeting)Mathf.Clamp(I("targeting", (int)Targeting.Opportunist), 0, 1); set => Set("targeting", (int)value); }
@@ -65,7 +81,9 @@ namespace PoKingHill
         public static bool Commentary { get => DevTools && B("commentary", false); set => Set("commentary", value); }
 
         static readonly string[] Keys = { "rounds", "seaPace", "intro", "replays", "targeting", "quality", "cinematic", "colorSafe",
-                                          "volume", "sfxVolume", "ambVolume", "musVolume", "voice", "devTools", "telemetryHud", "overlay", "intent", "winOdds", "commentary",
+                                          "volume", "sfxVolume", "ambVolume", "musVolume", "voice",
+                                          "haptics", "atmosphere", "liveWeather", "modifier", "dailyApiUrl",
+                                          "devTools", "telemetryHud", "overlay", "intent", "winOdds", "commentary",
                                           // settings that were cut (2026-10-21): cleared by a reset too
                                           "camera", "effects", "slowmo", "cutaways", "hazards", "stamina", "tactician", "getup" };
         /// <summary>Back to the defaults: deletes only this game's keys, never other PlayerPrefs.</summary>
@@ -73,9 +91,11 @@ namespace PoKingHill
 
         static int I(string k, int d) { try { return PlayerPrefs.GetInt("koth." + k, d); } catch { return d; } }
         static float F(string k, float d) { try { return PlayerPrefs.GetFloat("koth." + k, d); } catch { return d; } }
+        static string S(string k, string d) { try { return PlayerPrefs.GetString("koth." + k, d); } catch { return d; } }
         static bool B(string k, bool d) => I(k, d ? 1 : 0) != 0;
         static void Set(string k, int v) { PlayerPrefs.SetInt("koth." + k, v); Changed?.Invoke(); }
         static void Set(string k, float v) { PlayerPrefs.SetFloat("koth." + k, v); Changed?.Invoke(); }
+        static void SetS(string k, string v) { PlayerPrefs.SetString("koth." + k, v); Changed?.Invoke(); }
         static void Set(string k, bool v) => Set(k, v ? 1 : 0);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

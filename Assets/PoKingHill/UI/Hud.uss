@@ -17,7 +17,8 @@
     --bad: rgb(240, 96, 86);
     --radius: 22px;
 
-    /* type scale: six steps */
+    /* type scale: seven steps */
+    --fs-xxs: 18px;
     --fs-xs: 22px;
     --fs-s: 25px;
     --fs-m: 28px;
@@ -67,7 +68,8 @@ Button { font-size: var(--fs-m); }
 .scoreboard.crowded .badge { flex-grow: 0; flex-basis: 10%; max-width: none; padding: 4px; margin: 2px 3px; }
 .scoreboard.crowded .avatar-wrap, .scoreboard.crowded .avatar { width: 42px; height: 42px; }
 .scoreboard.crowded .avatar { border-radius: 21px; }
-.scoreboard.crowded .badge-name { font-size: 18px; margin-top: 4px; }
+.scoreboard.crowded .badge-name { font-size: var(--fs-xxs); margin-top: 4px; }
+.scoreboard.crowded .badge-tag { display: none; }
 .scoreboard.crowded .vitals { height: 12px; }
 .badge { flex-grow: 1; flex-basis: 0; min-width: 0; max-width: 220px; align-items: center; background-color: var(--glass); border-radius: 24px; padding: 8px 8px 6px 8px; margin: 0 4px; border-width: 2px; border-color: var(--line); transition-property: scale; transition-duration: 0.15s; }
 .badge.out { opacity: 0.45; }
@@ -203,12 +205,12 @@ Button { font-size: var(--fs-m); }
 .feed-verb { color: var(--ink-dim); margin: 0 8px; }
 
 /* ---- intro: tale of the tape -------------------------------------------------------------------------------- */
-.intro { background-color: var(--glass-strong); border-radius: 36px; padding: 24px 30px 18px 30px; border-width: 2px; border-color: var(--line); margin: 0 4px 18px 4px; }
-.intro-stripe { height: 10px; border-radius: 5px; margin-bottom: 14px; }
+.intro { background-color: var(--glass-strong); border-radius: 32px; padding: 16px 24px 14px 24px; border-width: 2px; border-color: var(--line); margin: 0 4px 10px 4px; }
+.intro-stripe { height: 8px; border-radius: 4px; margin-bottom: 10px; }
 .intro-kicker { font-size: var(--fs-s); color: var(--accent); -unity-font-style: bold; letter-spacing: 2px; }
-.intro-name { font-size: var(--fs-xxl); -unity-font-style: bold; white-space: normal; margin: 2px 0 6px 0; }
-.intro-grid { flex-direction: row; flex-wrap: wrap; justify-content: space-between; margin-top: 14px; }
-.intro-tile { width: 32%; background-color: rgba(255, 255, 255, 0.07); border-radius: 20px; padding: 12px 14px; margin-bottom: 10px; }
+.intro-name { font-size: var(--fs-xxl); -unity-font-style: bold; white-space: normal; margin: 2px 0 4px 0; }
+.intro-grid { flex-direction: row; flex-wrap: wrap; justify-content: space-between; margin-top: 8px; }
+.intro-tile { width: 32%; background-color: rgba(255, 255, 255, 0.07); border-radius: 18px; padding: 8px 12px; margin-bottom: 6px; }
 .intro-value { font-size: var(--fs-xl); -unity-font-style: bold; white-space: normal; }
 .intro-key { font-size: var(--fs-xs); color: var(--ink-dim); }
 
@@ -226,3 +228,21 @@ Button { font-size: var(--fs-m); }
 .sheet.dense .secondary { height: var(--h-l); }
 .sheet.dense .res-row { height: var(--h-s); }
 .sheet.dense .agent { height: 128px; margin-bottom: 10px; }
+
+/* ---- feature upgrades: flags, bio, predictions, action bar, photo mode, PiP KO cam ------------------------- */
+.flag-badge { width: 34px; height: 22px; border-radius: 5px; margin-right: 10px; border-width: 1px; border-color: var(--line); flex-shrink: 0; }
+.flag-row { flex-direction: row; align-items: center; margin-top: 2px; }
+.flag-row Label { margin-top: 0; }
+.bio-line { font-size: var(--fs-xxs); color: var(--ink-dim); white-space: normal; margin-top: 4px; }
+.bio-clip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick-row { flex-direction: row; align-items: center; justify-content: space-between; min-height: var(--h-s); border-radius: 18px; background-color: rgba(255, 255, 255, 0.06); border-width: 1px; border-color: var(--line); padding: 6px 14px; margin-top: 8px; }
+.pick-row Label { font-size: var(--fs-xs); white-space: normal; flex-shrink: 1; }
+.action-bar { flex-direction: row; justify-content: flex-end; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
+.action-pill { height: var(--h-s); min-height: 48px; border-radius: 26px; background-color: var(--glass-strong); border-width: 2px; border-color: var(--line); color: var(--ink); font-size: var(--fs-xs); padding: 0 20px; margin-left: 8px; }
+.action-pill:hover { border-color: var(--accent); }
+.action-pill.active { border-color: var(--accent); background-color: rgba(255, 196, 64, 0.20); }
+.photo-bar { flex-direction: row; justify-content: center; align-items: center; background-color: var(--glass-strong); border-radius: 28px; border-width: 2px; border-color: var(--accent); padding: 6px 10px; margin-bottom: 10px; flex-shrink: 0; }
+.photo-bar Button { height: var(--h-s); min-height: 48px; border-radius: 22px; background-color: var(--fill-strong); border-width: 0; color: var(--ink); font-size: var(--fs-xs); padding: 0 18px; margin: 0 5px; }
+.pip-box { position: absolute; left: 20px; top: 112px; width: 220px; height: 136px; border-radius: 16px; background-color: var(--glass-strong); border-width: 2px; border-color: var(--bad); overflow: hidden; }
+.pip-img { flex-grow: 1; }
+.pip-tag { position: absolute; left: 8px; top: 6px; font-size: var(--fs-xxs); -unity-font-style: bold; background-color: rgba(240, 96, 86, 0.85); color: var(--ink); border-radius: 8px; padding: 1px 8px; }

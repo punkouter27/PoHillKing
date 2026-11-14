@@ -885,3 +885,20 @@ when every share >= 0.28. Progress: `runs/overnight/progress_balance.txt`; repor
 - Measured, 11 real 16-way rounds: 6 wins, every winner standing at the bell; 5 draws.
 - Motion-prior run (`scripts/archive/amp_kim_walker_261114.sh`, Kim's walker with and without `--amp`, then eval)
   is prepared but not started: 1.5 GB free RAM with the editor open, below the 4 GB floor.
+
+## 2026-11-14 evening - all 20 feature upgrades + full verification (Unity + Python)
+
+- Implemented all 20 feature upgrades spanning presentation, cameras, HUD, matchmaking, external APIs, batched
+  inference, AMP 100STYLE pipeline, physical `victory` R6 rung, and the `brawler` 4th-fighter scaffold; documented
+  per-feature policy scope in `DOCS/20261114/all-20-features.md` and visual report in
+  `SCREENSHOTS/features-261114/report.html`.
+- **Policy impact:** features #1-#17 introduce zero policy retrains (`PolicyBatcher` parity-checked against
+  single-runner CPU inference `< 1e-4`; arena modifiers and spectator box throws are blocked when `statsRounds > 0`).
+  Features #18 (`100STYLE` AMP aliases + `queue_hill.py --amp`), #19 (`victory` rung `victory_s=2.5`), and #20
+  (`brawler` 118.24 kg MJCF/GLB/skin kept off `Game.unity`) are opt-in/off-roster until trained and gated.
+- **Verified after final edits:**
+  - Unity EditMode (`-testFilter PoKingHill`): **62/62 passed** (0 failed, 4.21 s).
+  - Unity PlayMode DX11 (`-testFilter PoKingHill`): **11/11 passed** (0 failed, 457.30 s), including
+    `FeaturePlayModeTests`, `HudLayoutTests`, `MatchFlowTests`, and `StateFlowSoakTests`.
+  - Python (`training/`): `test_amp.py` **5/5 ok**, `test_train_budget.py` **2/2 OK**, `collision_audit.py` exit **0**
+    (`brawler` zero/rest/tpose enabled overlaps: 0), `env.py` `victory`/`brawler` config check ok.

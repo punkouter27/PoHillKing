@@ -43,10 +43,11 @@ Shader "PoKingHill/Fighter"
             float4 _LifeHeadUp;          // the head frame's up in world space
             float4 _LifeMouth;           // xyz: the mouth in the head frame; w: head height (chin to crown, m), 0 = no face
             float4 _LifeFace;            // x: jaw open 0..1, y: brow -1 (furrowed) .. 1 (raised), z: flush 0..1
+            float4 _LifeEyes;            // x: blink 0..1, y: eyeX -1..1, z: eyeY -1..1, w: hairWet 0..1
             float4 _LifeChest;           // xyz: world centre of the rib cage, w: radius (0 = off)
             float4 _LifeBreath;          // xyz: the chest's forward in world space, w: swell (m)
-            float4 _LifeJigC[3];         // xyz: world centre, w: radius (0 = off)
-            float4 _LifeJigD[3];         // xyz: world offset at the centre
+            float4 _LifeJigC[5];         // xyz: world centre, w: radius (0 = off)
+            float4 _LifeJigD[5];         // xyz: world offset at the centre
         CBUFFER_END
 
         // Position in the head frame relative to the mouth, in head heights.
@@ -59,7 +60,7 @@ Shader "PoKingHill/Fighter"
                 float3 d = p - _LifeChest.xyz; float w = saturate(1.0 - dot(d, d) / (_LifeChest.w * _LifeChest.w));
                 p += n * (_LifeBreath.w * w * w * (0.35 + 0.65 * saturate(dot(n, _LifeBreath.xyz))));
             }
-            [unroll] for (int i = 0; i < 3; i++)
+            [unroll] for (int i = 0; i < 5; i++)
                 if (_LifeJigC[i].w > 0.0)
                 {
                     float3 d = p - _LifeJigC[i].xyz; float w = saturate(1.0 - dot(d, d) / (_LifeJigC[i].w * _LifeJigC[i].w));
@@ -188,6 +189,30 @@ Shader "PoKingHill/Fighter"
                 s.albedo = albedo; s.metallic = metallic; s.smoothness = smooth; s.occlusion = 1; s.alpha = 1; s.specular = 0;
                 half rim = pow(1.0 - saturate(dot(n, d.viewDirectionWS)), _RimPower) * _RimColor.a * (1.0 - mouthDark);
                 s.emission = _EmissionColor.rgb + _RimColor.rgb * rim + half3(1.0, 0.62, 0.28) * (_Flash * _Flash * 4.0);
+                // Eyelid blink, flinch squint, iris dart (#11) and wet hair sheen (#10)
+                if (_LifeMouth.w > 0.0)
+                {
+                    float3 fe = i.face;
+                    half frontFace = smoothstep(-0.20, 0.05, fe.x);
+                    float ez = abs(fe.z) - 0.23;
+                    float ey = fe.y - 0.255;
+                    float2 eNorm = float2(ez / 0.115, ey / 0.055);
+                    float eyeMask = smoothstep(1.0, 0.45, dot(eNorm, eNorm)) * frontFace;
+                    if (eyeMask > 0.01)
+                    {
+                        float lidY = lerp(0.055, -0.055, saturate(_LifeEyes.x));
+                        float closed = smoothstep(lidY + 0.015, lidY - 0.015, ey) * step(0.02, _LifeEyes.x);
+                        float crease = smoothstep(0.025, 0.0, abs(ey - lidY)) * saturate(_LifeEyes.x * 2.0);
+                        float2 dart = float2(_LifeEyes.y * 0.042, _LifeEyes.z * 0.022);
+                        float iris = smoothstep(0.036, 0.015, length(float2(ez, ey) - dart));
+                        s.albedo = lerp(s.albedo, s.albedo * half3(0.45, 0.48, 0.54), iris * 0.45 * eyeMask * (1.0 - _LifeEyes.x));
+                        s.albedo = lerp(s.albedo, half3(0.55, 0.42, 0.36), saturate(closed * 0.35 + crease * 0.55) * eyeMask);
+                    }
+                    half crown = smoothstep(0.36, 0.56, fe.y) * smoothstep(0.25, -0.25, fe.x);
+                    half hw = saturate(_LifeEyes.w) * crown;
+                    s.albedo *= lerp(1.0, 0.72, hw);
+                    s.smoothness = lerp(s.smoothness, 0.88, hw);
+                }
                 half4 c = UniversalFragmentPBR(d, s);
                 c.rgb *= 1.0 - 0.8 * mouthDark;                                     // no light gets in there
                 c.rgb = MixFog(c.rgb, i.fog);

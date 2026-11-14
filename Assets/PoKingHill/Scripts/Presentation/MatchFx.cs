@@ -146,8 +146,12 @@ namespace PoKingHill
             confetti.transform.position = position + Vector3.up * 1.6f; confetti.Play();
         }
 
+        bool _footHooked;
+        float _nextSweat;
+
         void Update()
         {
+            if (!_footHooked) { _footHooked = true; MatchEvents.Footfall += OnFootfall; }
             if (director == null) return;
             // post-process punch decays over ~0.25 s
             _punch = Mathf.MoveTowards(_punch, 0f, Time.unscaledDeltaTime * 4f);
@@ -185,6 +189,21 @@ namespace PoKingHill
             Lightning(fight, storm);
             Danger(fight);
             Drips(fight);
+        }
+
+        // Persistent footprints stamped onto the dirt pool on strong footfalls (#10).
+        void OnFootfall(Vector3 pos, float speed)
+        {
+            if (this == null || !isActiveAndEnabled) { MatchEvents.Footfall -= OnFootfall; return; }
+            if (!On || scuffs.Length == 0 || speed < 0.75f) return;
+            int pool = quality != null ? Mathf.Min(scuffs.Length, quality.Decals) : scuffs.Length;
+            if (pool <= 0) return;
+            var d = scuffs[_nextScuff]; if (d == null) return;
+            d.transform.SetPositionAndRotation(pos + Vector3.up * 0.15f, Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f));
+            d.size = new Vector3(0.14f, 0.28f, 0.45f);
+            d.fadeFactor = Mathf.Lerp(0.35f, 0.7f, Mathf.Clamp01((speed - 0.75f) / 3f));
+            _scuffBorn[_nextScuff] = Time.time;
+            _nextScuff = (_nextScuff + 1) % pool;
         }
 
         void Wind()
@@ -258,17 +277,23 @@ namespace PoKingHill
             danger.intensity = (2f + 3f * Mathf.Clamp01(best / 0.4f)) * (0.6f + 0.4f * Mathf.Sin(Time.unscaledTime * 14f));
         }
 
-        // Fighters that were in the sea drip for a while once out of it.
+        // Fighters that were in the sea drip for a while once out of it; exhausted fighters mist sweat (#10).
         void Drips(bool fight)
         {
             if (drips == null || director.sea == null) return;
             int n = director.bodies.Length; if (_wetUntil.Length != n) _wetUntil = new float[n];
             bool emit = Time.unscaledTime >= _nextDrip; if (emit) _nextDrip = Time.unscaledTime + 0.08f;
+            bool emitSweat = fight && Time.unscaledTime >= _nextSweat; if (emitSweat) _nextSweat = Time.unscaledTime + 0.25f;
             for (int i = 0; i < n && i < director.Playing; i++)
             {
                 var t = director.bodies[i].PelvisTransform; if (t == null) continue;
                 if (t.position.y < director.sea.Level) { _wetUntil[i] = Time.unscaledTime + 6f; continue; }
                 if (emit && On && Time.unscaledTime < _wetUntil[i]) Burst(drips, t.position + new Vector3(0f, 0.2f, 0f), 2, 0.05f);
+                if (emitSweat && On && bio != null)
+                {
+                    var vit = bio.Of(director.bodies[i]);
+                    if (vit != null && vit.strain > 0.52f) Burst(drips, t.position + new Vector3(0f, 0.72f, 0f), 1, 0.08f);
+                }
             }
         }
     }

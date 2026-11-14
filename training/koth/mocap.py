@@ -119,17 +119,55 @@ def _limb(Rparent, d_upper, d_lower, bend_sign: float):
     return pitch, roll, yaw, bend, Ru @ _Rz(yaw) @ _Ry(bend_sign * bend)
 
 
+# Common hierarchy aliases across CMU, 100STYLE (CC BY 4.0), and Mixamo BVH rigs.
+_BVH_ALIASES = {
+    "Hips": ("Hips", "hips", "Pelvis", "Root"),
+    "Spine1": ("Spine1", "Chest", "UpperChest", "Spine2", "Spine", "Torso"),
+    "LeftUpLeg": ("LeftUpLeg", "LeftThigh", "L_UpLeg", "L_Thigh"),
+    "LeftLeg": ("LeftLeg", "LeftShin", "LeftKnee", "L_Leg", "L_Shin"),
+    "LeftFoot": ("LeftFoot", "LeftAnkle", "L_Foot"),
+    "LeftToeBase": ("LeftToeBase", "LeftToe", "LeftToes", "L_Toe", "L_ToeBase"),
+    "RightUpLeg": ("RightUpLeg", "RightThigh", "R_UpLeg", "R_Thigh"),
+    "RightLeg": ("RightLeg", "RightShin", "RightKnee", "R_Leg", "R_Shin"),
+    "RightFoot": ("RightFoot", "RightAnkle", "R_Foot"),
+    "RightToeBase": ("RightToeBase", "RightToe", "RightToes", "R_Toe", "R_ToeBase"),
+    "LeftArm": ("LeftArm", "LeftUpperArm", "L_Arm", "L_UpperArm"),
+    "LeftForeArm": ("LeftForeArm", "LeftLowerArm", "LeftElbow", "L_ForeArm"),
+    "LeftHand": ("LeftHand", "LeftWrist", "L_Hand"),
+    "RightArm": ("RightArm", "RightUpperArm", "R_Arm", "R_UpperArm"),
+    "RightForeArm": ("RightForeArm", "RightLowerArm", "RightElbow", "R_ForeArm"),
+    "RightHand": ("RightHand", "RightWrist", "R_Hand"),
+}
+
+
+def _canonicalize_bvh(pos: np.ndarray, rot: np.ndarray, names: list[str]):
+    """Map CMU / 100STYLE / Mixamo bone names into canonical CMU keys in model coordinates."""
+    raw_p = {n.split(":")[-1]: np.einsum("ij,fj->fi", M_BVH, pos[:, k]) for k, n in enumerate(names)}
+    raw_r = {n.split(":")[-1]: np.einsum("ij,fjk,lk->fil", M_BVH, rot[:, k], M_BVH) for k, n in enumerate(names)}
+    P, R = {}, {}
+    for canon, aliases in _BVH_ALIASES.items():
+        for a in aliases:
+            if a in raw_p:
+                P[canon], R[canon] = raw_p[a], raw_r[a]
+                break
+    # Some 100STYLE / game BVHs end at the foot without a ToeBase node: place a virtual +x toe offset in foot space.
+    for side in ("Left", "Right"):
+        if f"{side}Foot" in P and f"{side}ToeBase" not in P:
+            P[f"{side}ToeBase"] = P[f"{side}Foot"] + np.einsum("fij,j->fi", R[f"{side}Foot"], np.array([0.12, 0.0, 0.0]))
+            R[f"{side}ToeBase"] = R[f"{side}Foot"]
+    return P, R
+
+
 def retarget(path: str, body: dict | None = None):
     """A clip as model-frame motion at its own frame rate: dict(dt, R (F,3,3) pelvis rotation, pos (F,3) pelvis
     position in standing heights, q (F,29) joint angles). body = None: anatomical angles; body_limbs(...): that
     fighter's own joint angles. The first frame (the T pose) is dropped."""
     names, parents, offsets, chans, data, dt = parse_bvh(path)
     pos, rot = bvh_fk(names, parents, offsets, chans, data)
-    P = {n: np.einsum("ij,fj->fi", M_BVH, pos[:, k]) for k, n in enumerate(names)}
-    R = {n: np.einsum("ij,fjk,lk->fil", M_BVH, rot[:, k], M_BVH) for k, n in enumerate(names)}
+    P, R = _canonicalize_bvh(pos, rot, names)
     need = ["Hips", "LeftUpLeg", "LeftLeg", "LeftFoot", "LeftToeBase", "RightUpLeg", "RightLeg", "RightFoot", "RightToeBase", "Spine1", "LeftArm", "LeftForeArm", "LeftHand", "RightArm", "RightForeArm", "RightHand"]
     missing = [n for n in need if n not in P]
-    if missing: raise ValueError(f"{os.path.basename(path)}: not a CMU-style skeleton (no {missing})")
+    if missing: raise ValueError(f"{os.path.basename(path)}: unsupported BVH skeleton (no {missing})")
     # the T pose: floor under the toes, standing pelvis height, the foot's toe-down angle at rest
     floor = min(P["LeftToeBase"][0, 2], P["RightToeBase"][0, 2], P["LeftFoot"][0, 2], P["RightFoot"][0, 2])
     stand = P["Hips"][0, 2] - floor

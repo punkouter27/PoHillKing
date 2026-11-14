@@ -1,0 +1,241 @@
+<mujoco model="brawler 29dof">
+  <compiler angle="radian" meshdir="assets" />
+  <default>
+    <default class="brawler">
+      <geom condim="1" contype="0" conaffinity="0" />
+      <joint frictionloss="0.2" damping="0.5" solimplimit="0 0.99 0.01" solreflimit=".008 1" />
+      <position inheritrange="1" kp="75" kv="2" />
+      <default class="brawler_collision">
+        <geom group="3" rgba=".8 .6 .5 1" type="capsule" />
+        <default class="brawler_foot_box">
+          <geom type="box" group="4" />
+        </default>
+        <default class="brawler_foot_capsule">
+          <geom type="capsule" group="3" />
+        </default>
+      </default>
+      <default class="brawler_hip">
+        <default class="brawler_hip_pitch">
+          <joint axis="0 1 0" actuatorfrcrange="-210 210" armature="0.03" range="-1.9 0.45" />
+        </default>
+        <default class="brawler_hip_roll">
+          <joint axis="1 0 0" actuatorfrcrange="-145 145" armature="0.03" />
+        </default>
+        <default class="brawler_hip_yaw">
+          <joint axis="0 0 1" actuatorfrcrange="-75 75" armature="0.016" range="-0.65 0.65" />
+        </default>
+      </default>
+      <default class="brawler_knee">
+        <joint axis="0 1 0" actuatorfrcrange="-210 210" armature="0.03" range="-0.05 2.3" />
+      </default>
+      <default class="brawler_ankle">
+        <default class="brawler_ankle_pitch">
+          <joint axis="0 1 0" actuatorfrcrange="-150 150" armature="0.016" range="-0.45 0.75" />
+        </default>
+        <default class="brawler_ankle_roll">
+          <joint axis="1 0 0" actuatorfrcrange="-45 45" armature="0.008" range="-0.36 0.36" />
+        </default>
+      </default>
+      <default class="brawler_waist_yaw">
+        <joint axis="0 0 1" actuatorfrcrange="-88 88" armature="0.03" range="-0.7 0.7" />
+      </default>
+      <default class="brawler_waist_roll">
+        <joint axis="1 0 0" actuatorfrcrange="-145 145" armature="0.03" range="-0.42 0.42" />
+      </default>
+      <default class="brawler_waist_pitch">
+        <joint axis="0 1 0" actuatorfrcrange="-205 205" armature="0.03" range="-0.3 0.9" />
+      </default>
+      <default class="brawler_shoulder">
+        <default class="brawler_shoulder_pitch">
+          <joint axis="0 1 0" actuatorfrcrange="-82 82" armature="0.0065" range="-2.6 0.9" />
+        </default>
+        <default class="brawler_shoulder_roll">
+          <joint axis="1 0 0" actuatorfrcrange="-78 78" armature="0.0065" />
+        </default>
+        <default class="brawler_shoulder_yaw">
+          <joint axis="0 0 1" actuatorfrcrange="-46 46" armature="0.004" range="-1.4 1.4" />
+        </default>
+      </default>
+      <default class="brawler_elbow">
+        <joint axis="0 -1 0" actuatorfrcrange="-64 64" armature="0.005" range="0 2.4" />
+      </default>
+      <default class="brawler_wrist">
+        <default class="brawler_wrist_roll">
+          <joint axis="0 0 1" actuatorfrcrange="-13 13" armature="0.0012" range="-1.3 1.3" />
+        </default>
+        <default class="brawler_wrist_pitch">
+          <joint axis="0 1 0" actuatorfrcrange="-11 11" armature="0.0012" range="-0.95 0.95" />
+        </default>
+        <default class="brawler_wrist_yaw">
+          <joint axis="1 0 0" actuatorfrcrange="-11 11" armature="0.0012" range="-0.35 0.35" />
+        </default>
+      </default>
+    </default>
+  </default>
+  <asset />
+  <worldbody>
+    <body name="pelvis" pos="0 0 0.98" childclass="brawler">
+      <freejoint name="floating_base_joint" />
+      <geom name="pelvis_collision" class="brawler_collision" size="0.11" fromto="0 -0.05 -0.005 0 0.05 -0.005" mass="13.181" />
+      <body name="left_hip_pitch_link" pos="0 0.125 -0.01">
+        <inertial pos="0 0 0" mass="0.8" diaginertia="0.00072 0.00072 0.00072" />
+        <joint name="left_hip_pitch_joint" class="brawler_hip_pitch" />
+        <body name="left_hip_roll_link" pos="0 0 0">
+          <inertial pos="0 0 0" mass="0.8" diaginertia="0.00072 0.00072 0.00072" />
+          <joint name="left_hip_roll_joint" class="brawler_hip_roll" range="-0.35 0.8" />
+          <body name="left_hip_yaw_link" pos="0 0 0">
+            <joint name="left_hip_yaw_joint" class="brawler_hip_yaw" />
+            <geom name="left_thigh_collision" class="brawler_collision" size="0.092" fromto="0.0008 0.0004 -0.0352 0.0092 0.0046 -0.4048" mass="15.109" />
+            <body name="left_knee_link" pos="0.01 0.005 -0.44">
+              <joint name="left_knee_joint" class="brawler_knee" />
+              <geom name="left_shin_collision" class="brawler_collision" size="0.066" fromto="-0.001 0 -0.02125 -0.011 0 -0.23375" mass="3.2444" />
+              <geom name="left_linkage_brace_collision" class="brawler_collision" size="0.048" fromto="-0.012 0 -0.255 -0.019 0 -0.40375" mass="1.747" />
+              <body name="left_ankle_pitch_link" pos="-0.02 0 -0.425">
+                <inertial pos="0 0 0" mass="0.3" diaginertia="0.00027 0.00027 0.00027" />
+                <joint name="left_ankle_pitch_joint" class="brawler_ankle_pitch" />
+                <body name="left_ankle_roll_link" pos="0 0 0">
+                  <joint name="left_ankle_roll_joint" class="brawler_ankle_roll" />
+                  <site name="left_foot" pos="0.0875 0 -0.085" />
+                  <geom name="left_foot_box_collision" class="brawler_foot_box" pos="0.0875 0 -0.073" size="0.1525 0.052 0.012" mass="1.1386" />
+                  <geom name="left_foot1_collision" class="brawler_foot_capsule" size="0.012" mass="0.02" fromto="0.17 -0.0364 -0.071 0.225 -0.0364 -0.071" />
+                  <geom name="left_foot3_collision" class="brawler_foot_capsule" size="0.012" mass="0.02" fromto="0.17 0.0364 -0.071 0.225 0.0364 -0.071" />
+                  <geom name="left_foot2_collision" class="brawler_foot_capsule" size="0.022" mass="0.02" fromto="-0.04 0 -0.061 0.215 0 -0.061" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="right_hip_pitch_link" pos="0 -0.125 -0.01">
+        <inertial pos="0 0 0" mass="0.8" diaginertia="0.00072 0.00072 0.00072" />
+        <joint name="right_hip_pitch_joint" class="brawler_hip_pitch" />
+        <body name="right_hip_roll_link" pos="0 0 0">
+          <inertial pos="0 0 0" mass="0.8" diaginertia="0.00072 0.00072 0.00072" />
+          <joint name="right_hip_roll_joint" class="brawler_hip_roll" range="-0.8 0.35" />
+          <body name="right_hip_yaw_link" pos="0 0 0">
+            <joint name="right_hip_yaw_joint" class="brawler_hip_yaw" />
+            <geom name="right_thigh_collision" class="brawler_collision" size="0.092" fromto="0.0008 -0.0004 -0.0352 0.0092 -0.0046 -0.4048" mass="15.109" />
+            <body name="right_knee_link" pos="0.01 -0.005 -0.44">
+              <joint name="right_knee_joint" class="brawler_knee" />
+              <geom name="right_shin_collision" class="brawler_collision" size="0.066" fromto="-0.001 0 -0.02125 -0.011 0 -0.23375" mass="3.2444" />
+              <geom name="right_linkage_brace_collision" class="brawler_collision" size="0.048" fromto="-0.012 0 -0.255 -0.019 0 -0.40375" mass="1.747" />
+              <body name="right_ankle_pitch_link" pos="-0.02 0 -0.425">
+                <inertial pos="0 0 0" mass="0.3" diaginertia="0.00027 0.00027 0.00027" />
+                <joint name="right_ankle_pitch_joint" class="brawler_ankle_pitch" />
+                <body name="right_ankle_roll_link" pos="0 0 0">
+                  <joint name="right_ankle_roll_joint" class="brawler_ankle_roll" />
+                  <site name="right_foot" pos="0.0875 0 -0.085" />
+                  <geom name="right_foot_box_collision" class="brawler_foot_box" pos="0.0875 0 -0.073" size="0.1525 0.052 0.012" mass="1.1386" />
+                  <geom name="right_foot1_collision" class="brawler_foot_capsule" size="0.012" mass="0.02" fromto="0.17 -0.0364 -0.071 0.225 -0.0364 -0.071" />
+                  <geom name="right_foot3_collision" class="brawler_foot_capsule" size="0.012" mass="0.02" fromto="0.17 0.0364 -0.071 0.225 0.0364 -0.071" />
+                  <geom name="right_foot2_collision" class="brawler_foot_capsule" size="0.022" mass="0.02" fromto="-0.04 0 -0.061 0.215 0 -0.061" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="waist_yaw_link" pos="0 0 0.11">
+        <inertial pos="0 0 0" mass="1" diaginertia="0.0009 0.0009 0.0009" />
+        <joint name="waist_yaw_joint" class="brawler_waist_yaw" />
+        <body name="waist_roll_link" pos="0 0 0">
+          <inertial pos="0 0 0" mass="1" diaginertia="0.0009 0.0009 0.0009" />
+          <joint name="waist_roll_joint" class="brawler_waist_roll" />
+          <body name="torso_link" pos="0 0 0">
+            <joint name="waist_pitch_joint" class="brawler_waist_pitch" />
+            <geom name="abdomen_collision" class="brawler_collision" size="0.13" fromto="0 -0.05 0.085 0 0.05 0.085" mass="16.089" />
+            <geom name="chest_collision" class="brawler_collision" size="0.145" fromto="0.005 -0.095 0.28 0.005 0.095 0.28" mass="20.013" />
+            <geom name="head_collision" class="brawler_collision" type="sphere" size="0.11" pos="0 0 0.66" mass="8.1892" />
+            <body name="left_shoulder_pitch_link" pos="0 0.24 0.39">
+              <inertial pos="0 0 0" mass="0.4" diaginertia="0.00036 0.00036 0.00036" />
+              <joint name="left_shoulder_pitch_joint" class="brawler_shoulder_pitch" />
+              <body name="left_shoulder_roll_link" pos="0 0 0">
+                <inertial pos="0 0 0" mass="0.4" diaginertia="0.00036 0.00036 0.00036" />
+                <joint name="left_shoulder_roll_joint" class="brawler_shoulder_roll" range="-0.25 2.5" />
+                <body name="left_shoulder_yaw_link" pos="0 0 0">
+                  <joint name="left_shoulder_yaw_joint" class="brawler_shoulder_yaw" />
+                  <geom name="left_upper_arm_collision" class="brawler_collision" size="0.062" fromto="0.001 0.003 -0.029 0.009 0.027 -0.261" mass="2.6338" />
+                  <body name="left_elbow_link" pos="0.01 0.03 -0.29">
+                    <joint name="left_elbow_joint" class="brawler_elbow" />
+                    <geom name="left_forearm_collision" class="brawler_collision" size="0.048" fromto="0.003 0.001 -0.026 0.0285 0.0095 -0.247" mass="1.8496" />
+                    <body name="left_wrist_roll_link" pos="0.03 0.01 -0.26">
+                      <inertial pos="0 0 0" mass="0.09" diaginertia="8.1e-05 8.1e-05 8.1e-05" />
+                      <joint name="left_wrist_roll_joint" class="brawler_wrist_roll" />
+                      <body name="left_wrist_pitch_link" pos="0 0 0">
+                        <inertial pos="0 0 0" mass="0.09" diaginertia="8.1e-05 8.1e-05 8.1e-05" />
+                        <joint name="left_wrist_pitch_joint" class="brawler_wrist_pitch" />
+                        <body name="left_wrist_yaw_link" pos="0 0 0">
+                          <joint name="left_wrist_yaw_joint" class="brawler_wrist_yaw" />
+                          <geom name="left_hand_collision" class="brawler_collision" size="0.036" fromto="0 0 -0.02 0 0 -0.1105" mass="0.7198" />
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+            <body name="right_shoulder_pitch_link" pos="0 -0.24 0.39">
+              <inertial pos="0 0 0" mass="0.4" diaginertia="0.00036 0.00036 0.00036" />
+              <joint name="right_shoulder_pitch_joint" class="brawler_shoulder_pitch" />
+              <body name="right_shoulder_roll_link" pos="0 0 0">
+                <inertial pos="0 0 0" mass="0.4" diaginertia="0.00036 0.00036 0.00036" />
+                <joint name="right_shoulder_roll_joint" class="brawler_shoulder_roll" range="-2.5 0.25" />
+                <body name="right_shoulder_yaw_link" pos="0 0 0">
+                  <joint name="right_shoulder_yaw_joint" class="brawler_shoulder_yaw" />
+                  <geom name="right_upper_arm_collision" class="brawler_collision" size="0.062" fromto="0.001 -0.003 -0.029 0.009 -0.027 -0.261" mass="2.6338" />
+                  <body name="right_elbow_link" pos="0.01 -0.03 -0.29">
+                    <joint name="right_elbow_joint" class="brawler_elbow" />
+                    <geom name="right_forearm_collision" class="brawler_collision" size="0.048" fromto="0.003 -0.001 -0.026 0.0285 -0.0095 -0.247" mass="1.8496" />
+                    <body name="right_wrist_roll_link" pos="0.03 -0.01 -0.26">
+                      <inertial pos="0 0 0" mass="0.09" diaginertia="8.1e-05 8.1e-05 8.1e-05" />
+                      <joint name="right_wrist_roll_joint" class="brawler_wrist_roll" />
+                      <body name="right_wrist_pitch_link" pos="0 0 0">
+                        <inertial pos="0 0 0" mass="0.09" diaginertia="8.1e-05 8.1e-05 8.1e-05" />
+                        <joint name="right_wrist_pitch_joint" class="brawler_wrist_pitch" />
+                        <body name="right_wrist_yaw_link" pos="0 0 0">
+                          <joint name="right_wrist_yaw_joint" class="brawler_wrist_yaw" />
+                          <geom name="right_hand_collision" class="brawler_collision" size="0.036" fromto="0 0 -0.02 0 0 -0.1105" mass="0.7198" />
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+    <position name="left_hip_pitch_joint" joint="left_hip_pitch_joint" class="brawler_hip_pitch" />
+    <position name="left_hip_roll_joint" joint="left_hip_roll_joint" class="brawler_hip_roll" />
+    <position name="left_hip_yaw_joint" joint="left_hip_yaw_joint" class="brawler_hip_yaw" />
+    <position name="left_knee_joint" joint="left_knee_joint" class="brawler_knee" />
+    <position name="left_ankle_pitch_joint" joint="left_ankle_pitch_joint" class="brawler_ankle_pitch" />
+    <position name="left_ankle_roll_joint" joint="left_ankle_roll_joint" class="brawler_ankle_roll" />
+    <position name="right_hip_pitch_joint" joint="right_hip_pitch_joint" class="brawler_hip_pitch" />
+    <position name="right_hip_roll_joint" joint="right_hip_roll_joint" class="brawler_hip_roll" />
+    <position name="right_hip_yaw_joint" joint="right_hip_yaw_joint" class="brawler_hip_yaw" />
+    <position name="right_knee_joint" joint="right_knee_joint" class="brawler_knee" />
+    <position name="right_ankle_pitch_joint" joint="right_ankle_pitch_joint" class="brawler_ankle_pitch" />
+    <position name="right_ankle_roll_joint" joint="right_ankle_roll_joint" class="brawler_ankle_roll" />
+    <position name="waist_yaw_joint" joint="waist_yaw_joint" class="brawler_waist_yaw" />
+    <position name="waist_roll_joint" joint="waist_roll_joint" class="brawler_waist_roll" />
+    <position name="waist_pitch_joint" joint="waist_pitch_joint" class="brawler_waist_pitch" />
+    <position name="left_shoulder_pitch_joint" joint="left_shoulder_pitch_joint" class="brawler_shoulder_pitch" />
+    <position name="left_shoulder_roll_joint" joint="left_shoulder_roll_joint" class="brawler_shoulder_roll" />
+    <position name="left_shoulder_yaw_joint" joint="left_shoulder_yaw_joint" class="brawler_shoulder_yaw" />
+    <position name="left_elbow_joint" joint="left_elbow_joint" class="brawler_elbow" />
+    <position name="left_wrist_roll_joint" joint="left_wrist_roll_joint" class="brawler_wrist_roll" />
+    <position name="left_wrist_pitch_joint" joint="left_wrist_pitch_joint" class="brawler_wrist_pitch" />
+    <position name="left_wrist_yaw_joint" joint="left_wrist_yaw_joint" class="brawler_wrist_yaw" />
+    <position name="right_shoulder_pitch_joint" joint="right_shoulder_pitch_joint" class="brawler_shoulder_pitch" />
+    <position name="right_shoulder_roll_joint" joint="right_shoulder_roll_joint" class="brawler_shoulder_roll" />
+    <position name="right_shoulder_yaw_joint" joint="right_shoulder_yaw_joint" class="brawler_shoulder_yaw" />
+    <position name="right_elbow_joint" joint="right_elbow_joint" class="brawler_elbow" />
+    <position name="right_wrist_roll_joint" joint="right_wrist_roll_joint" class="brawler_wrist_roll" />
+    <position name="right_wrist_pitch_joint" joint="right_wrist_pitch_joint" class="brawler_wrist_pitch" />
+    <position name="right_wrist_yaw_joint" joint="right_wrist_yaw_joint" class="brawler_wrist_yaw" />
+  </actuator>
+</mujoco>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PoHillKing — All 20 Feature Upgrades Verification Report (2026-11-14)</title>
+  <style>
+    :root { --bg: #f6f6f4; --ink: #1d1d1f; --dim: #5d5d63; --card: #fff; --line: #ddd; --good: #1e8449; --accent: #b7791f; --code: #f0f0ed; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --bg: #151517; --ink: #ececef; --dim: #a0a0a8; --card: #1f1f23; --line: #333; --good: #4cd18a; --accent: #f6c453; --code: #27272c; }
+    }
+    :root[data-theme="dark"] { --bg: #151517; --ink: #ececef; --dim: #a0a0a8; --card: #1f1f23; --line: #333; --good: #4cd18a; --accent: #f6c453; --code: #27272c; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px 16px 56px; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, sans-serif; }
+    main { max-width: 1080px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+    h1 { margin: 0 0 6px; font-size: 26px; }
+    h2 { margin-top: 36px; font-size: 20px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+    p.sub { color: var(--dim); margin: 0; }
+    code { background: var(--code); padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+    button.theme-btn { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 13px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 18px; }
+    .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+    .stat .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--dim); }
+    .stat .v { font-size: 24px; font-weight: 700; margin-top: 4px; color: var(--good); }
+    .stat .d { font-size: 13px; color: var(--dim); margin-top: 4px; }
+    .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 14px; }
+    figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+    figure img { width: 100%; height: auto; display: block; border-radius: 6px; }
+    figcaption { margin-top: 8px; font-size: 13px; color: var(--dim); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    th, td { border-bottom: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--dim); }
+    tr:last-child td { border-bottom: none; }
+    .badge-pass { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(30, 132, 73, 0.14); color: var(--good); }
+    ul { margin: 8px 0 0 20px; }
+    .notes { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin-top: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>PoHillKing — All 20 Feature Upgrades Verification</h1>
+        <p class="sub">2026-11-14 · Unity <code>6000.6.0f1</code> (DX11 + URP + InferenceEngine 2.6.1) · MuJoCo <code>3.15.0</code> · Python <code>training/</code></p>
+      </div>
+      <button class="theme-btn" id="themeBtn" type="button">Toggle dark/light</button>
+    </header>
+
+    <div class="cards">
+      <div class="stat">
+        <div class="k">Unity EditMode</div>
+        <div class="v">62 / 62 Passed</div>
+        <div class="d">0 failed · 4.21 s · includes <code>FeatureUpgradeTests</code> + DX11 shader checks</div>
+      </div>
+      <div class="stat">
+        <div class="k">Unity PlayMode</div>
+        <div class="v">11 / 11 Passed</div>
+        <div class="d">0 failed · 457.30 s · <code>FeaturePlayModeTests</code>, <code>HudLayoutTests</code>, <code>MatchFlowTests</code>, <code>StateFlowSoakTests</code></div>
+      </div>
+      <div class="stat">
+        <div class="k">Python &amp; AMP</div>
+        <div class="v">5/5 AMP · 2/2 Budget</div>
+        <div class="d"><code>test_amp.py</code> (incl. 100STYLE), <code>test_train_budget.py</code>, <code>env.py</code> victory &amp; brawler checks</div>
+      </div>
+      <div class="stat">
+        <div class="k">Collision Audit</div>
+        <div class="v">0 Zero/Rest/T-Pose</div>
+        <div class="d"><code>collision_audit.py --robots g1 kim trump grandpa brawler --no-render</code> exit 0</div>
+      </div>
+    </div>
+
+    <h2>Visual Captures (<code>Game.unity</code> DX11 PlayMode)</h2>
+    <p class="sub">Captured offscreen via <code>Camera.main.Render()</code> in <code>FeaturePlayModeTests</code> (720×1280 portrait); UIToolkit overlays verified separately across all 5 portrait resolutions (<code>1080×1920</code> to <code>1080×2520</code>) in <code>HudLayoutTests</code> and <code>FeaturePlayModeTests</code>.</p>
+    <div class="shots">
+      <figure>
+        <img src="01_menu_play.png" alt="Menu state with Sunset atmosphere and CrowdRing spectators">
+        <figcaption><strong>01 · Menu (Sunset &amp; Ruins Crowd):</strong> Dual corner flags framing the ruins arch, <code>SkyGradient.shader</code> Sunset horizon, and GPU-instanced <code>CrowdSpectator</code> ring on perimeter ruins columns.</figcaption>
+      </figure>
+      <figure>
+        <img src="02_menu_settings.png" alt="Settings tab view">
+        <figcaption><strong>02 · Settings Tab Scene:</strong> Settings state (Atmosphere / Modifiers / Haptics / Live Weather / Daily toggles verified with zero layout problems at 1080×2340).</figcaption>
+      </figure>
+      <figure>
+        <img src="03_menu_agents.png" alt="Agents tab view">
+        <figcaption><strong>03 · Agents Tab Scene:</strong> Agents state (<code>FlagBadge</code> country badges, rivalry nemesis counters, career W/M/KO stats, and Wikipedia summary lines verified in layout checks).</figcaption>
+      </figure>
+      <figure>
+        <img src="04_intro_predict_bio.png" alt="Intro Tale of the Tape scene view">
+        <figcaption><strong>04 · Intro Scene:</strong> Pre-match Tale of the Tape view with <code>PredictionBook</code> winner pick, country flag badge, nemesis record, and ellipsized single-line Wikipedia bio verified without badge overlap.</figcaption>
+      </figure>
+      <figure>
+        <img src="05_fight_batched_crowd.png" alt="16-way Fight with PolicyBatcher and Spectator Box Throw">
+        <figcaption><strong>05 · 16-Way Fight (Batched Inference + Box Throw):</strong> <code>PolicyBatcher</code> running grouped dynamic-batch ONNX forward passes across shared body kinds with <code>SpringBone</code> clothing motion, eyes/blink shader state, and spectator crate throw.</figcaption>
+      </figure>
+      <figure>
+        <img src="06_fight_pov.png" alt="Fighter POV Camera view during Fight">
+        <figcaption><strong>06 · Fighter POV Camera:</strong> First-person fighter eye camera tracking opponents across the summit melee (verified alongside Picture-in-Picture KO cam and replay Photo Mode).</figcaption>
+      </figure>
+    </div>
+
+    <h2>PlayMode Suite Breakdown (<code>Logs/playmode-pk.xml</code>)</h2>
+    <table>
+      <thead>
+        <tr><th>Fixture</th><th>Test Case</th><th>Duration</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>FeaturePlayModeTests</code></td><td><code>FeaturesRuntimeBatchingHeatsCamerasAndScreenshots</code></td><td>7.15 s</td><td><span class="badge-pass">Passed</span></td></tr>
+        <tr><td><code>HudLayoutTests</code></td><td><code>EveryScreenFitsEveryPhone</code> (5 phones: 16:9 to 21:9)</td><td>19.45 s</td><td><span class="badge-pass">Passed</span></td></tr>
+        <tr><td><code>HudLayoutTests</code></td><td><code>TopBarClearsCutouts</code></td><td>1.74 s</td><td><span class="badge-pass">Passed</span></td></tr>
+        <tr><td><code>MatchFlowTests</code></td><td><code>CenteredSixteenPlayerStartKeepsMostFightersStandingForTwoSeconds</code></td><td>3.41 s</td><td><span class="badge-pass">Passed</span></td></tr>
+        <tr><td><code>MatchFlowTests</code></td><td><code>CharacterVoiceMatrixHasProceduralFallbacks</code></td><td>1.36 s</td><td><span class="badge-pass">Passed</span></td></tr>
+        <tr><td><code>MatchFlowTests</code></td><td><code>IntroLeadsIntoTheFirstRound</code></td><td>16.26 s</td><td><span class="badge-pass">Passed</span></td></tr>
+        <tr><td><code>MatchFlowTests</code></td><td><code>MenuFightResultMenu</code> (strict <code>ConsoleGuard(allWarnings: true)</code>)</td><td>16.39 s</td><td><span class="badge-pass">Passed</span></td></tr>
+        <tr><td><code>MatchFlowTests</code></td><td><code>ObserveTenSixteenPlayerGames</code></td><td>159.53 s</td><td><span class="badge-pass">Passed</span></td></tr>
+        <tr><td><code>MatchFlowTests</code></td><td><code>ReturningToTheMenuMidRoundIsClean</code></td><td>3.21 s</td><td><span class="badge-pass">Passed</span></td></tr>
+        <tr><td><code>StateFlowSoakTests</code></td><td><code>MenuDuringReplayKeepsTheMenuPlacement</code></td><td>20.75 s</td><td><span class="badge-pass">Passed</span></td></tr>
+        <tr><td><code>StateFlowSoakTests</code></td><td><code>RandomTapsNeverStrandTheGame</code></td><td>207.96 s</td><td><span class="badge-pass">Passed</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2>All 20 Features — Policy Impact &amp; Verification Status</h2>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Feature</th><th>Primary Implementation</th><th>Policy Impact</th><th>Verified By</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Pick-your-winner predictions &amp; streak score</td><td><code>SocialBooks.cs</code>, <code>HudView.Features.cs</code>, <code>MatchDirector.Features.cs</code></td><td>None</td><td>EditMode + PlayMode</td></tr>
+        <tr><td>2</td><td>Batched neural inference per brain/obsDim</td><td><code>PolicyBatcher.cs</code>, <code>PolicyRunner.cs</code></td><td>None (parity &lt; 1e-4 vs single-worker)</td><td>EditMode + PlayMode</td></tr>
+        <tr><td>3</td><td>Rivalries, nemesis cards &amp; career stats</td><td><code>SocialBooks.cs</code>, <code>ContactLedger.cs</code>, <code>HudView.Features.cs</code></td><td>None</td><td>EditMode + PlayMode</td></tr>
+        <tr><td>4</td><td>Haptics &amp; gamepad rumble</td><td><code>Haptics.cs</code>, <code>GameSettings.cs</code></td><td>None</td><td>EditMode + PlayMode</td></tr>
+        <tr><td>5</td><td>Time-of-day &amp; storm sky skins</td><td><code>AtmosphereController.cs</code>, <code>FX/SkyGradient.shader</code>, <code>GameSettings.cs</code></td><td>None</td><td>EditMode + DX11 PlayMode</td></tr>
+        <tr><td>6</td><td>Photo mode on replay pause</td><td><code>CameraExtras.cs</code>, <code>ShareBridge.cs</code>, <code>HudView.Features.cs</code></td><td>None</td><td>PlayMode + HUD layout</td></tr>
+        <tr><td>7</td><td>4×4 Heats-and-Final bracket</td><td><code>MatchDirector.Features.cs</code> (<code>BuildHeatsSchedule</code>, <code>StartHeatsTournament</code>)</td><td>None</td><td>EditMode + PlayMode</td></tr>
+        <tr><td>8</td><td>KO-of-the-match highlight &amp; share bridge</td><td><code>ContactLedger.cs</code>, <code>ReplaySystem.cs</code>, <code>ShareBridge.cs</code>, <code>KothShare.jslib</code></td><td>None</td><td>EditMode + PlayMode</td></tr>
+        <tr><td>9</td><td>Fighter POV &amp; PiP KO cam</td><td><code>CameraExtras.cs</code>, <code>HudView.Features.cs</code></td><td>None</td><td>DX11 PlayMode + <code>06_fight_pov.png</code></td></tr>
+        <tr><td>10</td><td>Footprints, sweat &amp; wet hair rendering</td><td><code>MatchFx.cs</code>, <code>LifeSigns.cs</code>, <code>FX/Fighter.shader</code></td><td>None</td><td>DX11 PlayMode</td></tr>
+        <tr><td>11</td><td>Real eyes, blinking &amp; eye darting</td><td><code>LifeSigns.cs</code>, <code>FX/Fighter.shader</code></td><td>None</td><td>DX11 PlayMode</td></tr>
+        <tr><td>12</td><td>Cloth / tie / hair spring physics</td><td><code>SpringBone.cs</code>, <code>LifeSigns.cs</code>, <code>FX/Fighter.shader</code></td><td>None</td><td>EditMode + DX11 PlayMode</td></tr>
+        <tr><td>13</td><td>Procedural crowd &amp; cheering ruins</td><td><code>CrowdRing.cs</code>, <code>FX/CrowdSpectator.shader</code></td><td>None (zero PhysX colliders)</td><td><code>PhysXAudit</code> + <code>01_menu_play.png</code></td></tr>
+        <tr><td>14</td><td>Live weather &amp; tide sync (Open-Meteo)</td><td><code>LiveAtmosphere.cs</code>, <code>GameSettings.cs</code></td><td>None</td><td>EditMode JSON parser + HUD</td></tr>
+        <tr><td>15</td><td>Daily seeded match &amp; Azure/local leaderboard</td><td><code>DailyChallenge.cs</code>, <code>MatchDirector.Features.cs</code>, <code>tools/daily-api/</code></td><td>None</td><td>EditMode + PlayMode <code>StartDailyMatch</code></td></tr>
+        <tr><td>16</td><td>Country flag badges &amp; Wikipedia bio summary</td><td><code>AgentBioService.cs</code>, <code>HudWidgets.cs</code>, <code>HudView.Features.cs</code></td><td>None</td><td>EditMode + <code>HudLayoutTests</code></td></tr>
+        <tr><td>17</td><td>Spectator box throw &amp; unranked arena modifiers</td><td><code>MatchDirector.Features.cs</code>, <code>ProjectilePool.cs</code>, <code>HudView.Features.cs</code></td><td>Fun-only (blocked in <code>statsRounds &gt; 0</code>)</td><td>EditMode + PlayMode</td></tr>
+        <tr><td>18</td><td>AMP <code>100STYLE</code> personality clips &amp; hill queue</td><td><code>mocap.py</code>, <code>fetch_mocap.py</code>, <code>queue_hill.py</code>, <code>test_amp.py</code></td><td>Opt-in training pipeline</td><td><code>test_amp.py</code> (5/5 ok)</td></tr>
+        <tr><td>19</td><td>True physical victory R6 rung</td><td><code>training/koth/env.py</code> (<code>victory</code> / <code>victory_s=2.5</code>)</td><td>New rung only (unchanged obs/act)</td><td><code>env.py</code> cfg + <code>test_train_budget.py</code></td></tr>
+        <tr><td>20</td><td>4th fighter scaffold (<code>brawler</code>)</td><td><code>make_brawler.py</code>, <code>build_brawler.py</code>, <code>env.py</code>, <code>brawler.glb</code></td><td>Off <code>Game.unity</code> until gated</td><td><code>collision_audit.py</code> + <code>env.py</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Notes &amp; Issues Resolved During Verification</h2>
+    <div class="notes">
+      <ul>
+        <li><strong>DX11 shader compilation fix (<code>Fighter.shader</code>):</strong> Resolved DX11 loop unrolling error on <code>Scratches()</code> by annotating <code>[unroll] for (int i = 0; i &lt; 3; i++)</code> while preserving the 5-region cloth spring loop.</li>
+        <li><strong>Procedural crowd instancing (<code>CrowdRing.cs</code> + <code>CrowdSpectator.shader</code>):</strong> Fixed invisible crowd instances under URP by providing a GPU-instanced shader with <code>_BaseColor</code> per-instance property block and placing perimeter spectator columns outside the hill base (<code>minRadius=5.6</code>, <code>ringY=-2.2</code>).</li>
+        <li><strong>4×4 Heats fallback &amp; Intro layout (<code>MatchDirector.Features.cs</code>, <code>HudView.Features.cs</code>):</strong> Added roster fallback from <code>InGame()</code> to <code>RandomizePlayerSlots(true)</code> / <code>Available()</code> when fewer than 8 fighters are manually ticked; marked the single-line Wikipedia bio label with <code>ellipsis</code> so live-fetched long summaries clip cleanly inside compact portrait phone screens (1080×1920).</li>
+        <li><strong>POV camera framing (<code>CameraExtras.cs</code>):</strong> Tuned eye anchor (<code>headBase + up*0.14 + toTarget*0.30</code>) to clear self-geometry and frame opponent engagement across hill slopes.</li>
+      </ul>
+    </div>
+  </main>
+  <script>
+    const btn = document.getElementById('themeBtn');
+    const root = document.documentElement;
+    btn.addEventListener('click', () => {
+      const dark = root.getAttribute('data-theme') === 'dark' || (!root.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+      root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>

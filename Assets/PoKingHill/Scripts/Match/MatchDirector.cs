@@ -43,7 +43,7 @@ namespace PoKingHill
     /// opponent (nearest, or the easiest to push off). Everything is done by writing mjData (no scene reload, no
     /// Instantiate/Destroy). Presentation listens to <see cref="MatchEvents"/>; the HUD is HudView.
     /// </summary>
-    public unsafe class MatchDirector : MonoBehaviour
+    public unsafe partial class MatchDirector : MonoBehaviour
     {
         [Tooltip("Every fighter body in the scene (a_, b_, ...). A match seats agents on the first ones.")]
         [FormerlySerializedAs("fighters")] public PolicyRunner[] bodies = Array.Empty<PolicyRunner>();
@@ -400,7 +400,8 @@ namespace PoKingHill
                 for (int i = 0; i < _playing; i++) _agentAt[i] = seats[i];
             }
             else Seat(2);
-            if (statsRounds == 0 && !autoLaunch) roundsPerMatch = _tournamentMatch || _bracket.Count > 0 ? 1 : GameSettings.RoundsPerMatch;   // PerfProbe/auto runs keep theirs
+            if (statsRounds == 0 && !autoLaunch) roundsPerMatch = _tournamentMatch || _bracket.Count > 0 || _heats.Count > 0 ? 1 : GameSettings.RoundsPerMatch;   // PerfProbe/auto runs keep theirs
+            if (!_heatsLaunching) _heats.Clear();
             _roundsThisMatch = 0;
             if (statsRounds == 0 && !autoLaunch && GameSettings.Intro && roster.Length > 0) { BeginIntro(); return; }
             ArmBrains();
@@ -492,6 +493,7 @@ namespace PoKingHill
             ReplaySystem.StopActive();
             OutRadiusNow = _playing >= 12 ? Mathf.Max(crowdedOutRadius, MinSpawnGap / (2f * Mathf.Sin(Mathf.PI / _playing)) + 0.5f) : outRadius;
             Place(); ClearOut(); _knockout = false;
+            OnNewRoundFeatures();
             _roundStart = MjScene.Instance.Data->time; _resultUntil = 0;
             if (sea != null) { sea.pace = statsRounds > 0 ? 1f : GameSettings.SeaPace; sea.Restart(); }
             SetState(MatchState.Fight);
@@ -727,6 +729,7 @@ namespace PoKingHill
         // CLI cannot reach it), then leave play mode, the editor, or the player.
         void StatsDone()
         {
+            RestoreModifier();
             statsRounds = 0; Time.timeScale = 1f; Time.maximumDeltaTime = 1f / 3f;
 #if UNITY_EDITOR
             if (Cli.Exit) UnityEditor.EditorApplication.Exit(0); else UnityEditor.EditorApplication.ExitPlaymode();
@@ -739,6 +742,7 @@ namespace PoKingHill
 
         public string NameOf(int agent, string fallback) => roster.Length > 0 && agent >= 0 ? roster[Mathf.Clamp(agent, 0, roster.Length - 1)].name : fallback;
         public string BadgeOf(int agent) => roster.Length > 0 && agent >= 0 ? roster[Mathf.Clamp(agent, 0, roster.Length - 1)].Badge : "Robot";
+        public string AgentNameAtBody(int body) => body >= 0 && body < _agentAt.Length && _agentAt[body] >= 0 ? NameOf(_agentAt[body], bodies[body].body) : (body >= 0 && body < bodies.Length ? bodies[body].body : "?");
 
         // ------------------------------------------------------------------ verification helpers
         public void Shot(string name)
@@ -789,11 +793,15 @@ namespace PoKingHill
             }
             if (_launchAt > 0 && Time.unscaledTime >= _launchAt) { _launchAt = -1; Launch(); }
             if (State == MatchState.Intro && Time.unscaledTime >= _introStart + _introLength) EndIntro();
+            TickFeatures();
             if (State == MatchState.Result)
             {
                 float shownFor = pauseBetweenRounds - (_resultUntil - Time.unscaledTime);
                 if (shownFor >= 1f) { if (_knockout) Shot("ejection"); Shot("winner"); }
-                if (Time.unscaledTime >= _resultUntil) Advance();
+                if (Time.unscaledTime >= _resultUntil)
+                {
+                    if (!AdvanceHeats()) Advance();
+                }
             }
         }
     }

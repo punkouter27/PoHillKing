@@ -231,7 +231,7 @@ def report_html(results, shots, out: pathlib.Path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--robots", nargs="+", default=["g1", "kim", "trump"])
+    ap.add_argument("--robots", nargs="+", default=["g1", "kim", "trump", "grandpa", "brawler"])
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--out", default=str(ROOT / "SCREENSHOTS" / f"collision-{dt.date.today():%y%m%d}"))
     a = ap.parse_args()

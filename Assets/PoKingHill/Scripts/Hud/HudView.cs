@@ -357,6 +357,7 @@ namespace PoKingHill
             _sheetBody.Clear(); _next = null; _resFill = _resHead = null;
             _sheet.RemoveFromClassList("dense");
             if (_sheetKind == SheetKind.Menu) BuildMenu(); else if (_sheetKind == SheetKind.Result) BuildResult();
+            AppendSheetFeatures();
         }
 
         void ApplyVisibility()
@@ -400,6 +401,7 @@ namespace PoKingHill
         void Update()
         {
             if (director == null || _root == null) return;
+            EnsureHudFeatures();
             _fpsAvg = Mathf.Lerp(_fpsAvg, 1f / Mathf.Max(Time.unscaledDeltaTime, 1e-4f), 0.05f);
             bool fight = director.State == MatchState.Fight, live = fight || director.RoundOver;
             if (Time.unscaledTime >= _nextSlow)
@@ -438,6 +440,7 @@ namespace PoKingHill
             _status.text = Time.unscaledTime < _statusUntil ? _lastStatus : "";
             _debug.style.bottom = 128 + _bottomInset;
             ApplyVisibility();
+            UpdateHudFeatures();
             if (_devTools) TwoFingerTap();
         }
 
@@ -508,6 +511,7 @@ namespace PoKingHill
                 void Tile(string k, string v) { var t = El("intro-tile", grid); Text(v, "intro-value", t); Text(k, "intro-key", t); }
                 Tile("mass", $"{kg:0} kg"); Tile("strongest joint", $"{strongest:0} N m"); Tile("Elo", $"{Ladder.Rating(name):0}");
                 Tile("record", $"{Ladder.Wins(name)}-{Ladder.Losses(name)}"); Tile("knock-outs", Ladder.Knockouts(name).ToString()); Tile("brain", TaleOfTheTape.Brain(entry));
+                AddIntroFeatures(_intro, grid, entry, r.body, name);
             }
             var row = El("row spaced", _intro);
             Btn("Skip intro", "secondary", () => director.SkipIntro(), row);

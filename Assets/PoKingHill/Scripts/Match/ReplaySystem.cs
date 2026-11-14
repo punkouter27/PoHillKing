@@ -14,13 +14,28 @@ namespace PoKingHill
     public unsafe class ReplaySystem : MonoBehaviour
     {
         public MatchDirector director;
+        public ContactLedger contacts;
         public float seconds = 8f, before = 2f, after = 2.5f, speed = 0.35f, autoDelay = 0.8f;
 
         public static bool Active { get; private set; }
         /// <summary>The fighter whose fall is being replayed (the camera frames it).</summary>
         public static PolicyRunner Focus { get; private set; }
+        /// <summary>Best-impulse KO victim tracked for the current match (#8).</summary>
+        public PolicyRunner HighlightVictim => _bestRunner != null ? _bestRunner : _koRunner;
+        public float HighlightScore => _bestScore > 0f ? _bestScore : _lastScore;
+        public string HighlightSummary
+        {
+            get
+            {
+                var v = HighlightVictim;
+                if (v == null) return "";
+                if (contacts != null && contacts.BestMatchKoKiller != null)
+                    return $"KO of the Match: {contacts.BestMatchKoKiller.body} -> {v.body}";
+                return $"Highlight KO: {v.body}";
+            }
+        }
         // a knock-out "in the future" means mjData was reset since (MuJoCo resets after a NaN): nothing left to replay
-        public bool Available => _koTime >= 0 && _count > 10 && director != null && director.State == MatchState.Result && MjScene.InstanceExists && _koTime <= MjScene.Instance.Data->time;
+        public bool Available => (_bestCount >= 6 || (_koTime >= 0 && _count > 10 && MjScene.InstanceExists && _koTime <= MjScene.Instance.Data->time)) && director != null && director.State == MatchState.Result && MjScene.InstanceExists;
         public float Progress => Active ? (float)((_playT - _from) / Math.Max(1e-6, _to - _from)) : 0f;
         /// <summary>The HUD's scrubber holds the playhead while a finger is on it: no advance, no end.</summary>
         public bool Hold { get; set; }
@@ -30,7 +45,10 @@ namespace PoKingHill
         public static void StopActive() { if (Active && _live != null) _live.Stop(); }
 
         double[] _frames, _times; int _nq, _head, _count, _tick;
-        double _koTime = -1, _from, _to, _playT; PolicyRunner _koRunner; float _autoAt = -1;
+        double _koTime = -1, _from, _to, _playT; PolicyRunner _koRunner; float _autoAt = -1, _lastScore;
+        // KO-of-the-match snapshot buffer (#8)
+        double[] _bestFrames, _bestTimes; int _bestCount; double _bestKoTime = -1, _captureBestAt = -1;
+        PolicyRunner _bestRunner; float _bestScore = -1f; bool _playingBestSnapshot;
         // saved live state
         double[] _qpos, _qvel, _ctrl, _act, _warm, _xfrc; double _time;
 
@@ -52,14 +70,40 @@ namespace PoKingHill
             var m = MjScene.Instance.Model; _nq = (int)m->nq;
             int n = Mathf.CeilToInt(seconds / (2 * Time.fixedDeltaTime));
             _frames = new double[n * _nq]; _times = new double[n];
+            _bestFrames = new double[n * _nq]; _bestTimes = new double[n];
             _qpos = new double[_nq]; _qvel = new double[m->nv]; _ctrl = new double[m->nu]; _act = new double[Math.Max(1, (int)m->na)];
             _warm = new double[m->nv]; _xfrc = new double[6 * m->nbody];
-            _head = _count = 0;
+            _head = _count = _bestCount = 0;
+            if (contacts == null) contacts = FindAnyObjectByType<ContactLedger>();
         }
 
-        void OnStart() { _koTime = -1; _koRunner = null; _autoAt = -1; }
-        void OnKo(PolicyRunner r) { _koTime = MjScene.Instance.Data->time; _koRunner = r; }
-        void OnEnd(RoundResult r) { if (GameSettings.Replays && r.End == RoundEnd.Knockout && _koTime >= 0 && director.statsRounds == 0) _autoAt = Time.unscaledTime + autoDelay; }
+        void OnStart()
+        {
+            _koTime = -1; _koRunner = null; _autoAt = -1; _lastScore = 0f;
+            _bestScore = -1f; _bestKoTime = -1; _captureBestAt = -1; _bestRunner = null; _bestCount = 0; _playingBestSnapshot = false;
+            contacts?.ResetMatchHighlight();
+        }
+
+        void OnKo(PolicyRunner r)
+        {
+            double now = MjScene.Instance.Data->time;
+            _koTime = now; _koRunner = r;
+            float score = contacts != null ? contacts.LastKoScore : 1f;
+            _lastScore = score;
+            if (score >= _bestScore)
+            {
+                _bestScore = score;
+                _bestKoTime = now;
+                _bestRunner = r;
+                _captureBestAt = now + after;
+            }
+        }
+
+        void OnEnd(RoundResult r)
+        {
+            if (_captureBestAt > 0 && _bestKoTime >= 0) CaptureBestSnapshot();
+            if (GameSettings.Replays && r.End == RoundEnd.Knockout && (_koTime >= 0 || _bestCount >= 6) && director.statsRounds == 0) _autoAt = Time.unscaledTime + autoDelay;
+        }
 
         void Post(object s, MjStepArgs a)
         {
@@ -68,19 +112,49 @@ namespace PoKingHill
             var d = MjScene.Instance.Data; int n = _times.Length;
             fixed (double* dst = &_frames[_head * _nq]) Buffer.MemoryCopy(d->qpos, dst, _nq * 8, _nq * 8);
             _times[_head] = d->time; _head = (_head + 1) % n; if (_count < n) _count++;
+            if (_captureBestAt > 0 && d->time >= _captureBestAt) CaptureBestSnapshot();
+        }
+
+        void CaptureBestSnapshot()
+        {
+            _captureBestAt = -1;
+            if (_bestFrames == null || _count <= 0) return;
+            int n = _times.Length;
+            int outN = 0;
+            double minT = _bestKoTime - before, maxT = _bestKoTime + after;
+            for (int k = 0; k < _count; k++)
+            {
+                int idx = (_head - _count + k + n) % n;
+                double t = _times[idx];
+                if (t < minT || t > maxT) continue;
+                Array.Copy(_frames, idx * _nq, _bestFrames, outN * _nq, _nq);
+                _bestTimes[outN] = t;
+                outN++;
+            }
+            if (outN >= 6) _bestCount = outN;
         }
 
         public void Play()
         {
             if (!Available || Active) return;
             var d = MjScene.Instance.Data; var m = MjScene.Instance.Model;
-            double oldest = _times[(_head - _count + _times.Length) % _times.Length];
-            _from = Math.Max(oldest, _koTime - before); _to = Math.Min(d->time, _koTime + after); _playT = _from;
-            if (_to - _from < 0.5) return;
+            _playingBestSnapshot = _bestCount >= 6;
+            double chosenKo = _playingBestSnapshot ? _bestKoTime : _koTime;
+            var chosenRunner = _playingBestSnapshot && _bestRunner != null ? _bestRunner : _koRunner;
+            if (_playingBestSnapshot)
+            {
+                _from = _bestTimes[0]; _to = _bestTimes[_bestCount - 1]; _playT = _from;
+            }
+            else
+            {
+                double oldest = _times[(_head - _count + _times.Length) % _times.Length];
+                _from = Math.Max(oldest, chosenKo - before); _to = Math.Min(d->time, chosenKo + after); _playT = _from;
+            }
+            if (_to - _from < 0.35) return;
             Copy(d->qpos, _qpos); Copy(d->qvel, _qvel); Copy(d->ctrl, _ctrl); if (m->na > 0) Copy(d->act, _act);
             Copy(d->qacc_warmstart, _warm); Copy(d->xfrc_applied, _xfrc); _time = d->time;
             MjScene.Instance.enabled = false;                 // no FixedUpdate: physics and every listener stop
-            Active = true; Focus = _koRunner; director.BeginReplay();
+            Active = true; Focus = chosenRunner; director.BeginReplay();
         }
 
         public void Stop()
@@ -115,13 +189,26 @@ namespace PoKingHill
         void ShowFrame()
         {
             // nearest recorded frame at or before the playhead
-            int n = _times.Length, best = -1;
+            int best = -1;
+            if (_playingBestSnapshot && _bestCount > 0)
+            {
+                for (int k = _bestCount - 1; k >= 0; k--) if (_bestTimes[k] <= _playT) { best = k; break; }
+                if (best < 0) best = 0;
+                var d = MjScene.Instance.Data; var m = MjScene.Instance.Model;
+                fixed (double* src = &_bestFrames[best * _nq]) Buffer.MemoryCopy(src, d->qpos, _nq * 8, _nq * 8);
+                MujocoLib.mj_kinematics(m, d); MujocoLib.mj_comPos(m, d);
+                MjScene.Instance.SyncUnityToMjState();
+                return;
+            }
+            int n = _times.Length;
             for (int k = 0; k < _count; k++) { int i = (_head - 1 - k + n) % n; if (_times[i] <= _playT) { best = i; break; } }
             if (best < 0) return;
-            var d = MjScene.Instance.Data; var m = MjScene.Instance.Model;
-            fixed (double* src = &_frames[best * _nq]) Buffer.MemoryCopy(src, d->qpos, _nq * 8, _nq * 8);
-            MujocoLib.mj_kinematics(m, d); MujocoLib.mj_comPos(m, d);
-            MjScene.Instance.SyncUnityToMjState();
+            {
+                var d = MjScene.Instance.Data; var m = MjScene.Instance.Model;
+                fixed (double* src = &_frames[best * _nq]) Buffer.MemoryCopy(src, d->qpos, _nq * 8, _nq * 8);
+                MujocoLib.mj_kinematics(m, d); MujocoLib.mj_comPos(m, d);
+                MjScene.Instance.SyncUnityToMjState();
+            }
         }
 
         static void Copy(double* src, double[] dst) { fixed (double* p = dst) Buffer.MemoryCopy(src, p, dst.Length * 8, dst.Length * 8); }

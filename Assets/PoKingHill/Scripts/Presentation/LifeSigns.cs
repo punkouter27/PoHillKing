@@ -47,33 +47,41 @@ namespace PoKingHill
         [Tooltip("Breaths per second at rest and when spent")] public Vector2 breathHz = new(0.24f, 0.95f);
         [Tooltip("Chest swell at rest and when spent (m, for a 1.75 m body)")] public Vector2 breathSwell = new(0.004f, 0.014f);
 
-        /// <summary>How soft each body is: belly, hair, chest (0 = stiff).</summary>
+        /// <summary>How soft each body is: belly, hair, chest (0 = stiff), plus cloth tie/hem springs (#12).</summary>
         static readonly Dictionary<string, Vector3> Softness = new()
         {
             ["kim"] = new Vector3(0.35f, 1f, 0.5f), ["trump"] = new Vector3(1f, 0.8f, 0.5f), ["grandpa"] = new Vector3(0.9f, 0.25f, 0.4f),
+        };
+        static readonly Dictionary<string, Vector2> ClothSoftness = new()
+        {
+            ["kim"] = new Vector2(0.45f, 0.85f), ["trump"] = new Vector2(1.0f, 0.90f), ["grandpa"] = new Vector2(0.75f, 0.80f),
         };
 
         class Fighter
         {
             public SkinFollower skin; public PolicyRunner runner; public Renderer[] renderers; public float k, head;      // k: size against 1.75 m
-            public Vector3 mouth; public Vector3 soft;
+            public Vector3 mouth; public Vector3 soft; public Vector2 clothSoft;
             public float yaw, pitch, weight, exertion, phase, jaw, brow, noise;
             public float painUntil, pain, fearUntil, triumphUntil, glanceAt;
-            public SoftSpring belly, hair, chest;
+            public float blink, nextBlink, blinkDur, flinchUntil;
+            public float eyeX, eyeY, eyeTargetX, eyeTargetY, nextDart;
+            public SoftSpring belly, hair, chest, tie, hem;
         }
 
         readonly List<Fighter> _all = new(); readonly Dictionary<PolicyRunner, Fighter> _of = new();
         static readonly Dictionary<string, Vector3> MouthOf = new();      // per body kind, in the head frame
         MaterialPropertyBlock _mpb; bool _ready; int _winner = -1; Transform _cam;
-        readonly Vector4[] _jigC = new Vector4[3], _jigD = new Vector4[3];
+        readonly Vector4[] _jigC = new Vector4[5], _jigD = new Vector4[5];
         static readonly int Head = Shader.PropertyToID("_LifeHead"), HeadUp = Shader.PropertyToID("_LifeHeadUp"), Mouth = Shader.PropertyToID("_LifeMouth"),
-                            Face = Shader.PropertyToID("_LifeFace"), Chest = Shader.PropertyToID("_LifeChest"), Breath = Shader.PropertyToID("_LifeBreath"),
+                            Face = Shader.PropertyToID("_LifeFace"), Eyes = Shader.PropertyToID("_LifeEyes"), Chest = Shader.PropertyToID("_LifeChest"), Breath = Shader.PropertyToID("_LifeBreath"),
                             JigC = Shader.PropertyToID("_LifeJigC"), JigD = Shader.PropertyToID("_LifeJigD");
 
         // verification (LifeTests, captures)
         public int Fighters => _all.Count;
         public float JawOf(PolicyRunner r) => _of.TryGetValue(r, out var f) ? f.jaw : 0f;
         public float ExertionOf(PolicyRunner r) => _of.TryGetValue(r, out var f) ? f.exertion : 0f;
+        public float BlinkOf(PolicyRunner r) => _of.TryGetValue(r, out var f) ? f.blink : 0f;
+        public Vector2 EyeDartOf(PolicyRunner r) => _of.TryGetValue(r, out var f) ? new Vector2(f.eyeX, f.eyeY) : Vector2.zero;
         /// <summary>Captures and tuning: hold every face at this jaw, brow and flush (null = live).</summary>
         [NonSerialized] public Vector3? FaceOverride;
         public Vector3 MouthAt(PolicyRunner r) => _of.TryGetValue(r, out var f) ? f.mouth / f.head : Vector3.zero;
@@ -92,6 +100,7 @@ namespace PoKingHill
         {
             if (strength < 0.3f || !_of.TryGetValue(r, out var f)) return;
             f.pain = Mathf.Max(f.pain, strength); f.painUntil = Time.time + 0.45f;
+            f.flinchUntil = Time.time + 0.22f;
         }
         void OnDown(PolicyRunner r) { if (_of.TryGetValue(r, out var f)) { f.pain = 0.8f; f.painUntil = Time.time + 0.8f; } }
         void OnKo(PolicyRunner r) { if (_of.TryGetValue(r, out var f)) f.fearUntil = Time.time + 1.6f; }
@@ -112,7 +121,10 @@ namespace PoKingHill
                 var runner = Array.Find(director.bodies, b => b.robotPrefix == s.robotPrefix);
                 if (runner == null || s.HeadBone == null || s.skinRoot == null) continue;
                 var f = new Fighter { skin = s, runner = runner, renderers = s.skinRoot.GetComponentsInChildren<Renderer>(), k = s.Stature / 1.75f, head = 0.135f * s.Stature,
-                                      soft = Softness.TryGetValue(runner.body ?? "", out var so) ? so : new Vector3(0.3f, 0.3f, 0.3f), noise = _all.Count * 7.31f, phase = _all.Count * 1.7f };
+                                      soft = Softness.TryGetValue(runner.body ?? "", out var so) ? so : new Vector3(0.3f, 0.3f, 0.3f),
+                                      clothSoft = ClothSoftness.TryGetValue(runner.body ?? "", out var cs) ? cs : new Vector2(0.5f, 0.6f),
+                                      noise = _all.Count * 7.31f, phase = _all.Count * 1.7f,
+                                      nextBlink = 1.5f + (_all.Count % 5) * 0.65f, blinkDur = 0.14f, nextDart = 0.6f + (_all.Count % 4) * 0.35f };
                 if (!MouthOf.TryGetValue(runner.body ?? "", out f.mouth)) { f.mouth = FindMouth(f); MouthOf[runner.body ?? ""] = f.mouth; }
                 _all.Add(f); _of[runner] = f;
             }
@@ -226,13 +238,40 @@ namespace PoKingHill
                 if (now < f.triumphUntil) { jaw = Mathf.Max(jaw, 0.55f + 0.3f * Mathf.Sin(now * 9f)); brow = 0.6f; }
                 f.jaw += (jaw - f.jaw) * Mathf.Clamp01(dt * 14f); f.brow += (brow - f.brow) * Mathf.Clamp01(dt * 8f);
 
-                // ---- soft parts: anchors on the body, the spring's lag is the offset
+                // ---- eyes: spontaneous blinking, hit flinch and micro-saccades (#11)
                 Vector3 fwd = frame * Vector3.right, up = frame * Vector3.up, chest = f.skin.ChestBone.position, pelvis = f.skin.PelvisBody.position;
+                if (now >= f.nextBlink)
+                {
+                    f.blinkDur = 0.12f + 0.06f * Mathf.PerlinNoise(f.noise, now);
+                    f.nextBlink = now + 2.2f + 3.1f * Mathf.PerlinNoise(now * 0.37f, f.noise);
+                }
+                float autoBlink = (f.nextBlink - now > -f.blinkDur && f.nextBlink - now <= 0f)
+                    ? Mathf.Sin(Mathf.Clamp01(-(f.nextBlink - now) / Mathf.Max(0.05f, f.blinkDur)) * Mathf.PI) : 0f;
+                float wantBlink = now < f.flinchUntil ? 0.92f : (now < f.painUntil ? 0.55f : (now < f.fearUntil ? 0f : autoBlink));
+                f.blink = Mathf.MoveTowards(f.blink, wantBlink, dt * 16f);
+
+                if (now >= f.nextDart)
+                {
+                    float s1 = Mathf.PerlinNoise(now * 1.7f, f.noise) * 2f - 1f;
+                    float s2 = Mathf.PerlinNoise(f.noise, now * 1.9f) * 2f - 1f;
+                    f.eyeTargetX = Mathf.Clamp(s1 * 0.9f, -1f, 1f);
+                    f.eyeTargetY = Mathf.Clamp(s2 * 0.55f, -0.7f, 0.7f);
+                    f.nextDart = now + (fight ? 0.35f : 0.95f) + 0.9f * Mathf.PerlinNoise(now, f.noise * 2f);
+                }
+                f.eyeX = Mathf.Lerp(f.eyeX, f.eyeTargetX, Mathf.Clamp01(dt * 24f));
+                f.eyeY = Mathf.Lerp(f.eyeY, f.eyeTargetY, Mathf.Clamp01(dt * 24f));
+                float hairWet = Mathf.Clamp01(f.exertion * 0.75f + (director.sea != null && pelvis.y < director.sea.Level ? 1f : 0f));
+
+                // ---- soft parts: anchors on the body + cloth/tie/hem springs (#12)
                 Vector3 bellyAt = Vector3.Lerp(pelvis, chest, 0.45f) + fwd * (0.10f * f.k), hairAt = headPos + (look * up) * (0.62f * f.head) - (look * fwd) * (0.03f * f.k),
                         chestAt = chest + fwd * (0.08f * f.k);
+                Vector3 tieAt = Vector3.Lerp(chest, pelvis, 0.38f) + fwd * (0.14f * f.k),
+                        hemAt = pelvis - up * (0.14f * f.k);
                 _jigC[0] = Region(bellyAt, 0.17f * f.k, f.soft.x); _jigD[0] = f.belly.Step(bellyAt, dt, 3.2f, 0.28f, 0.035f * f.k) * f.soft.x;
                 _jigC[1] = Region(hairAt, 0.15f * f.k, f.soft.y); _jigD[1] = f.hair.Step(hairAt, dt, 4.5f, 0.32f, 0.025f * f.k) * f.soft.y;
                 _jigC[2] = Region(chestAt, 0.13f * f.k, f.soft.z); _jigD[2] = f.chest.Step(chestAt, dt, 4f, 0.35f, 0.02f * f.k) * f.soft.z;
+                _jigC[3] = Region(tieAt, 0.14f * f.k, f.clothSoft.x); _jigD[3] = f.tie.Step(tieAt, dt, 3.4f, 0.22f, 0.055f * f.k) * f.clothSoft.x;
+                _jigC[4] = Region(hemAt, 0.22f * f.k, f.clothSoft.y); _jigD[4] = f.hem.Step(hemAt, dt, 3.8f, 0.25f, 0.045f * f.k) * f.clothSoft.y;
 
                 var toHead = Matrix4x4.TRS(headPos, look * frame, Vector3.one).inverse; Vector3 headUp = look * up;
                 foreach (var r in f.renderers)
@@ -240,6 +279,7 @@ namespace PoKingHill
                     r.GetPropertyBlock(_mpb);
                     _mpb.SetMatrix(Head, toHead); _mpb.SetVector(HeadUp, headUp); _mpb.SetVector(Mouth, new Vector4(f.mouth.x, f.mouth.y, f.mouth.z, f.head));
                     _mpb.SetVector(Face, FaceOverride is Vector3 fo ? new Vector4(fo.x, fo.y, fo.z, 0f) : new Vector4(f.jaw, f.brow, f.exertion, 0f));
+                    _mpb.SetVector(Eyes, new Vector4(f.blink, f.eyeX, f.eyeY, hairWet));
                     _mpb.SetVector(Chest, new Vector4(chestAt.x, chestAt.y, chestAt.z, 0.21f * f.k)); _mpb.SetVector(Breath, new Vector4(fwd.x, fwd.y, fwd.z, swell));
                     _mpb.SetVectorArray(JigC, _jigC); _mpb.SetVectorArray(JigD, _jigD);
                     r.SetPropertyBlock(_mpb);

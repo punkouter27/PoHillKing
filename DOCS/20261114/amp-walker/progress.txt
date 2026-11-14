@@ -1,0 +1,9 @@
+2026-11-14 14:06:06 baseline eval: shipped walker
+2026-11-14 14:07:57 SUMMARY {"impact_survival": {"mean": 0.9853, "ci95": 0.0115}, "envs_never_fell": {"mean": 0.9154, "ci95": 0.0646}} VERDICT kim_r1b PASS (3/3 seeds) [leg-contact rule: unity] 
+2026-11-14 14:07:57 train amp: 25 min, 2048 worlds
+2026-11-14 14:33:07 train amp done: 555 iterations
+2026-11-14 14:34:57 SUMMARY {"impact_survival": {"mean": 0.9846, "ci95": 0.0082}, "envs_never_fell": {"mean": 0.9089, "ci95": 0.0479}} VERDICT kim_r1b PASS (3/3 seeds) [leg-contact rule: unity] 
+2026-11-14 14:34:57 train control: 25 min, 2048 worlds
+2026-11-14 15:00:05 train control done: 569 iterations
+2026-11-14 15:01:55 SUMMARY {"impact_survival": {"mean": 0.9895, "ci95": 0.0092}, "envs_never_fell": {"mean": 0.9388, "ci95": 0.0458}} VERDICT kim_r1b PASS (3/3 seeds) [leg-contact rule: unity] 
+2026-11-14 15:01:55 all done

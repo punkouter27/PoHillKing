@@ -105,6 +105,103 @@ def test_reward_range_and_reset_pairs():
     assert out.shape == (7,) and torch.isfinite(out).all()
 
 
+def test_100style_alias_retarget_and_features():
+    import tempfile
+    bvh = """HIERARCHY
+ROOT mixamorig:Hips
+{
+  OFFSET 0 95 0
+  CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation
+  JOINT Chest
+  {
+    OFFSET 0 28 0
+    CHANNELS 3 Zrotation Xrotation Yrotation
+    JOINT LeftUpperArm
+    {
+      OFFSET 18 0 0
+      CHANNELS 3 Zrotation Xrotation Yrotation
+      JOINT LeftLowerArm
+      {
+        OFFSET 28 0 0
+        CHANNELS 3 Zrotation Xrotation Yrotation
+        JOINT LeftWrist
+        {
+          OFFSET 25 0 0
+          CHANNELS 3 Zrotation Xrotation Yrotation
+          End Site { OFFSET 8 0 0 }
+        }
+      }
+    }
+    JOINT RightUpperArm
+    {
+      OFFSET -18 0 0
+      CHANNELS 3 Zrotation Xrotation Yrotation
+      JOINT RightLowerArm
+      {
+        OFFSET -28 0 0
+        CHANNELS 3 Zrotation Xrotation Yrotation
+        JOINT RightWrist
+        {
+          OFFSET -25 0 0
+          CHANNELS 3 Zrotation Xrotation Yrotation
+          End Site { OFFSET -8 0 0 }
+        }
+      }
+    }
+  }
+  JOINT LeftThigh
+  {
+    OFFSET 10 0 0
+    CHANNELS 3 Zrotation Xrotation Yrotation
+    JOINT LeftShin
+    {
+      OFFSET 0 -42 0
+      CHANNELS 3 Zrotation Xrotation Yrotation
+      JOINT LeftAnkle
+      {
+        OFFSET 0 -40 0
+        CHANNELS 3 Zrotation Xrotation Yrotation
+        End Site { OFFSET 0 -8 10 }
+      }
+    }
+  }
+  JOINT RightThigh
+  {
+    OFFSET -10 0 0
+    CHANNELS 3 Zrotation Xrotation Yrotation
+    JOINT RightShin
+    {
+      OFFSET 0 -42 0
+      CHANNELS 3 Zrotation Xrotation Yrotation
+      JOINT RightAnkle
+      {
+        OFFSET 0 -40 0
+        CHANNELS 3 Zrotation Xrotation Yrotation
+        End Site { OFFSET 0 -8 10 }
+      }
+    }
+  }
+}
+MOTION
+Frames: 4
+Frame Time: 0.020000
+""" + "\n".join(
+        " ".join(["0", "95", "0"] + ["0"] * (3 * 14)) for _ in range(4)
+    ) + "\n"
+    with tempfile.NamedTemporaryFile("w", suffix=".bvh", delete=False) as tf:
+        tf.write(bvh); path = tf.name
+    try:
+        m = mujoco.MjModel.from_xml_path(os.path.join(ROOT, "assets", "kim", "scene_flat_1p.xml"))
+        b = mocap.body_limbs(m, "a_")
+        c = mocap.retarget(path, b)
+        assert c["q"].shape == (3, 29) and np.isfinite(c["q"]).all()
+        assert (c["q"] >= b["lo"] - 1e-5).all() and (c["q"] <= b["hi"] + 1e-5).all()
+        feat = mocap.features(c)
+        assert feat.shape[1] == mocap.FEAT and np.isfinite(feat).all()
+    finally:
+        os.unlink(path)
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"): print(name); fn()

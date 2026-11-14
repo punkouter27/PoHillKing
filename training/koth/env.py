@@ -70,8 +70,9 @@ def default_cfg(rung: str = "r0") -> dict:
                     joint_deviation_knee=-0.1, dof_pos_limits=-1.0, action_rate=-0.01, joint_vel=-2e-4, stand_still=-0.1,
                     tracking_heading=1.0, plateau=0.0, off_rim=0.0, ring_advantage=0.0, opp_radius=0.0, self_edge=0.0, push_out=0.0, hand_push=0.0, win=0.0, draw=0.0, termination=-1.0,
                     stalemate=0.0, mirror_push_out=0.0, mirror_stalemate=0.0, mirror_standoff=0.0, belly_push=0.0, arm_contact=0.0, getup_height=0.0, getup_upright=0.0, getup_pose=0.0, getup_still=0.0, getup_rise=0.0,
-                    potential=0.0, arm_flail=0.0, action_jerk=0.0, balance=0.0),
+                    potential=0.0, arm_flail=0.0, action_jerk=0.0, balance=0.0, victory_hold=0.0),
         tracking_sigma=0.25, swing_height=0.12, terminate_on_leg_contact=True, max_radius=8.0, combat=False,
+        victory_s=0.0,             # > 0 (rung victory): keep episode alive this many seconds after last opponent falls so winner walks to center & celebrates
         contact_free=False,        # True: within reach of the opponent, arms/waist are exempt from the pose penalty
         gait_free=False,           # True: within reach of the opponent, the gait-clock rewards are off (feet may plant)
         shove=False,               # True: the learner fights in the shove style (see SHOVE_*); frozen opponents opt in with ":shove"
@@ -251,6 +252,13 @@ def default_cfg(rung: str = "r0") -> dict:
         cfg["reward"].update(push_out=1.0, belly_push=4.0, arm_contact=-1.0, hand_push=0.0)
         cfg["goal_cmd"].update(vmax=0.7)
         cfg["terminate_on_leg_contact"] = False
+    elif rung == "victory" or rung.endswith("_victory"):
+        # R6 True Physical Victory: keep 103/112 obs & 29 actions; after the last opponent falls, hold the round open
+        # for `victory_s` seconds and pay `victory_hold` for walking to the summit center with arms raised upright.
+        base_rung = rung[:-8] + "_hill" if rung.endswith("_victory") else "r5ffa"
+        cfg.update(default_cfg(base_rung))
+        cfg.update(victory_s=2.5, episode_length_s=22.5)
+        cfg["reward"].update(victory_hold=6.0)
     # A human body never ends a round on its own foot-shin contact (human_overrides, Unity, duel_stats.py): r4league and the
     # other G1-built rungs kept the G1's rule for KOTH_ROBOT=<human>, which counted 37 of 64 Kims as fallen in the first
     # step (log 2026-10-29). One place for training, eval.py and reward_audit.py.
@@ -258,10 +266,10 @@ def default_cfg(rung: str = "r0") -> dict:
     return cfg
 
 
-HUMANS = ("kim", "trump", "grandpa")         # human bodies (koth/build_<body>.py) with the G1's 29 joints
+HUMANS = ("kim", "trump", "grandpa", "brawler")  # human bodies (koth/build_<body>.py) with the G1's 29 joints
 # Gait clock per body (train.py --body-gait -> action_map gait_hz, carried in the brain's _action.json): a light body
 # steps quicker, a heavy or older one slower. 1.5 Hz = obs.GAIT_FREQ_HZ, every brain up to 2026-10-29.
-BODY_GAIT_HZ = {"g1": 1.5, "kim": 1.6, "trump": 1.3, "grandpa": 1.2}
+BODY_GAIT_HZ = {"g1": 1.5, "kim": 1.6, "trump": 1.3, "grandpa": 1.2, "brawler": 1.4}
 
 
 def mix_scene(bodies: list) -> str:
@@ -296,9 +304,9 @@ def human_overrides(cfg: dict, body: str) -> dict:
     try:
         ratio = robot_mass("g1") / robot_mass(body)
     except OSError:
-        ratio = 33.341 / {"kim": 55.994, "trump": 102.0, "grandpa": 86.0}[body]
+        ratio = 33.341 / {"kim": 55.994, "trump": 102.0, "grandpa": 86.0, "brawler": 118.0}[body]
     cfg["push"].update(vel=[v * ratio for v in cfg["push"]["vel"]], curriculum_iters=300, curriculum_start=0.25, steps_per_iter=24)
-    cfg["swing_height"] = {"kim": 0.09, "trump": 0.10, "grandpa": 0.09}[body]     # Trump, Grandpa: an older man's shuffle
+    cfg["swing_height"] = {"kim": 0.09, "trump": 0.10, "grandpa": 0.09, "brawler": 0.10}[body]     # Trump, Grandpa: an older man's shuffle
     cfg["reward"].update(pose=-0.05, joint_deviation_hip=-0.15, joint_deviation_knee=-0.05)
     cfg["terminate_on_leg_contact"] = False
     cfg["mass_ratio"] = ratio
@@ -539,7 +547,10 @@ class KothEnv:
         self.act_f = z(M, 29); self.pose_offset = z(M, 29)
         self.act_s = z(M, 29); self.breath_off = z(M, 29); self.prev_action2 = z(M, 29)      # slew state, breathing rest offset, a(t-2)
         self.obs_hist = None; self.hist_head = 0; self.hist_fill = torch.ones(M, dtype=torch.bool, device=device)   # action_map delay
-        self.out = torch.zeros(M, dtype=torch.bool, device=device)        # > 2 robots: eliminated this round (latched)
+        self.out = torch.zeros(M, dtype=torch.bool, device=device)        # > 2 robots (or victory_s > 0): eliminated this round (latched)
+        self.victory_t = z(N)
+        self.victory_active = torch.zeros(N, dtype=torch.bool, device=device)
+        self.won_paid = torch.zeros(N, dtype=torch.bool, device=device)
         self.bench = torch.zeros(N, dtype=torch.long, device=device)      # duel_share: bit k set = robot k sits this world out, 0 = none
         self.stale_t = z(M); self.push_out_sum = z(M)                    # anti-stalemate timer, push_out paid this episode
         self.fatigue = z(M, 29)                                          # per-joint fatigue state in [0, 1]
@@ -763,6 +774,7 @@ class KothEnv:
         self.last_action[rows] = 0; self.act_f[rows] = 0; self.act_s[rows] = 0; self.prev_action2[rows] = 0; self.hist_fill[rows] = True; self.pose_offset[rows] = 0; self.phase[rows] = 0; self.yaw_target[rows] = yaw.reshape(-1)
         self.feet_air_time[rows] = 0; self.feet_contact[rows] = True
         self.out[rows] = False; self.stale_t[rows] = 0; self.push_out_sum[rows] = 0; self.fatigue[rows] = 0
+        self.victory_t[ids] = 0; self.victory_active[ids] = False; self.won_paid[ids] = False
         self.bench[ids] = bench
         if bench.any():
             for k in range(1, A): self.out[ids * A + k] |= (bench >> k) & 1 == 1
@@ -919,7 +931,7 @@ class KothEnv:
             jq, jv = self._joints(); kvq = self.win_kv * jv            # torque-feasible window at the current state (action_map.py)
             windowed = torch.minimum(torch.maximum(target, jq + (kvq - self.win_tau) / self.win_kp), jq + (kvq + self.win_tau) / self.win_kp)
             target = torch.clamp(torch.where(self.row["window"][:, None], windowed, target), self.ctrl_lo, self.ctrl_hi)
-        if A > 2: target = torch.where(self.out[:, None], 0.0, target)   # eliminated: limp, as Unity's paused runner (ctrl 0)
+        if A > 2 or self.cfg.get("victory_s", 0.0) > 0: target = torch.where(self.out[:, None], 0.0, target)   # eliminated: limp, as Unity's paused runner (ctrl 0)
         # one-step actuation latency on a random subset of robots (DR)
         self._jitter = (target - self.pending_ctrl).abs().mean(1)      # mean joint-target change this step (rad), eval's jitter
         apply = torch.where(self.latency[:, None], self.pending_ctrl, target); self.pending_ctrl = target
@@ -948,17 +960,34 @@ class KothEnv:
         if self.cfg["terminate_on_leg_contact"]: fallen |= leg
         if self.cfg.get("getup"): fallen = nan                  # getting up is the task: lying down never ends the episode
         timeout = self.episode_length_buf >= self.max_episode_length
+        victory_s = float(self.cfg.get("victory_s", 0.0))
         if A > 2:                                    # free-for-all: an eliminated robot stays in the world, limp
             fallen = fallen & ~self.out; self.out |= fallen               # fallen = eliminated this step
-            o = self.out.view(N, A); lost = o[:, 0].clone(); won_w = o[:, 1:].all(1) & ~lost      # clone: the reset clears self.out before eval reads extras
+            o = self.out.view(N, A); lost = o[:, 0].clone(); opp_down = o[:, 1:].all(1) & ~lost
+        elif victory_s > 0.0 and A == 2:
+            fallen = fallen & ~self.out; self.out |= fallen
+            o = self.out.view(N, A); lost = o[:, 0].clone(); opp_down = o[:, 1] & ~lost
+        else:
+            opp_down = torch.zeros(N, dtype=torch.bool, device=device)
+        if victory_s > 0.0 and A >= 2:
+            self.victory_active = (self.victory_active | opp_down) & ~lost
+            self.victory_t = torch.where(self.victory_active, self.victory_t + self.ctrl_dt, torch.zeros_like(self.victory_t))
+            won_w = opp_down & ~self.won_paid
+            self.won_paid |= won_w
+            decided = lost | (self.victory_active & (self.victory_t >= victory_s))
+            world_done = decided | timeout
+        elif A > 2:
+            won_w = opp_down      # clone: the reset clears self.out before eval reads extras
             decided = lost | won_w; world_done = decided | timeout
         else:
+            won_w = torch.zeros(N, dtype=torch.bool, device=device)
             decided = fallen.view(N, A).any(1); world_done = decided | timeout
         done = world_done.repeat_interleave(A)
         term = self.cfg["reward"]["termination"] * fallen.float()      # one-off, outside the clip, not scaled by dt
         rew += term; self.reward_terms["termination"] = term
         if self.A == 2 and self.cfg["reward"]["win"] != 0.0:
-            won = self._opp(fallen) & ~fallen; win = self.cfg["reward"]["win"] * won.float()
+            won = self._opp(fallen) & ~fallen if victory_s <= 0.0 else torch.stack([won_w, torch.zeros_like(won_w)], 1).reshape(M)
+            win = self.cfg["reward"]["win"] * won.float()
             rew += win; self.reward_terms["win"] = win
         elif self.A > 2 and self.cfg["reward"]["win"] != 0.0:       # last one in (the learner row of each world)
             won = torch.zeros(N, A, dtype=torch.bool, device=self.device); won[:, 0] = won_w
@@ -1104,6 +1133,11 @@ class KothEnv:
             t["getup_rise"] = linv_w[:, 2].clamp(0.0, 1.0) * (1 - standing)
         t["plateau"] = (radius < 1.2).float()
         t["off_rim"] = (radius - PLATEAU_R).clamp(min=0)
+        if R.get("victory_hold", 0.0) != 0.0:
+            vic = self.victory_active.repeat_interleave(self.A).float()
+            center = 1.0 - (radius / 1.2).clamp(0.0, 1.0)
+            hands_up = ((self._flat(self.xpos[:, self.hand_body])[:, :, 2] - pos[:, None, 2]).clamp(0.0, 0.45) / 0.45).mean(1)
+            t["victory_hold"] = vic * (0.5 * center + 0.5 * hands_up) * (-grav[:, 2]).clamp(0.0, 1.0)
         self.reward_terms = {k: R[k] * v * dt for k, v in t.items() if R.get(k, 0.0) != 0.0}
         cap = self.cfg.get("push_out_cap", 0.0)
         if cap and "push_out" in self.reward_terms:            # opt-in: at most `cap` push_out reward per episode

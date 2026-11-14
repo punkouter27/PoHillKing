@@ -83,6 +83,8 @@ def share(rows):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--iters", type=int, default=400); ap.add_argument("--num-envs", type=int, default=1536)
+    ap.add_argument("--amp", action="store_true", help="enable AMP motion prior per body (prefers assets/mocap/<style_tag>_<body>.npz)")
+    ap.add_argument("--amp-weight", type=float, default=1.0); ap.add_argument("--style-tag", default="style")
     ap.add_argument("--bodies", nargs="+", default=list(HUMANS)); a = ap.parse_args()
     note(f"=== queue_hill: {a.bodies}, {a.iters} iterations, {a.num_envs} worlds ===")
     ensure_tensorboard()
@@ -96,9 +98,14 @@ def main():
         ckpt = f"runs/{rung}/{name}/model_final.pt"
         if not os.path.exists(os.path.join(ROOT, ckpt)):
             note(f"{name}: training ({rung}, warm from {FIGHTER[me]}, opponents {others}, half the worlds duels)")
-            p = run(["scripts/train.py", "--rung", rung, "--name", name, "--num-envs", str(a.num_envs), "--iters", str(a.iters),
-                     "--warm", FIGHTER[me], "--opponent"] + opp + ["--frozen-deterministic", "--critic-warmup", "15", "--reward", "draw=-20"],
-                    me, os.path.join(LOG_DIR, f"{name}.log"))
+            train_args = ["scripts/train.py", "--rung", rung, "--name", name, "--num-envs", str(a.num_envs), "--iters", str(a.iters),
+                          "--warm", FIGHTER[me], "--opponent"] + opp + ["--frozen-deterministic", "--critic-warmup", "15", "--reward", "draw=-20"]
+            if a.amp:
+                pref = os.path.join(ROOT, "assets", "mocap", f"{a.style_tag}_{me}.npz")
+                fallback = os.path.join(ROOT, "assets", "mocap", f"cmu_style_{me}.npz")
+                amp_path = pref if os.path.exists(pref) else fallback
+                train_args += ["--amp", amp_path, "--amp-weight", str(a.amp_weight)]
+            p = run(train_args, me, os.path.join(LOG_DIR, f"{name}.log"))
             if p.returncode != 0: note(f"{name}: training FAILED (rc {p.returncode}), see runs/overnight/{name}.log"); continue
         ev = {"three_new": evaluate(me, ["--rung", rung, "--ckpt", ckpt, "--opponent"] + opp + ["--seconds", "20"]),
               "three_fighter": evaluate(me, ["--rung", rung, "--ckpt", FIGHTER[me], "--opponent"] + opp + ["--seconds", "20"]),

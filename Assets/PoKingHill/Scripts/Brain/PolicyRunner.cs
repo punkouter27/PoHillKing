@@ -136,11 +136,48 @@ namespace PoKingHill
         void OnPreStep(object sender, MjStepArgs args)
         {
             if (Map == null || paused) return;
+            if (PolicyBatcher.Active) return;
             var d = MjScene.Instance.Data;
             if (_substep++ % _spec.decimation == 0) PolicyTick(d);
+            WriteCtrl(d);
+        }
+
+        internal void WriteCtrl(MujocoLib.mjData_* d)
+        {
             // MjActuator.OnSyncState writes its own Control field (0) into mjData.ctrl after every mj_step, so the
             // held targets must be rewritten before every physics step, not only on policy ticks.
             for (int i = 0; i < Map.N; i++) d->ctrl[Map.ActId[i]] = Ctrl[i];
+        }
+
+        internal bool PrepareBatchedTick(MujocoLib.mjData_* d, out ModelAsset asset, out float[] obsVec, out int obsDim, out bool isGetup)
+        {
+            asset = null; obsVec = null; obsDim = 0; isGetup = false;
+            if (Map == null || paused || (_substep++ % _spec.decimation != 0)) return false;
+            if (_getup && getupPolicy != null)
+            {
+                command = Vector3.zero;
+                _getupObs ??= new float[ObsBuilder.ObsDim];
+                ObsBuilder.Fill(_getupObs, d, Map, ZeroCommand, LastAction, _phase);
+                asset = getupPolicy; obsVec = _getupObs; obsDim = ObsBuilder.ObsDim; isGetup = true;
+                return true;
+            }
+            if (policy == null)
+            {
+                for (int i = 0; i < Map.N; i++) Ctrl[i] = _spec.hold_ctrl[i];
+                return false;
+            }
+            BuildFightObs(d);
+            asset = policy;
+            obsVec = _obsRing != null ? DelayedObs() : Obs;
+            obsDim = policyObsDim;
+            return true;
+        }
+
+        internal void ApplyBatchedAction(MujocoLib.mjData_* d, System.ReadOnlySpan<float> act, bool isGetup, double elapsedMs)
+        {
+            LastInferenceMs = elapsedMs;
+            if (isGetup) ApplyGetUpAction(act);
+            else ApplyFightAction(d, act);
         }
 
         void PolicyTick(MujocoLib.mjData_* d)
@@ -151,6 +188,20 @@ namespace PoKingHill
                 for (int i = 0; i < Map.N; i++) Ctrl[i] = _spec.hold_ctrl[i];
                 return;
             }
+            BuildFightObs(d);
+            _sw.Restart();
+            _input.Upload(_obsRing != null ? DelayedObs() : Obs);
+            _worker.Schedule(_input);
+            // CPU backend: wait for the jobs, then read the worker's own output in place (no clone, no managed array).
+            var output = _worker.PeekOutput() as Tensor<float>;
+            output.CompleteAllPendingOperations();
+            var act = output.AsReadOnlySpan();
+            LastInferenceMs = _sw.Elapsed.TotalMilliseconds;
+            ApplyFightAction(d, act);
+        }
+
+        void BuildFightObs(MujocoLib.mjData_* d)
+        {
             _cmd[0] = command.x; _cmd[1] = command.y; _cmd[2] = command.z;
             if (_after == PostRound.Victory)
             {
@@ -184,14 +235,11 @@ namespace PoKingHill
                     ObsBuilder.FillCombat(Obs, ObsBuilder.ObsDim + 9, d, Map, opponent2 != null && opponent2.Map != null ? opponent2.Map : opponent.Map);
             }
             if (core < policyObsDim) System.Array.Copy(_fatigue, 0, Obs, core, Map.N);
-            _sw.Restart();
-            _input.Upload(_obsRing != null ? DelayedObs() : Obs);
-            _worker.Schedule(_input);
-            // CPU backend: wait for the jobs, then read the worker's own output in place (no clone, no managed array).
-            var output = _worker.PeekOutput() as Tensor<float>;
-            output.CompleteAllPendingOperations();
-            var act = output.AsReadOnlySpan();
-            LastInferenceMs = _sw.Elapsed.TotalMilliseconds;
+        }
+
+        void ApplyFightAction(MujocoLib.mjData_* d, System.ReadOnlySpan<float> act)
+        {
+            var fat = _amap != null && _frc0 != null ? _amap.Fatigue : null;
             float blend = 0f;
             if (shoveStyle && _after == PostRound.None && opponent != null && opponent.Map != null)
             {
@@ -273,6 +321,11 @@ namespace PoKingHill
             _getupInput.Upload(_getupObs); _getupWorker.Schedule(_getupInput);
             var output = _getupWorker.PeekOutput() as Tensor<float>; output.CompleteAllPendingOperations();
             var act = output.AsReadOnlySpan(); LastInferenceMs = _sw.Elapsed.TotalMilliseconds;
+            ApplyGetUpAction(act);
+        }
+
+        void ApplyGetUpAction(System.ReadOnlySpan<float> act)
+        {
             for (int i = 0; i < Map.N; i++)
             {
                 RawAction[i] = act[i]; float a = Mathf.Clamp(act[i], -1f, 1f); LastAction[i] = a; _actF[i] = a; _actS[i] = a;
