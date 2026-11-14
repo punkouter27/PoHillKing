@@ -1,0 +1,72 @@
+[
+  {
+    "opponent": "kim",
+    "variant": "baseline",
+    "status": "measured-preliminary-one-seed",
+    "metrics": {
+      "seed": 0,
+      "duels": 64,
+      "attacker_ejects_defender": 0.0938,
+      "attacker_lost": 0.8594,
+      "undecided": 0.0469,
+      "median_time_s": 5.48,
+      "contact_share": 0.6281,
+      "jitter_rad": 0.08736,
+      "flags": [],
+      "pass": false
+    }
+  },
+  {
+    "opponent": "kim",
+    "variant": "candidate",
+    "status": "measured-preliminary-one-seed",
+    "metrics": {
+      "seed": 0,
+      "duels": 64,
+      "attacker_ejects_defender": 0.0,
+      "attacker_lost": 0.1094,
+      "undecided": 0.8906,
+      "median_time_s": -1.0,
+      "contact_share": 0.7955,
+      "jitter_rad": 0.06617,
+      "flags": [
+        "stall"
+      ],
+      "pass": false
+    }
+  },
+  {
+    "opponent": "grandpa",
+    "variant": "baseline",
+    "status": "measured-preliminary-one-seed",
+    "metrics": {
+      "seed": 0,
+      "duels": 64,
+      "attacker_ejects_defender": 0.0312,
+      "attacker_lost": 0.9531,
+      "undecided": 0.0156,
+      "median_time_s": 3.16,
+      "contact_share": 0.661,
+      "jitter_rad": 0.07889,
+      "flags": [],
+      "pass": false
+    }
+  },
+  {
+    "opponent": "grandpa",
+    "variant": "candidate",
+    "status": "measured-preliminary-one-seed",
+    "metrics": {
+      "seed": 0,
+      "duels": 64,
+      "attacker_ejects_defender": 0.0938,
+      "attacker_lost": 0.7656,
+      "undecided": 0.1406,
+      "median_time_s": 6.6,
+      "contact_share": 0.7381,
+      "jitter_rad": 0.08845,
+      "flags": [],
+      "pass": false
+    }
+  }
+]

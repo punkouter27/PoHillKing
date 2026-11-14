@@ -1,0 +1,57 @@
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.3
+   Devices:
+     "cpu"      : "Intel64 Family 6 Model 165 Stepping 2, GenuineIntel"
+     "cuda:0"   : "NVIDIA GeForce RTX 2060" (6 GiB, sm_75, mempool enabled)
+   Kernel cache:
+     \\?\C:\Users\punko\AppData\Local\NVIDIA\warp\Cache\1.18.0
+C:\Users\punko\Downloads\_CODEMATT\PoHillKing\training\.venv\Lib\site-packages\mujoco_warp\_src\io.py:863: UserWarning: MULTICCD is enabled, but the scene contains CCD pairs without multicontact support: [('CAPSULE', 'MESH')]. At most 1 contact will be generated for these pairs.
+  warnings.warn(
+Module mujoco_warp._src.smooth 7937da7 load on device 'cuda:0' took 2.16 ms  (cached)
+Module _nxn_broadphase__locals__kernel_5424cb63 5424cb6 load on device 'cuda:0' took 1.01 ms  (cached)
+Module ccd_kernel_builder__locals__ccd_kernel_58a95c6e 58a95c6 load on device 'cuda:0' took 1.63 ms  (cached)
+Module ccd_kernel_builder__locals__ccd_kernel_2f8fe0b0 2f8fe0b load on device 'cuda:0' took 1.46 ms  (cached)
+Module ccd_kernel_builder__locals__ccd_kernel_4395978a 4395978 load on device 'cuda:0' took 1.83 ms  (cached)
+Module ccd_kernel_builder__locals__ccd_kernel_5e73d49c 5e73d49 load on device 'cuda:0' took 1.68 ms  (cached)
+Module _primitive_narrowphase__locals__primitive_narrowphase_2b4ed5bf 2b4ed5b load on device 'cuda:0' took 1.41 ms  (cached)
+Module mujoco_warp._src.constraint 8d4d513 load on device 'cuda:0' took 1.16 ms  (cached)
+Module _friction_dof__locals__kernel_c23b2f31 c23b2f3 load on device 'cuda:0' took 1.39 ms  (cached)
+Module _limit_slide_hinge__locals__kernel_9573ef9b 9573ef9 load on device 'cuda:0' took 1.18 ms  (cached)
+Module _efc_contact_init__locals__kernel_9009dd76 9009dd7 load on device 'cuda:0' took 1.17 ms  (cached)
+Module _efc_contact_jac_sparse__locals__kernel_54cecf88 54cecf8 load on device 'cuda:0' took 1.29 ms  (cached)
+Module _efc_contact_update__locals__kernel_efb3ac6e efb3ac6 load on device 'cuda:0' took 1.18 ms  (cached)
+Module mujoco_warp._src.forward 09bf588 load on device 'cuda:0' took 1.54 ms  (cached)
+Module mujoco_warp._src.passive 0de6fd1 load on device 'cuda:0' took 1.62 ms  (cached)
+Module _qfrc_passive_kernel__locals__kernel_976399dd 976399d load on device 'cuda:0' took 1.32 ms  (cached)
+Module mujoco_warp._src.forward fa7fa28 load on device 'cuda:0' took 1.61 ms  (cached)
+Module _qfrc_smooth__locals__kernel_8b823980 8b82398 load on device 'cuda:0' took 0.83 ms  (cached)
+Module mujoco_warp._src.support 770ef7d load on device 'cuda:0' took 1.08 ms  (cached)
+Module _small_cholesky_factorize_solve_block__locals__kernel_9da335f1 a5c2521 load on device 'cuda:0' took 1.14 ms  (cached)
+Module _tile_cholesky_factorize_solve_block__locals__kernel_f18d9752 acc0ae1 load on device 'cuda:0' took 82.35 ms  (cached)
+Module _solve_init_dof__locals__kernel_7cb1664a 7cb1664 load on device 'cuda:0' took 1.17 ms  (cached)
+Module mujoco_warp._src.solver a33a125 load on device 'cuda:0' took 1.40 ms  (cached)
+Module _solve_init_jaref_kernel__locals__kernel_d60013a8 d60013a load on device 'cuda:0' took 0.93 ms  (cached)
+Module mul_m_kernel__locals___mul_m_f3de1cc7 f3de1cc load on device 'cuda:0' took 0.85 ms  (cached)
+Module _update_constraint_efc__locals__kernel_0539aa50 0539aa5 load on device 'cuda:0' took 1.02 ms  (cached)
+Module _update_constraint_init_qfrc_constraint_sparse__locals__kernel_801f2ee2 801f2ee load on device 'cuda:0' took 0.99 ms  (cached)
+Module _update_gradient_zero_grad_dot__locals__kernel_b20934d7 b20934d load on device 'cuda:0' took 0.93 ms  (cached)
+Module _update_gradient_grad__locals__kernel_c876081d c876081 load on device 'cuda:0' took 1.04 ms  (cached)
+Module _update_gradient_init_h_sparse__locals__kernel_f82bfdd8 f82bfdd load on device 'cuda:0' took 1.01 ms  (cached)
+Module _JTDACJ_sparse__locals__kernel_765abea5 765abea load on device 'cuda:0' took 1.14 ms  (cached)
+Module _JTDACJ_sparse__locals__kernel_765abea5 bd2cd56 load on device 'cuda:0' took 0.89 ms  (cached)
+Module _update_gradient_cholesky_blocked__locals__kernel_1978ec8a e8439f0 load on device 'cuda:0' took 219.46 ms  (cached)
+Module _linesearch_jv_fused_kernel__locals__kernel_a5a98067 a5a9806 load on device 'cuda:0' took 1.25 ms  (cached)
+Module _linesearch_iterative_kernel__locals__kernel_778d6fd4 efd73e0 load on device 'cuda:0' took 1.38 ms  (cached)
+Module _update_constraint_efc__locals__kernel_e953547e e953547 load on device 'cuda:0' took 1.10 ms  (cached)
+Module _update_gradient_zero_grad_dot__locals__kernel_e9f8c963 e9f8c96 load on device 'cuda:0' took 1.27 ms  (cached)
+Module _update_gradient_grad__locals__kernel_87959044 8795904 load on device 'cuda:0' took 1.04 ms  (cached)
+Module _update_gradient_h_incremental_sparse__locals__kernel_e8129775 e812977 load on device 'cuda:0' took 1.05 ms  (cached)
+Module _update_gradient_cholesky_blocked_skip_unchanged__locals__kernel_3f234dec efe19e3 load on device 'cuda:0' took 201.68 ms  (cached)
+Module _solve_done__locals__kernel_54267c25 54267c2 load on device 'cuda:0' took 1.20 ms  (cached)
+Module mujoco_warp._src.derivative 73aac08 load on device 'cuda:0' took 1.72 ms  (cached)
+Module _next_time_builder__locals___next_time_6a85bd47 6a85bd4 load on device 'cuda:0' took 1.25 ms  (cached)
+{"seed": 0, "rounds": 128, "learner_last_one_in": 0.2344, "learner_out": 0.7656, "undecided": 0.0, "median_time_s": 4.86, "jitter_rad": 0.08822, "flags": [], "pass": false}
+{"seed": 1, "rounds": 128, "learner_last_one_in": 0.2969, "learner_out": 0.7031, "undecided": 0.0, "median_time_s": 4.86, "jitter_rad": 0.0904, "flags": [], "pass": false}
+{"seed": 2, "rounds": 128, "learner_last_one_in": 0.2422, "learner_out": 0.75, "undecided": 0.0078, "median_time_s": 5.24, "jitter_rad": 0.08607, "flags": [], "pass": false}
+SUMMARY {"undecided": {"mean": 0.0026, "ci95": 0.0112}, "learner_last_one_in": {"mean": 0.2578, "ci95": 0.0845}, "learner_out": {"mean": 0.7396, "ci95": 0.0808}, "jitter_rad": {"mean": 0.0882, "ci95": 0.0054}}
+VERDICT trump_hill FAIL (0/3 seeds) [leg-contact rule: unity]

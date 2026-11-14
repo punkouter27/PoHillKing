@@ -1,0 +1,95 @@
+{
+  "title": "PoHillKing - bounded candidate training",
+  "subtitle": "Completed within the 90-minute window ending 2026-11-13T21:52:32.901-05:00; candidate rejected after preliminary duel regressions.",
+  "sections": [
+    {
+      "title": "Combat policy fine-tune",
+      "runs": [
+        {
+          "label": "trump candidate",
+          "dir": "C:\\Users\\punko\\Downloads\\_CODEMATT\\PoHillKing\\training\\runs\\trump_hill4\\trump_bounded_261113_204506"
+        }
+      ],
+      "metrics": [
+        {
+          "tag": "Train/mean_reward",
+          "label": "Mean episode reward"
+        },
+        {
+          "tag": "Train/mean_episode_length",
+          "label": "Mean episode length"
+        },
+        {
+          "tag": "Policy/mean_std",
+          "label": "Exploration standard deviation"
+        }
+      ],
+      "evals": [
+        {
+          "label": "shipped kim",
+          "values": {
+            "share": "0.32550",
+            "jitter": "0.05536"
+          }
+        },
+        {
+          "label": "shipped trump",
+          "values": {
+            "share": "0.25783",
+            "jitter": "0.08823"
+          }
+        },
+        {
+          "label": "shipped grandpa",
+          "values": {
+            "share": "0.53123",
+            "jitter": "0.06401"
+          }
+        },
+        {
+          "label": "candidate trump",
+          "values": {
+            "share": "0.30470",
+            "jitter": "0.08513",
+            "share_delta": "0.04687"
+          }
+        }
+      ],
+      "summary": {
+        "toddler": "25/25 solo get-up drops passed for each body; keep those policies frozen.",
+        "child": "Warm-start the weakest measured combat body from its own shipped actor.",
+        "adult": "457 PPO updates, zero NaN-gradient updates. Not graduated: consecutive-episode and Unity/16-player gates remain mandatory."
+      },
+      "verdict": "Three-way share rose 25.78% to 30.47% (+4.69 percentage points), jitter fell 3.51%. Three seeds do not establish significance (candidate share 95% half-width: 8.46 points). Auxiliary physics diagnostics contained NaNs; the environment resets nonfinite worlds. Learner tensors and gradients remained finite. Not promoted: see the duel stalling regression below. All shipped assets are unchanged."
+    },
+    {
+      "title": "Preliminary duel regression: 64 rounds, one seed per case",
+      "runs": [],
+      "metrics": [],
+      "evals": [
+        {
+          "label": "Shipped Trump vs Kim",
+          "values": {"win": "9.38%", "loss": "85.94%", "undecided": "4.69%", "jitter_rad": "0.08736"}
+        },
+        {
+          "label": "Candidate Trump vs Kim",
+          "values": {"win": "0.00%", "loss": "10.94%", "undecided": "89.06%", "jitter_rad": "0.06617"}
+        },
+        {
+          "label": "Shipped Trump vs Grandpa",
+          "values": {"win": "3.12%", "loss": "95.31%", "undecided": "1.56%", "jitter_rad": "0.07889"}
+        },
+        {
+          "label": "Candidate Trump vs Grandpa",
+          "values": {"win": "9.38%", "loss": "76.56%", "undecided": "14.06%", "jitter_rad": "0.08845"}
+        }
+      ],
+      "summary": {
+        "toddler": "Compare the candidate and unchanged shipped Trump against the same frozen opponents.",
+        "child": "Candidate improved the measured three-way share and Grandpa duel, but strongly regressed into stalling against Kim.",
+        "adult": "Do not replace the game policy. Keep checkpoints for a later engagement-focused experiment and formal multi-seed gates."
+      },
+      "verdict": "Rejected for promotion: the Kim duel's undecided rate rose from 4.69% to 89.06%, with zero candidate wins. These short single-seed checks are preliminary, not a Unity or full 16-player graduation gate."
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+2026-11-13T20:32:03-05:00 Budget ends 2026-11-13T21:52:32.901-05:00; one 512-world run; reserve 12 minutes for final evaluation. No auto-export.
+2026-11-13T20:45:06-05:00 Baseline {'kim': {'share': 0.3255, 'jitter': 0.055356666666666665}, 'trump': {'share': 0.2578333333333333, 'jitter': 0.08822999999999999}, 'grandpa': {'share': 0.5312333333333333, 'jitter': 0.06400666666666666}}; selected trump for body-specific fine-tuning.
+2026-11-13T20:45:06-05:00 Training ETA: up to 55.4 minutes including initialization; trump_bounded_261113_204506.
+2026-11-13T21:32:47-05:00 HOURLY STATUS {"body": "trump", "phase": "training", "remaining_minutes": 19.8, "metrics": {"Train/mean_reward": {"iteration": 390, "value": -9.398679733276367}, "Train/mean_episode_length": {"iteration": 390, "value": 140.69000244140625}, "Policy/mean_std": {"iteration": 390, "value": 0.3183051347732544}}}
+2026-11-13T21:45:05-05:00 Finished. {"share": 0.3047, "jitter": 0.08513}; no policy exported or promoted.

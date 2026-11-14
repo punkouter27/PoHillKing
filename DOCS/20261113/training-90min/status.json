@@ -1,0 +1,134 @@
+{
+  "start": "2026-11-13T20:32:03.712639-05:00",
+  "deadline": "2026-11-13T21:52:32.901-05:00",
+  "phase": "completed-candidate-not-graduated",
+  "promotion_decision": "Rejected: preliminary Kim duels stalled in 89.06% of rounds with zero wins. Shipped policies remain unchanged.",
+  "preliminary_duel_results": "duel-regressions.json",
+  "pid": 6432,
+  "baseline": {
+    "kim": {
+      "share": 0.3255,
+      "jitter": 0.055356666666666665
+    },
+    "trump": {
+      "share": 0.2578333333333333,
+      "jitter": 0.08822999999999999
+    },
+    "grandpa": {
+      "share": 0.5312333333333333,
+      "jitter": 0.06400666666666666
+    }
+  },
+  "candidate": {
+    "share": 0.3047,
+    "jitter": 0.08513
+  },
+  "exported": false,
+  "shipped_sha256": {
+    "grandpa\\fighter_action.json": "808d5a41bfbda85471775d587b3a265dca1eeabadcbfc889b548f4457394fe30",
+    "grandpa\\fighter_action.json.meta": "a8e91a85c9c74d3b724cd4088efd5ad9ba437ef2f5c0acfa4aea22e71a2e0ed5",
+    "grandpa\\fighter_policy.onnx": "0feb97b442cb9e426c79c20eeb174c77ae6e7334b699e104fcc6dded0a0b90c5",
+    "grandpa\\fighter_policy.onnx.meta": "96af5b29ecc1fb184c59a3ac0044f0f50d7708dcead01a04b74541eb6f5384e3",
+    "grandpa\\fighter_value.onnx": "e5452b4ad01a0a2ef843c4ff5d99786da76ccb90b079514ab7b3380f80e45d9e",
+    "grandpa\\fighter_value.onnx.meta": "9076b4cabb811919e4f0698c4c247e58a91f192b1bbaa3808b73d2b74047153e",
+    "grandpa\\getup_policy.onnx": "bb0d0274064fbd6e07084914bd8d7ddeefc3abef86d74cb311b7a0b5b9f60dad",
+    "grandpa\\getup_policy.onnx.meta": "db89981e062d287f18f3d83204ac7eb7703a1bd6de3d57b6fdc35372d041f9d2",
+    "grandpa\\grandpa_skin.json": "e7a4928b90d636ed0f4d7f113979bc752a34d1dbc7aefb4423efe4bc6a8d9359",
+    "grandpa\\grandpa_skin.json.meta": "a7a5c55c4f0edb46bd9204bddac18698d9affe03090b9757a03621bcaf38b2ee",
+    "grandpa\\joint_map.json": "a6de213f19e10b5f1f5114eff8e832b28252f61b793afb14cfe6605dbe1c5eb6",
+    "grandpa\\joint_map.json.meta": "9ac544ffa2436047c89975a7091572fa89a25e2a00f61b0c0404d6d7d079dcac",
+    "grandpa\\model_dump_flat_1p.json": "13c7e8ea3dec2bdb7d9e6230e29ea0a1a343447fb40a8c4adc6399bbf3ac82ba",
+    "grandpa\\model_dump_flat_1p.json.meta": "b31ebd2c6fde797def50f514606707da085a39f6fe67feceea30bc58c9ceb3e0",
+    "grandpa\\model_dump_koth_1p.json": "c9da371b24a24faba8a4b67c87c3d00aa03dd128ba2ebdecefcb2b898ce8324a",
+    "grandpa\\model_dump_koth_1p.json.meta": "fc5ebff56061a638f0f3758713616e23d79c6a2d47792cfa82e2bb6ce4a85b9e",
+    "grandpa\\model_dump_koth_2p.json": "b9101e3bc6b95610e301bc9e6c83512c6ac90dba481748b57a68ce07a771162c",
+    "grandpa\\model_dump_koth_2p.json.meta": "3f4aa29959c8efcfde02388e139e91b77249ee4b3ba78f18f7e77f6bdd8e1f85",
+    "grandpa\\walker_policy.onnx": "de3dc2cd813ee672a26798cf4d6e8427bd91a6e7bbe1e206e430e3ac6973ecc6",
+    "grandpa\\walker_policy.onnx.meta": "718eafa940dd179960e6aa25f4562fa5413166181705a7b90dfe82150f96af76",
+    "grandpa\\walker_value.onnx": "1666c5a64f036af1976a3e757fe02ba98b5d946d339878ad9592ea2bd77d90e4",
+    "grandpa\\walker_value.onnx.meta": "e0019df5baad55990b63081f41081190b7b636b38ba44aff861a54fd5ce106f0",
+    "kim\\fighter_action.json": "808d5a41bfbda85471775d587b3a265dca1eeabadcbfc889b548f4457394fe30",
+    "kim\\fighter_action.json.meta": "0f34e91d5885f8ae8d98f6f27d5f19271471e94bade035efaa94b9bfbc3ee9fe",
+    "kim\\fighter_policy.onnx": "e42f3b437606a1e6468ab51706794020fd157a54dae7918cd9cbb3a9cb9bdd0d",
+    "kim\\fighter_policy.onnx.meta": "09a64b1fee6681adec60ce5838a31791b3f83c21530cebec02093e27c11b1bbf",
+    "kim\\fighter_value.onnx": "a00053012e2e3c10dfa4104629efebb284c2317417656a6b0e42984bebf555f2",
+    "kim\\fighter_value.onnx.meta": "f8e932540d616cf0cecc719539e8a3f31ed88ca08ea25d0a4434c35d0171db3d",
+    "kim\\getup_policy.onnx": "d7adc8e7ec0b5a2eb3428e6b30c28e8b4f00f1fa832dde85a520004a779eca1e",
+    "kim\\getup_policy.onnx.meta": "e34d041ab313f4381592c7607fa3db9b2ea3cd99334372b5b7532ad33341e8a2",
+    "kim\\joint_map.json": "ab45927b8c3f661291ef03164e352a769152c677721198f24bbbe200608902d5",
+    "kim\\joint_map.json.meta": "5844420e88bea7cfb38931f1142938e25742f61bd97434105817ddf189a10b60",
+    "kim\\kim_skin.json": "aa99c11bc5b6618578422bec8d62e15b2de655f4a6aad37e3fd7742f4a82b0b6",
+    "kim\\kim_skin.json.meta": "f6e3b28c0da4d2b0ba5b473658e853253fa50e5b6e4435e0a279d7da0b62a457",
+    "kim\\model_dump_flat_1p.json": "6c6a2796e635be97086ff93004945001f1032ef05429d7119d76317c05ec67e8",
+    "kim\\model_dump_flat_1p.json.meta": "6e15a09186d97942d9944933be005db1504b3d77e366aae0f0aef703809c4cf0",
+    "kim\\model_dump_koth_1p.json": "fc68e0f47d6b9baff877678820ccb13d9fb4274d3e64f960275228cedec80388",
+    "kim\\model_dump_koth_1p.json.meta": "a78a89b4a4b9954cc7a8d71a6cb98c2e52a6f70a673e27b9206372d1b73c3bd2",
+    "kim\\model_dump_koth_2p.json": "52f975d3bff8cfb19d765d735321019a9375531259061225741aecdff90eeeb3",
+    "kim\\model_dump_koth_2p.json.meta": "5aede9cbe31a9387d4608ad8bca4532fcb9aa8bbd85bcd5b9e2da514692faf11",
+    "kim\\walker_policy.onnx": "5b8083e377475b2ae6a3432451bf11ecb3fc579a23f2cb02f6aac4124c75c4f2",
+    "kim\\walker_policy.onnx.meta": "a63558e4b1a1589286b27991b8d8836bd9df26b8b104d08b236b949d4eb42e2a",
+    "kim\\walker_value.onnx": "50fa865e8b7752d6c9bb124436ae01da3d38365c414d3feb2a1d6043df55b9c1",
+    "kim\\walker_value.onnx.meta": "11e2b1700d185c6df650c299943178fd37ec9938bfcf24d55830dcb4d65ebcfa",
+    "trump\\fighter_policy.onnx": "b2f8f307e546f3d6f49a9102ba14b5dd84d5430c24bdfea2dfdf05529d136223",
+    "trump\\fighter_policy.onnx.meta": "3032250354b83912b8e1da3150a9cc6de0d8f7b90e722798857006e470bd8bf9",
+    "trump\\fighter_value.onnx": "83d072ea7373095ffbc3a01c3e743951c7a2ab2aa45e18639aa12b92c14c898d",
+    "trump\\fighter_value.onnx.meta": "7449e642500ff8d744347cc9a052f664504057e856d6ae4ec1c64152324a8add",
+    "trump\\getup_policy.onnx": "148e00ffba6a4af30148cbf3a864034dbff8daa9c057a15114269961a6a16ccc",
+    "trump\\getup_policy.onnx.meta": "766a7ae71ffa7d76eae628bd5d05caaae610c41bb1b32dc5d1bb1ee54c478dd3",
+    "trump\\joint_map.json": "1adac003373e90a7e84a70871c7ae3d529190158d9c5cf260c437fcf8e6533df",
+    "trump\\joint_map.json.meta": "444f5cad6b52cdcc290548505792278560a6f2ec93a6b3bfafe1e7796f2e354d",
+    "trump\\model_dump_flat_1p.json": "2777d16cbcefeaf1c511450fe123e2ffe8c92293bf538e8db94bf222d7fff8a6",
+    "trump\\model_dump_flat_1p.json.meta": "669db14e97efd2c95cced9f6bcd0483fa1299f34ced85d75c91199a87fd6d309",
+    "trump\\model_dump_koth_1p.json": "aa28ed5c1e6d05eabeec0bae028c3c8f5c83977969e1895f59f02e457f9ecf5c",
+    "trump\\model_dump_koth_1p.json.meta": "354166c8fa8cc5022f3b171459cb71f53523b1fb396290d004e2daa0d925ab9e",
+    "trump\\model_dump_koth_2p.json": "2ca0d12a1d043212a1742a4bad8309c772514ec2acbc53777a68338a89dae305",
+    "trump\\model_dump_koth_2p.json.meta": "2a279327fd8bea0a5187bb9bedb822635b86c24fe22acc5a833835891880a80f",
+    "trump\\trump_skin.json": "d8d0e22e6161d2496d30ce4a410500b52a4c726df56af47af84b088673142cec",
+    "trump\\trump_skin.json.meta": "2b3d2c92b092c75b23550d7bdf735cacb3faf95bac67c7c1ce44e0748c660154",
+    "trump\\walker_policy.onnx": "f357e285932e44f86a1284453803f6db85085dad261a4fd74acd13ee44976140",
+    "trump\\walker_policy.onnx.meta": "33440846a5b42902a15c1f85c4927f016273860a1573a1593ceed2fd69b8ace3",
+    "trump\\walker_value.onnx": "eda37942425d19927dfac2ad45488fe8347ea5a646c1db527013abbcd68d1a5c",
+    "trump\\walker_value.onnx.meta": "1824d1e1ba55443719135297bc0dc501f78b64241fc1cd3cc22d0b007b01268d"
+  },
+  "pending_gates": [
+    "100 consecutive target episodes",
+    "duel regression",
+    "16-player regression",
+    "Unity parity"
+  ],
+  "tensorboard": "http://127.0.0.1:6007",
+  "log": "C:\\Users\\punko\\Downloads\\_CODEMATT\\PoHillKing\\DOCS\\20261113\\training-90min\\candidate-evaluation.log",
+  "child_pid": 27844,
+  "updated": "2026-11-13T21:45:05.427041-05:00",
+  "remaining_minutes": 7.46,
+  "metrics": {
+    "Train/mean_reward": {
+      "iteration": 456,
+      "value": -6.686121940612793
+    },
+    "Train/mean_episode_length": {
+      "iteration": 456,
+      "value": 81.08000183105469
+    },
+    "Policy/mean_std": {
+      "iteration": 456,
+      "value": 0.3212849497795105
+    }
+  },
+  "body": "trump",
+  "run_dir": "C:\\Users\\punko\\Downloads\\_CODEMATT\\PoHillKing\\training\\runs\\trump_hill4\\trump_bounded_261113_204506",
+  "training": {
+    "checkpoint": "C:\\Users\\punko\\Downloads\\_CODEMATT\\PoHillKing\\training\\runs\\trump_hill4\\trump_bounded_261113_204506\\model_final.pt",
+    "iterations": 457,
+    "bars": {
+      "target_mean_reward_100_episodes": null,
+      "final_mean_reward_100_episodes": -6.686121888160706,
+      "best_mean_reward_100_episodes": -0.8293181657791138,
+      "first_iteration_at_target": null,
+      "updates": 457,
+      "updates_with_nan_gradients": 0,
+      "graduated": false
+    }
+  },
+  "shipped_assets_unchanged": true
+}
