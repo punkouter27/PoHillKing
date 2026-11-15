@@ -442,7 +442,34 @@ namespace PoKingHill
             _debug.style.bottom = 128 + _bottomInset;
             ApplyVisibility();
             UpdateHudFeatures();
+            HandleHotkeys();
             if (_devTools) TwoFingerTap();
+        }
+
+        void HandleHotkeys()
+        {
+            var kb = Keyboard.current;
+            if (kb == null || director == null) return;
+            if (kb.f1Key.wasPressedThisFrame) { director.CycleMode(); return; }
+            if (kb.f2Key.wasPressedThisFrame) { BroadcastCamera.CycleMode(); return; }
+            if (kb.f3Key.wasPressedThisFrame) { ToggleDebug(); return; }
+            if (kb.f4Key.wasPressedThisFrame) { director.CyclePlayerSlot(0); return; }
+            if (kb.spaceKey.wasPressedThisFrame)
+            {
+                if (ReplaySystem.Active) replay?.Stop();
+                else director.TogglePause();
+                return;
+            }
+            if (kb.rKey.wasPressedThisFrame) { director.NewRound(); return; }
+            if (BroadcastCamera.Mode == BroadcastCamera.CameraMode.Free)
+            {
+                Vector3 pan = Vector3.zero;
+                if (kb.wKey.isPressed || kb.upArrowKey.isPressed) pan.z += 1f;
+                if (kb.sKey.isPressed || kb.downArrowKey.isPressed) pan.z -= 1f;
+                if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) pan.x -= 1f;
+                if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) pan.x += 1f;
+                if (pan.sqrMagnitude > 0f) BroadcastCamera.AddFreeOffset(pan.normalized * (6f * Time.unscaledDeltaTime));
+            }
         }
 
         static void SetScrub(VisualElement fill, VisualElement head, float t)

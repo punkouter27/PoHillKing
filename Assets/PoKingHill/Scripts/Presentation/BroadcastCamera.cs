@@ -32,14 +32,36 @@ namespace PoKingHill
 
         readonly HashSet<PolicyRunner> _shown = new();
         PolicyRunner _cut; float _cutUntil; CinemachineCamera _live; int _introFor = -1;
+        Vector3 _summitOrig; bool _hasSummitOrig;
 
-        void OnEnable() { MatchEvents.Impact += OnImpact; MatchEvents.RoundStarted += OnRound; }
-        void OnDisable() { MatchEvents.Impact -= OnImpact; MatchEvents.RoundStarted -= OnRound; }
-        void OnRound() { _shown.Clear(); _cut = null; FollowSeat = -1; }
-
+        public enum CameraMode { Broadcast, Follow, Orbit, Free }
+        public static CameraMode Mode { get; set; } = CameraMode.Broadcast;
+        public static Vector3 FreeOffset { get; set; }
         /// <summary>Seat the camera follows during the fight (-1 = the summit group). Set by the HUD's badges.</summary>
         public static int FollowSeat { get; set; } = -1;
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetFollow() => FollowSeat = -1;
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetFollow()
+        {
+            FollowSeat = -1;
+            Mode = CameraMode.Broadcast;
+            FreeOffset = Vector3.zero;
+        }
+        public static CameraMode CycleMode() => Mode = (CameraMode)(((int)Mode + 1) % 4);
+        public static void AddFreeOffset(Vector3 delta) => FreeOffset += delta;
+
+        void OnEnable()
+        {
+            MatchEvents.Impact += OnImpact;
+            MatchEvents.RoundStarted += OnRound;
+            if (summitAnchor != null && !_hasSummitOrig) { _summitOrig = summitAnchor.position; _hasSummitOrig = true; }
+        }
+        void OnDisable()
+        {
+            MatchEvents.Impact -= OnImpact;
+            MatchEvents.RoundStarted -= OnRound;
+            if (_hasSummitOrig && summitAnchor != null) summitAnchor.position = _summitOrig;
+        }
+        void OnRound() { _shown.Clear(); _cut = null; FollowSeat = -1; FreeOffset = Vector3.zero; }
 
         static Transform Pelvis(PolicyRunner r) => r != null ? r.PelvisTransform : null;
 
@@ -60,15 +82,37 @@ namespace PoKingHill
             SyncGroup(alive, centre);
 
             CinemachineCamera next;
-            if (ReplaySystem.Active && Pelvis(ReplaySystem.Focus) != null) { Aim(replay, Pelvis(ReplaySystem.Focus)); Spin(replay, 0.5f); next = replay; }
-            else if (director.State == MatchState.Menu || director.State == MatchState.Booting) { Spin(menu, 0.6f); next = menu; }
-            else if (director.State == MatchState.Intro && crane != null && intro != null) next = IntroShot();
-            else if (director.State == MatchState.Result && director.LastResult.Winner >= 0 && director.LastResult.Winner < director.bodies.Length)
-            { Aim(winner, Pelvis(director.bodies[director.LastResult.Winner])); Spin(winner, 1f); next = winner; }
-            else if (FallerShot(fallen)) next = faller;
-            else if (director.State == MatchState.Fight && FollowSeat >= 0 && FollowSeat < director.Playing && !director.IsOut(FollowSeat) && Pelvis(director.bodies[FollowSeat]) != null)
-            { Aim(winner, Pelvis(director.bodies[FollowSeat])); Spin(winner, 0.35f); next = winner; }
-            else next = summit;
+            if (Mode == CameraMode.Free && summitAnchor != null)
+            {
+                summitAnchor.position = (_hasSummitOrig ? _summitOrig : summitAnchor.position) + FreeOffset;
+                Aim(winner, summitAnchor);
+                next = winner != null ? winner : summit;
+            }
+            else
+            {
+                if (_hasSummitOrig && summitAnchor != null) summitAnchor.position = _summitOrig;
+                if (Mode == CameraMode.Follow && director.Playing > 0)
+                {
+                    int seat = FollowSeat >= 0 && FollowSeat < director.Playing && !director.IsOut(FollowSeat) ? FollowSeat : 0;
+                    Aim(winner, Pelvis(director.bodies[seat]) ?? summitAnchor);
+                    next = winner != null ? winner : summit;
+                }
+                else if (Mode == CameraMode.Orbit)
+                {
+                    var tgt = FollowSeat >= 0 && FollowSeat < director.Playing && !director.IsOut(FollowSeat) ? Pelvis(director.bodies[FollowSeat]) : null;
+                    Aim(winner, tgt ?? summitAnchor); Spin(winner, 1f);
+                    next = winner != null ? winner : summit;
+                }
+                else if (ReplaySystem.Active && Pelvis(ReplaySystem.Focus) != null) { Aim(replay, Pelvis(ReplaySystem.Focus)); Spin(replay, 0.5f); next = replay; }
+                else if (director.State == MatchState.Menu || director.State == MatchState.Booting) { Spin(menu, 0.6f); next = menu; }
+                else if (director.State == MatchState.Intro && crane != null && intro != null) next = IntroShot();
+                else if (director.State == MatchState.Result && director.LastResult.Winner >= 0 && director.LastResult.Winner < director.bodies.Length)
+                { Aim(winner, Pelvis(director.bodies[director.LastResult.Winner])); Spin(winner, 1f); next = winner; }
+                else if (FallerShot(fallen)) next = faller;
+                else if (director.State == MatchState.Fight && FollowSeat >= 0 && FollowSeat < director.Playing && !director.IsOut(FollowSeat) && Pelvis(director.bodies[FollowSeat]) != null)
+                { Aim(winner, Pelvis(director.bodies[FollowSeat])); Spin(winner, 0.35f); next = winner; }
+                else next = summit;
+            }
             Activate(next);
         }
 

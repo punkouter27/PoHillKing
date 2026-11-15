@@ -95,6 +95,10 @@ namespace PoKingHill
               new(0.90f, 0.62f, 0.00f), new(0.00f, 0.45f, 0.70f) };
 
         public static MatchDirector Instance { get; private set; }
+        public enum AppMode { Watch, Play, Testbed }
+        public AppMode Mode { get; private set; } = AppMode.Watch;
+        public int ActiveSeed { get; private set; } = 42;
+        public bool Paused { get; private set; }
         public MatchState State { get; private set; } = MatchState.Booting;
         public bool InMenu => State <= MatchState.Menu;
         /// <summary>The round is decided and the winner panel (or its replay) is up.</summary>
@@ -153,6 +157,9 @@ namespace PoKingHill
             Instance = this;
             Application.targetFrameRate = 60;            // the editor otherwise renders uncapped and starves GPU training
             Application.runInBackground = true;
+            if (int.TryParse(Cli.Arg("-kothSeed"), out int cliSeed) || int.TryParse(Environment.GetEnvironmentVariable("POHILLKING_SEED"), out cliSeed))
+                ActiveSeed = cliSeed;
+            UnityEngine.Random.InitState(ActiveSeed);
             _shotDir = Cli.Arg("-kothShots");
             // Player-side statistical gate (-kothRounds N): same rules as ParityBatch.RunDuelStats, no sea and a 25 s bell.
             if (!Application.isEditor && int.TryParse(Cli.Arg("-kothRounds"), out int rounds) && rounds > 0)
@@ -171,9 +178,25 @@ namespace PoKingHill
         }
         void OnDisable()
         {
+            if (Paused) { Paused = false; Time.timeScale = 1f; }
             if (Instance == this) Instance = null;
             if (!MjScene.InstanceExists) return;
             MjScene.Instance.postInitEvent -= OnInit; MjScene.Instance.preUpdateEvent -= Pre; MjScene.Instance.postUpdateEvent -= Post;
+        }
+
+        public AppMode CycleMode()
+        {
+            Mode = (AppMode)(((int)Mode + 1) % 3);
+            _status = $"Mode: {Mode}";
+            return Mode;
+        }
+
+        public bool TogglePause()
+        {
+            Paused = !Paused;
+            Time.timeScale = Paused ? 0f : 1f;
+            _status = Paused ? "Paused" : "Resumed";
+            return Paused;
         }
 
         void SetState(MatchState s) { if (State == s) return; State = s; MatchEvents.RaiseState(s); }

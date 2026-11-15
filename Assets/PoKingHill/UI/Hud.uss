@@ -15,6 +15,9 @@
     --accent-ink: rgb(26, 20, 6);
     --good: rgb(110, 214, 120);
     --bad: rgb(240, 96, 86);
+    --color-policy-bot: rgb(240, 96, 86);
+    --color-policy-ref: rgb(110, 214, 120);
+    --color-policy-custom: rgb(69, 158, 250);
     --radius: 22px;
 
     /* type scale: seven steps */

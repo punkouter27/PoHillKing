@@ -70,6 +70,17 @@ namespace PoKingHill
         public double[] Ctrl { get; private set; }        // held position targets, canonical order
         public event System.Action<PolicyRunner> OnPolicyStep;
         public double LastInferenceMs { get; private set; }
+        public int NanInfCount { get; private set; }
+        public void ResetTelemetry() => NanInfCount = 0;
+
+        /// <summary>Append tail features to a pre-sized zero-initialized observation vector without reordering existing prefix inputs.</summary>
+        public static void AppendZeroInitInputs(float[] src, int baseCount, float[] dst)
+        {
+            if (dst == null || dst.Length <= baseCount || src == null) return;
+            System.Array.Clear(dst, baseCount, dst.Length - baseCount);
+            int copy = System.Math.Min(src.Length, dst.Length - baseCount);
+            if (copy > 0) System.Array.Copy(src, 0, dst, baseCount, copy);
+        }
         /// <summary>The get-up brain is driving (SetGetUp).</summary>
         public bool GettingUp => _getup;
         /// <summary>Per-joint shove/style rest-pose offset (target - default), for rollouts that mirror PolicyTick.</summary>
@@ -251,8 +262,10 @@ namespace PoKingHill
             double breath = _amap != null && _amap.Breath > 0f ? _amap.Breath * System.Math.Sin(2.0 * System.Math.PI * _amap.BreathHz * _ticks * _spec.ctrl_dt) : 0.0;
             for (int i = 0; i < Map.N; i++)
             {
-                RawAction[i] = act[i];
-                float a = _amap != null ? _amap.ToAction(act[i]) : Mathf.Clamp(act[i], -1f, 1f);
+                float raw = act[i];
+                if (!float.IsFinite(raw)) { NanInfCount++; raw = 0f; }
+                RawAction[i] = raw;
+                float a = _amap != null ? _amap.ToAction(raw) : Mathf.Clamp(raw, -1f, 1f);
                 LastAction[i] = a;
                 float k = Mathf.Max(shoveStyle ? ShoveSmooth : 0f, _amap != null ? _amap.Smooth : 0f);     // action low-pass (action_map.py)
                 float f = k > 0f ? k * _actF[i] + (1f - k) * a : a; _actF[i] = f;
@@ -328,7 +341,9 @@ namespace PoKingHill
         {
             for (int i = 0; i < Map.N; i++)
             {
-                RawAction[i] = act[i]; float a = Mathf.Clamp(act[i], -1f, 1f); LastAction[i] = a; _actF[i] = a; _actS[i] = a;
+                float raw = act[i];
+                if (!float.IsFinite(raw)) { NanInfCount++; raw = 0f; }
+                RawAction[i] = raw; float a = Mathf.Clamp(raw, -1f, 1f); LastAction[i] = a; _actF[i] = a; _actS[i] = a;
                 Ctrl[i] = System.Math.Clamp(Map.DefaultPose[i] + _spec.action_scale * a, Map.CtrlMin[i], Map.CtrlMax[i]);
             }
             _phase += 2f * Mathf.PI * ObsBuilder.GaitFreqHz * _spec.ctrl_dt;

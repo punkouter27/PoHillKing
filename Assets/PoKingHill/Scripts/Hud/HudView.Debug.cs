@@ -33,6 +33,9 @@ namespace PoKingHill
         string DebugText()
         {
             var sb = new System.Text.StringBuilder();
+            int nanInf = 0;
+            if (director.bodies != null) for (int i = 0; i < director.bodies.Length; i++) if (director.bodies[i] != null) nanInf += director.bodies[i].NanInfCount;
+            sb.Append($"mode {director.Mode} · cam {BroadcastCamera.Mode} · seed {director.ActiveSeed} · NaN/Inf {nanInf}\n");
             sb.Append($"state {director.State} · round {director.RoundTime:0.0} s · out radius {director.OutRadiusNow:0.00} m\n");
             sb.Append($"physics tick {director.StepMs:0.000} ms · ");
             for (int i = 0; i < director.Playing && i < director.bodies.Length; i++) sb.Append($"{director.bodies[i].robotPrefix} {director.bodies[i].LastInferenceMs:0.00} ms  ");
