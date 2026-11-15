@@ -210,7 +210,8 @@ namespace PoKingHill
 
         void UpdateCountdown()
         {
-            string what = director.InTournament ? "Next match" : director.LastRoundOfMatch ? "Main menu" : "Next round";
+            bool nextMatch = director.InTournament || (director.InHeatsTournament && director.HeatIndex + 1 < director.HeatsBracket.Count);
+            string what = nextMatch ? "Next match" : director.LastRoundOfMatch ? "Main menu" : "Next round";
             int left = Mathf.CeilToInt(director.ResultSecondsLeft);
             if (_next != null) _next.text = $"{what} ({left})";
             string peek = _sheetKind == SheetKind.Result ? $"Results · {left}" : "Menu";

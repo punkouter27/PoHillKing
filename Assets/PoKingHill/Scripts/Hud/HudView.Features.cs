@@ -10,11 +10,12 @@ namespace PoKingHill
         bool _featuresBuilt;
         VisualElement _actionBar, _photoBar, _pipBox;
         Image _pipImg;
+        Label _modBadge, _liveWeatherStatus;
         Button _boxBtn, _povBtn, _photoBtn, _photoHideBtn;
         CameraExtras _camExtras;
         ShareBridge _share;
         LiveAtmosphere _liveWeather;
-        int _pickCursor;
+        int _pickCursor, _inspectCursor;
         bool _photoDrag;
         Vector2 _photoDragPos;
 
@@ -56,6 +57,8 @@ namespace PoKingHill
             }
 
             _actionBar = El("action-bar");
+            _modBadge = Text("", "mod-badge", _actionBar);
+            _modBadge.style.display = DisplayStyle.None;
             _boxBtn = Btn("Throw box", "action-pill", () => director?.ThrowSpectatorBox(), _actionBar);
             _povBtn = Btn("POV", "action-pill", () => { _camExtras?.TogglePov(); }, _actionBar);
             _photoBtn = Btn("Photo", "action-pill", () => { _camExtras?.SetPhotoMode(!_camExtras.PhotoMode); }, _actionBar);
@@ -69,10 +72,10 @@ namespace PoKingHill
             _safe.Insert(Mathf.Max(0, _safe.IndexOf(_actionBar)), _photoBar);
 
             _pipBox = El("pip-box", _safe);
-            _pipImg = new Image { scaleMode = ScaleMode.ScaleToFit };
+            Text("KO CAM", "pip-tag", _pipBox);
+            _pipImg = new Image { scaleMode = ScaleMode.ScaleAndCrop };
             _pipImg.AddToClassList("pip-img");
             _pipBox.Add(_pipImg);
-            Text("KO CAM", "pip-tag", _pipBox);
             _pipBox.style.display = DisplayStyle.None;
 
             _safe.RegisterCallback<PointerDownEvent>(OnPhotoPointerDown);
@@ -111,7 +114,20 @@ namespace PoKingHill
             bool photo = _camExtras != null && _camExtras.PhotoMode && replaying;
             bool uiHidden = _camExtras != null && _camExtras.PhotoUiHidden;
 
-            _actionBar.style.display = (fight || replaying) && !uiHidden && !_sim ? DisplayStyle.Flex : DisplayStyle.None;
+            _actionBar.style.display = (fight || replaying) && !uiHidden && !_sim && !SheetShown && !DebugShown ? DisplayStyle.Flex : DisplayStyle.None;
+            bool unrankedMod = fight && GameSettings.Modifier != ArenaModifier.Standard;
+            _modBadge.style.display = unrankedMod ? DisplayStyle.Flex : DisplayStyle.None;
+            if (unrankedMod)
+            {
+                string modLabel = GameSettings.Modifier switch
+                {
+                    ArenaModifier.MoonGravity => "Moon · unranked",
+                    ArenaModifier.IceSummit => "Ice · unranked",
+                    ArenaModifier.HeavyKnockback => "Heavy · unranked",
+                    _ => "Unranked"
+                };
+                if (_modBadge.text != modLabel) _modBadge.text = modLabel;
+            }
             _boxBtn.style.display = fight && director.statsRounds == 0 ? DisplayStyle.Flex : DisplayStyle.None;
             if (_boxBtn.style.display == DisplayStyle.Flex)
             {
@@ -127,12 +143,37 @@ namespace PoKingHill
             _photoBar.style.display = photo ? DisplayStyle.Flex : DisplayStyle.None;
             if (_photoHideBtn != null) _photoHideBtn.text = uiHidden ? "Show UI" : "Hide UI";
 
-            bool pip = _camExtras != null && _camExtras.PipActive && _camExtras.PipTexture != null && !uiHidden;
+            bool pip = _camExtras != null && _camExtras.PipActive && _camExtras.PipTexture != null && !uiHidden && !SheetShown;
             _pipBox.style.display = pip ? DisplayStyle.Flex : DisplayStyle.None;
-            if (pip && _pipImg.image != _camExtras.PipTexture) _pipImg.image = _camExtras.PipTexture;
+            if (pip)
+            {
+                if (_pipImg.image != _camExtras.PipTexture) _pipImg.image = _camExtras.PipTexture;
+                _pipImg.MarkDirtyRepaint();
+            }
 
-            if (_scoreboard != null) _scoreboard.style.visibility = uiHidden ? Visibility.Hidden : Visibility.Visible;
-            if (_topBar != null) _topBar.style.visibility = uiHidden ? Visibility.Hidden : Visibility.Visible;
+            Visibility vis = uiHidden ? Visibility.Hidden : Visibility.Visible;
+            float op = uiHidden ? 0f : 1f;
+            void HideEl(VisualElement el) { if (el == null) return; el.style.visibility = vis; el.style.opacity = op; }
+            HideEl(_scoreboard);
+            HideEl(_topBar);
+            HideEl(_roundInfo);
+            HideEl(_odds);
+            HideEl(_oddsLabel);
+            HideEl(_replayBar);
+            HideEl(_bottomBar);                                          
+            if (_fps != null) _fps.style.visibility = uiHidden ? Visibility.Hidden : (GameSettings.DevTools ? Visibility.Visible : Visibility.Hidden);
+            if (_debugBtn != null) _debugBtn.style.visibility = uiHidden ? Visibility.Hidden : (GameSettings.DevTools ? Visibility.Visible : Visibility.Hidden);
+            if (_feed != null) { _feed.style.visibility = uiHidden || SheetShown ? Visibility.Hidden : Visibility.Visible; _feed.style.opacity = op; }
+            if (uiHidden)
+            {
+                if (_debug != null) _debug.style.visibility = Visibility.Hidden;
+                if (_caption != null) _caption.style.visibility = Visibility.Hidden;
+            }
+            if (_liveWeather != null && _liveWeatherStatus != null && _liveWeatherStatus.panel != null)
+            {
+                string ws = _liveWeather.StatusText ?? "";
+                if (_liveWeatherStatus.text != ws) _liveWeatherStatus.text = ws;
+            }
         }
 
         void AppendSheetFeatures()
@@ -167,16 +208,24 @@ namespace PoKingHill
                 if (list.Count == 0) return;
                 _pickCursor = (_pickCursor + 1) % (list.Count + 1);
                 if (_pickCursor == list.Count) PredictionBook.ClearPick();
-                else PredictionBook.SetPick(list[_pickCursor].name, 1f / Mathf.Max(2, list.Count));
+                else PredictionBook.SetPick(list[_pickCursor].Badge, 1f / Mathf.Max(2, list.Count));
                 RebuildSheet();
             }, pickRow);
+
+            var dailyTop = DailyChallenge.TopToday(DateTime.UtcNow, 3);
+            if (dailyTop.Count > 0)
+            {
+                var best = dailyTop[0];
+                Text($"Daily best: {best.champion} · {best.score} pts ({best.durationSec:0.0}s)", "bio-line", _sheetBody);
+            }
         }
 
         void AppendAgentsFeatures()
         {
             var list = AvailableAgents();
             if (list.Count == 0) return;
-            var featured = list[Mathf.Clamp(director.selectedA, 0, list.Count - 1)];
+            _inspectCursor = ((_inspectCursor % list.Count) + list.Count) % list.Count;
+            var featured = list[_inspectCursor];
             var meta = AgentBioService.MetaOf(featured.body);
             var (wins, matches, kos) = RivalryBook.CareerOf(featured.name);
             var (nem, losses, nemKos) = RivalryBook.NemesisOf(featured.name);
@@ -184,7 +233,9 @@ namespace PoKingHill
             var flagRow = El("flag-row", _sheetBody);
             flagRow.Add(new FlagBadge(meta.CountryCode));
             string nemText = string.IsNullOrEmpty(nem) ? "No nemesis yet" : $"Nemesis: {nem} ({losses}W/{nemKos}KO)";
-            Text($"{featured.Badge} ({meta.CountryName}) · {wins}W/{matches}M/{kos}KO · {nemText}", "bio-line", flagRow);
+            var line = Text($"{featured.Badge} ({meta.CountryName}) · {wins}W/{matches}M/{kos}KO · {nemText}", "bio-line grow", flagRow);
+            if (list.Count > 1)
+                Btn("Next bio", "action-pill", () => { _inspectCursor = (_inspectCursor + 1) % list.Count; RebuildSheet(); }, flagRow);
             Text(AgentBioService.SummaryOf(featured.body), "bio-line", _sheetBody);
             StartCoroutine(AgentBioService.EnsureSummary(featured.body));
         }
@@ -207,6 +258,7 @@ namespace PoKingHill
                 atmoSeg.AddToClassList("wrap");
                 var grid = El("grid", _sheetBody);
                 Chip(grid, "Live weather", GameSettings.LiveWeather, v => GameSettings.LiveWeather = v);
+                _liveWeatherStatus = Text(_liveWeather != null ? (_liveWeather.StatusText ?? "") : "", "bio-line", _sheetBody);
             }
         }
 
@@ -218,13 +270,25 @@ namespace PoKingHill
             if (replay != null && !string.IsNullOrEmpty(replay.HighlightSummary))
                 Text(replay.HighlightSummary, "bio-line", _sheetBody);
 
+            var dailyTop = DailyChallenge.TopToday(DateTime.UtcNow, 3);
+            if (dailyTop.Count > 0)
+            {
+                var sb = new System.Text.StringBuilder("Daily top: ");
+                for (int i = 0; i < dailyTop.Count; i++)
+                {
+                    if (i > 0) sb.Append(" · ");
+                    sb.Append($"#{i + 1} {dailyTop[i].champion} {dailyTop[i].score}");
+                }
+                Text(sb.ToString(), "bio-line", _sheetBody);
+            }
+
             if (director.InHeatsTournament && director.HeatsBracket.Count > 0)
             {
                 var row = El("bracket", _sheetBody);
                 for (int i = 0; i < director.HeatsBracket.Count; i++)
                 {
                     var hm = director.HeatsBracket[i];
-                    string win = hm.Winner >= 0 ? director.NameOf(hm.Winner, "?") : (i == director.HeatIndex ? "Live" : "TBD");
+                    string win = hm.Winner >= 0 ? director.BadgeOf(hm.Winner) : (i == director.HeatIndex ? "Live" : "TBD");
                     Text($"{hm.Label}: {win}", "bio-line", row);
                 }
             }

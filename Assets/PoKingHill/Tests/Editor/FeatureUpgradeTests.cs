@@ -38,8 +38,45 @@ namespace PoKingHill.Tests
                 PredictionBook.FileOverride = tmp;
                 Assert.AreEqual(2, PredictionBook.Picks);
                 Assert.AreEqual(1, PredictionBook.BestStreak);
+
+                // Settling without an active pick clears stale LastOutcome
+                Assert.IsNotNull(PredictionBook.LastOutcome);
+                Assert.IsNull(PredictionBook.Settle("Kim 2"));
+                Assert.IsNull(PredictionBook.LastOutcome);
             }
             finally { PredictionBook.FileOverride = null; File.Delete(tmp); }
+        }
+
+        [Test]
+        public void UnrankedModifierAndResetSettingsConsistent()
+        {
+            var prevMod = GameSettings.Modifier;
+            var prevAtmo = GameSettings.Atmosphere;
+            var prevLive = GameSettings.LiveWeather;
+            var prevHap = GameSettings.Haptics;
+            try
+            {
+                var go = new GameObject("RankedCheckDirector");
+                try
+                {
+                    var d = go.AddComponent<MatchDirector>();
+                    GameSettings.Modifier = ArenaModifier.Standard;
+                    Assert.IsTrue(d.IsRankedMatch);
+                    GameSettings.Modifier = ArenaModifier.MoonGravity;
+                    Assert.IsFalse(d.IsRankedMatch);
+                    GameSettings.ResetAll();
+                    Assert.AreEqual(ArenaModifier.Standard, GameSettings.Modifier);
+                    Assert.IsTrue(d.IsRankedMatch);
+                }
+                finally { UnityEngine.Object.DestroyImmediate(go); }
+            }
+            finally
+            {
+                GameSettings.Modifier = prevMod;
+                GameSettings.Atmosphere = prevAtmo;
+                GameSettings.LiveWeather = prevLive;
+                GameSettings.Haptics = prevHap;
+            }
         }
 
         [Test]

@@ -241,8 +241,9 @@ Button { font-size: var(--fs-m); }
 .action-pill { height: var(--h-s); min-height: 48px; border-radius: 26px; background-color: var(--glass-strong); border-width: 2px; border-color: var(--line); color: var(--ink); font-size: var(--fs-xs); padding: 0 20px; margin-left: 8px; }
 .action-pill:hover { border-color: var(--accent); }
 .action-pill.active { border-color: var(--accent); background-color: rgba(255, 196, 64, 0.20); }
+.mod-badge { background-color: rgba(255, 196, 64, 0.20); border-width: 2px; border-color: var(--accent); color: var(--accent); border-radius: 20px; font-size: var(--fs-xxs); -unity-font-style: bold; padding: 6px 14px; margin-right: auto; }
 .photo-bar { flex-direction: row; justify-content: center; align-items: center; background-color: var(--glass-strong); border-radius: 28px; border-width: 2px; border-color: var(--accent); padding: 6px 10px; margin-bottom: 10px; flex-shrink: 0; }
 .photo-bar Button { height: var(--h-s); min-height: 48px; border-radius: 22px; background-color: var(--fill-strong); border-width: 0; color: var(--ink); font-size: var(--fs-xs); padding: 0 18px; margin: 0 5px; }
-.pip-box { position: absolute; left: 20px; top: 112px; width: 220px; height: 136px; border-radius: 16px; background-color: var(--glass-strong); border-width: 2px; border-color: var(--bad); overflow: hidden; }
+.pip-box { position: absolute; left: 20px; top: 356px; width: 240px; height: 158px; border-radius: 16px; background-color: var(--glass-strong); border-width: 2px; border-color: var(--bad); overflow: hidden; flex-direction: column; }
+.pip-tag { font-size: var(--fs-xxs); -unity-font-style: bold; background-color: rgba(240, 96, 86, 0.90); color: var(--ink); padding: 2px 10px; -unity-text-align: middle-left; flex-shrink: 0; }
 .pip-img { flex-grow: 1; }
-.pip-tag { position: absolute; left: 8px; top: 6px; font-size: var(--fs-xxs); -unity-font-style: bold; background-color: rgba(240, 96, 86, 0.85); color: var(--ink); border-radius: 8px; padding: 1px 8px; }

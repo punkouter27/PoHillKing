@@ -11,9 +11,9 @@ namespace PoKingHill
     {
         public MatchDirector director;
         [Range(8, 120)] public int maxSpectators = 48;
-        public float minRadius = 5.6f;
-        public float maxRadius = 8.4f;
-        public float ringY = -2.2f;
+        public float minRadius = 10.5f;
+        public float maxRadius = 14.5f;
+        public float ringY = -4.6f;
 
         struct Member
         {
@@ -99,7 +99,7 @@ namespace PoKingHill
                     BasePos = pos,
                     YawDeg = -ang * Mathf.Rad2Deg - 90f,
                     Phase = (float)rng.NextDouble() * Mathf.PI * 2f,
-                    Scale = 0.88f + (float)rng.NextDouble() * 0.24f
+                    Scale = 0.62f + (float)rng.NextDouble() * 0.16f
                 };
                 Color c = Color.HSVToRGB((float)rng.NextDouble(), 0.48f + (float)rng.NextDouble() * 0.25f, 0.62f + (float)rng.NextDouble() * 0.28f);
                 _colors[i] = c;
@@ -162,8 +162,8 @@ namespace PoKingHill
             var norms = new List<Vector3>(192);
             var stoneTris = new List<int>(96);
             var crowdTris = new List<int>(256);
-            AddBox(verts, norms, stoneTris, new Vector3(0f, -4.5f, 0f), new Vector3(0.58f, 9.0f, 0.58f));
-            AddBox(verts, norms, stoneTris, new Vector3(0f, -0.06f, 0f), new Vector3(0.76f, 0.14f, 0.76f));
+            AddBox(verts, norms, stoneTris, new Vector3(0f, -4.5f, 0f), new Vector3(0.42f, 9.0f, 0.42f));
+            AddBox(verts, norms, stoneTris, new Vector3(0f, -0.06f, 0f), new Vector3(0.58f, 0.14f, 0.58f));
             AddBox(verts, norms, crowdTris, new Vector3(0f, 0.48f, 0f), new Vector3(0.36f, 0.86f, 0.22f));
             AddBox(verts, norms, crowdTris, new Vector3(-0.23f, 0.76f, 0f), new Vector3(0.11f, 0.42f, 0.11f));
             AddBox(verts, norms, crowdTris, new Vector3(0.23f, 0.76f, 0f), new Vector3(0.11f, 0.42f, 0.11f));

@@ -41,11 +41,13 @@ namespace PoKingHill
 
         IEnumerator CaptureRoutine(string folder, string prefix, Action<string> onDone)
         {
-            yield return new WaitForEndOfFrame();
+            if (Application.isBatchMode) yield return null;
+            else yield return new WaitForEndOfFrame();
             Texture2D tex = null;
             try
             {
-                tex = ScreenCapture.CaptureScreenshotAsTexture();
+                tex = Application.isBatchMode ? CaptureCameraFallback() : ScreenCapture.CaptureScreenshotAsTexture();
+                if (tex == null) tex = CaptureCameraFallback();
                 if (tex == null) yield break;
                 byte[] png = tex.EncodeToPNG();
                 string fileName = $"{prefix}-{DateTime.UtcNow:yyyyMMdd-HHmmss}.png";
@@ -67,6 +69,34 @@ namespace PoKingHill
             finally
             {
                 if (tex != null) Destroy(tex);
+            }
+        }
+
+        static Texture2D CaptureCameraFallback()
+        {
+            var cam = Camera.main;
+            if (cam == null || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return null;
+            int w = Mathf.Max(320, Screen.width > 0 ? Screen.width : 720);
+            int h = Mathf.Max(320, Screen.height > 0 ? Screen.height : 1280);
+            var rt = RenderTexture.GetTemporary(w, h, 24, RenderTextureFormat.ARGB32);
+            var prevTarget = cam.targetTexture;
+            var prevActive = RenderTexture.active;
+            try
+            {
+                cam.targetTexture = rt;
+                cam.Render();
+                RenderTexture.active = rt;
+                var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+                tex.Apply();
+                return tex;
+            }
+            catch { return null; }
+            finally
+            {
+                cam.targetTexture = prevTarget;
+                RenderTexture.active = prevActive;
+                RenderTexture.ReleaseTemporary(rt);
             }
         }
     }

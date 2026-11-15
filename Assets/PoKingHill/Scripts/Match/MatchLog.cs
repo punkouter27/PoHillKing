@@ -140,12 +140,19 @@ namespace PoKingHill
         void OnEnd(RoundResult r)
         {
             if (director == null || director.statsRounds > 0) return;
-            for (int i = 0; i < r.Agents.Length && i < MaxBodies; i++) _ratingDelta[i] = -Ladder.Rating(director.NameOf(r.Agents[i], "Robot"));
-            Ladder.Record(r, director.roster);
-            for (int i = 0; i < r.Agents.Length && i < MaxBodies; i++) _ratingDelta[i] += Ladder.Rating(director.NameOf(r.Agents[i], "Robot"));
-            if (ledger != null)
-                for (int i = 0; i < r.Agents.Length && i < director.bodies.Length; i++)
-                    if (r.Agents[i] >= 0) Ladder.AddCredits(director.NameOf(r.Agents[i], "Robot"), ledger.Knockouts(director.bodies[i]), ledger.Assists(director.bodies[i]));
+            if (director.IsRankedMatch)
+            {
+                for (int i = 0; i < r.Agents.Length && i < MaxBodies; i++) _ratingDelta[i] = -Ladder.Rating(director.NameOf(r.Agents[i], "Robot"));
+                Ladder.Record(r, director.roster);
+                for (int i = 0; i < r.Agents.Length && i < MaxBodies; i++) _ratingDelta[i] += Ladder.Rating(director.NameOf(r.Agents[i], "Robot"));
+                if (ledger != null)
+                    for (int i = 0; i < r.Agents.Length && i < director.bodies.Length; i++)
+                        if (r.Agents[i] >= 0) Ladder.AddCredits(director.NameOf(r.Agents[i], "Robot"), ledger.Knockouts(director.bodies[i]), ledger.Assists(director.bodies[i]));
+            }
+            else
+            {
+                Array.Clear(_ratingDelta, 0, _ratingDelta.Length);
+            }
             try { Write(r); } catch (Exception ex) { Debug.LogWarning("[MatchLog] " + ex.Message); }
         }
 

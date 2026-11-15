@@ -149,6 +149,8 @@ namespace PoKingHill
             if (Instance == this) Instance = null;
             if (_subscribed && MjScene.InstanceExists) MjScene.Instance.preUpdateEvent -= OnPreStep;
             _subscribed = false;
+            LastBatchCount = 0;
+            LastScheduleCount = 0;
             DisposeBuckets();
         }
 
@@ -192,8 +194,11 @@ namespace PoKingHill
             }
 
             for (int b = 0; b < _activeBuckets.Count; b++) _activeBuckets[b].Dispatch(d);
-            LastBatchCount = batchedItems;
-            LastScheduleCount = _activeBuckets.Count;
+            if (batchedItems > 0)
+            {
+                LastBatchCount = batchedItems;
+                LastScheduleCount = _activeBuckets.Count;
+            }
 
             for (int i = 0; i < _runners.Count; i++)
             {

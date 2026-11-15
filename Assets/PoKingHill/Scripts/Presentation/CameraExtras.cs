@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace PoKingHill
 {
@@ -15,17 +16,20 @@ namespace PoKingHill
         public bool PovEnabled { get; private set; }
         public int PovSeat { get; private set; }
         public bool PhotoMode { get; private set; }
-        public bool PipActive => _pipCam != null && _pipCam.enabled;
+        public bool PipActive => _pipCam != null && _pipActive;
         public RenderTexture PipTexture => _pipRt;
 
         float _photoYaw = 35f, _photoPitch = 18f, _photoDist = 3.2f;
         bool _photoUiHidden;
+        bool _pipActive;
         public bool PhotoUiHidden => PhotoMode && _photoUiHidden;
 
         Camera _pipCam;
         RenderTexture _pipRt;
         Transform _pipTarget;
         float _pipUntil;
+        float _savedNearClip = -1f;
+        Camera _savedNearClipCam;
 
         void OnEnable()
         {
@@ -39,10 +43,19 @@ namespace PoKingHill
             MatchEvents.Knockout -= OnKo;
             MatchEvents.RoundStarted -= OnRoundStarted;
             MatchEvents.StateChanged -= OnStateChanged;
+            RestoreNearClip();
             SetPhotoMode(false);
             PovEnabled = false;
             if (_pipCam != null) _pipCam.enabled = false;
             if (_pipRt != null) { _pipRt.Release(); Destroy(_pipRt); _pipRt = null; }
+        }
+
+        void RestoreNearClip()
+        {
+            if (_savedNearClipCam != null && _savedNearClip > 0f)
+                _savedNearClipCam.nearClipPlane = _savedNearClip;
+            _savedNearClip = -1f;
+            _savedNearClipCam = null;
         }
 
         void OnRoundStarted()
@@ -77,7 +90,12 @@ namespace PoKingHill
         void EnsurePipCamera()
         {
             if (_pipCam != null || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return;
-            _pipRt = new RenderTexture(320, 180, 16) { name = "KothPipKoRT" };
+            var desc = new RenderTextureDescriptor(320, 180, RenderTextureFormat.ARGB32, 24)
+            {
+                sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear,
+                msaaSamples = 1
+            };
+            _pipRt = new RenderTexture(desc) { name = "KothPipKoRT" };
             if (!_pipRt.Create()) { Destroy(_pipRt); _pipRt = null; return; }
             var go = new GameObject("PipKoCamera");
             go.transform.SetParent(transform, false);
@@ -85,12 +103,31 @@ namespace PoKingHill
             _pipCam.targetTexture = _pipRt;
             _pipCam.fieldOfView = 45f;
             _pipCam.depth = -5f;
+            var main = Camera.main;
+            if (main != null)
+            {
+                _pipCam.cullingMask = main.cullingMask;
+                _pipCam.clearFlags = main.clearFlags;
+                _pipCam.backgroundColor = main.backgroundColor;
+                _pipCam.nearClipPlane = main.nearClipPlane;
+                _pipCam.farClipPlane = main.farClipPlane;
+            }
+            else
+            {
+                _pipCam.clearFlags = CameraClearFlags.SolidColor;
+                _pipCam.backgroundColor = new Color(0.08f, 0.12f, 0.18f, 1f);
+            }
+            var urpData = _pipCam.GetUniversalAdditionalCameraData();
+            urpData.renderType = CameraRenderType.Base;
+            urpData.renderPostProcessing = false;
+            urpData.renderShadows = false;
             _pipCam.enabled = false;
         }
 
         public void TogglePov()
         {
             PovEnabled = !PovEnabled;
+            if (!PovEnabled) RestoreNearClip();
             if (PovEnabled && director != null && director.Playing > 0)
                 PovSeat = Mathf.Clamp(PovSeat, 0, director.Playing - 1);
         }
@@ -130,6 +167,7 @@ namespace PoKingHill
 
             if (PhotoMode && director.State == MatchState.Replay)
             {
+                RestoreNearClip();
                 var focus = ReplaySystem.Focus != null ? ReplaySystem.Focus.PelvisTransform : null;
                 if (focus != null)
                 {
@@ -142,36 +180,86 @@ namespace PoKingHill
 
             if (PovEnabled && (director.State == MatchState.Fight || director.State == MatchState.Replay))
             {
+                if (director.State == MatchState.Fight && (PovSeat < 0 || PovSeat >= director.Playing || director.IsOut(PovSeat)))
+                {
+                    var alive = director.Alive;
+                    if (alive != null && alive.Count > 0)
+                    {
+                        int found = System.Array.IndexOf(director.bodies, alive[0]);
+                        if (found >= 0) PovSeat = found;
+                    }
+                }
                 PolicyRunner subject = director.State == MatchState.Replay && ReplaySystem.Focus != null
                     ? ReplaySystem.Focus
                     : (PovSeat >= 0 && PovSeat < director.Playing ? director.bodies[PovSeat] : null);
                 if (subject == null) return;
+                if (_savedNearClipCam != cam)
+                {
+                    RestoreNearClip();
+                    _savedNearClipCam = cam;
+                    _savedNearClip = cam.nearClipPlane;
+                }
+                cam.nearClipPlane = Mathf.Max(_savedNearClip, 0.38f);
+
                 var skin = FindSkin(subject);
                 Vector3 headBase = skin != null && skin.HeadBone != null
                     ? skin.HeadBone.position
                     : subject.PelvisTransform.position + Vector3.up * 0.72f;
-                Vector3 target = subject.opponent != null && subject.opponent.PelvisTransform != null
-                    ? subject.opponent.PelvisTransform.position + Vector3.up * 0.72f
-                    : headBase + (skin != null ? skin.TorsoBody.forward : subject.PelvisTransform.forward) * 3f;
+                var aliveList = director.Alive;
+                Vector3 target = new(0f, Mathf.Max(0.75f, headBase.y), 0f);
+                bool oppValid = subject.opponent != null && subject.opponent.PelvisTransform != null &&
+                                (director.State == MatchState.Replay || aliveList == null || ContainsRunner(aliveList, subject.opponent));
+                if (oppValid)
+                {
+                    target = subject.opponent.PelvisTransform.position + Vector3.up * 0.72f;
+                }
+                else
+                {
+                    float bestD = float.MaxValue;
+                    if (aliveList != null)
+                    {
+                        for (int i = 0; i < aliveList.Count; i++)
+                        {
+                            if (aliveList[i] == null || aliveList[i] == subject || aliveList[i].PelvisTransform == null) continue;
+                            float d2 = (aliveList[i].PelvisTransform.position - headBase).sqrMagnitude;
+                            if (d2 < bestD) { bestD = d2; target = aliveList[i].PelvisTransform.position + Vector3.up * 0.72f; }
+                        }
+                    }
+                }
                 Vector3 toTarget = (target - headBase).sqrMagnitude > 0.01f
                     ? (target - headBase).normalized : Vector3.forward;
-                Vector3 eye = headBase + Vector3.up * 0.14f + toTarget * 0.30f;
+                Vector3 flatFwd = new(toTarget.x, 0f, toTarget.z);
+                flatFwd = flatFwd.sqrMagnitude > 1e-4f ? flatFwd.normalized : Vector3.forward;
+                Vector3 eye = headBase + Vector3.up * 0.34f + flatFwd * 0.50f;
                 if ((target - eye).sqrMagnitude > 0.04f)
                     cam.transform.SetPositionAndRotation(eye, Quaternion.LookRotation((target - eye).normalized, Vector3.up));
+            }
+            else
+            {
+                RestoreNearClip();
             }
         }
 
         void UpdatePip()
         {
-            if (_pipCam == null) return;
-            bool on = Time.unscaledTime < _pipUntil && _pipTarget != null && director.State == MatchState.Fight;
-            _pipCam.enabled = on;
-            if (!on) return;
+            if (_pipCam == null) { _pipActive = false; return; }
+            _pipActive = Time.unscaledTime < _pipUntil && _pipTarget != null && director != null && director.State == MatchState.Fight;
+            _pipCam.enabled = false;
+            if (!_pipActive) return;
             Vector3 p = _pipTarget.position;
             Vector3 outDir = new Vector3(p.x, 0f, p.z).sqrMagnitude > 0.05f
                 ? new Vector3(p.x, 0f, p.z).normalized : Vector3.forward;
             Vector3 pos = p + outDir * 2.8f + Vector3.up * 1.4f;
+            if (director.sea != null) pos.y = Mathf.Max(pos.y, director.sea.Level + 0.6f);
             _pipCam.transform.SetPositionAndRotation(pos, Quaternion.LookRotation((p - pos).normalized, Vector3.up));
+            if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+                _pipCam.Render();
+        }
+
+        static bool ContainsRunner(System.Collections.Generic.IReadOnlyList<PolicyRunner> list, PolicyRunner item)
+        {
+            for (int i = 0; i < list.Count; i++) if (list[i] == item) return true;
+            return false;
         }
 
         static SkinFollower FindSkin(PolicyRunner r)

@@ -20,6 +20,7 @@ namespace PoKingHill
         public IReadOnlyList<HeatMatch> HeatsBracket => _heats;
         public int HeatIndex => _heatAt;
         public bool InHeatsTournament => _heats.Count > 0;
+        public bool IsDailyMatch => _dailyMatchActive;
         public bool IsRankedMatch => statsRounds == 0 && GameSettings.Modifier == ArenaModifier.Standard;
         public float BoxCooldownRemaining => Mathf.Max(0f, _boxReadyAt - Time.unscaledTime);
         public bool CanThrowBox => statsRounds == 0 && State == MatchState.Fight && _projectiles != null && BoxCooldownRemaining <= 0f;
@@ -27,6 +28,7 @@ namespace PoKingHill
         readonly List<HeatMatch> _heats = new();
         int _heatAt;
         bool _heatsLaunching;
+        bool _dailyMatchActive, _dailyLaunching;
         bool _featureHooksReady;
         ProjectilePool _projectiles;
         float _boxReadyAt;
@@ -73,13 +75,36 @@ namespace PoKingHill
             if (statsRounds > 0) return;
 
             string winnerName = r.Winner >= 0 ? AgentNameAtBody(r.Winner) : null;
-            PredictionBook.Settle(winnerName);
+            string winnerBadge = r.Winner >= 0 && r.Winner < _agentAt.Length && _agentAt[r.Winner] >= 0 ? BadgeOf(_agentAt[r.Winner]) : winnerName;
+            string pickTarget = r.Winner >= 0 && string.Equals(PredictionBook.CurrentPick, winnerName, StringComparison.OrdinalIgnoreCase)
+                ? winnerName
+                : winnerBadge;
+            PredictionBook.Settle(pickTarget);
 
             if (IsRankedMatch && _playing >= 2)
             {
                 var entrants = new List<string>(_playing);
                 for (int i = 0; i < _playing; i++) entrants.Add(AgentNameAtBody(i));
                 RivalryBook.RecordMatchResult(winnerName, entrants);
+            }
+
+            if (_dailyMatchActive && LastRoundOfMatch)
+            {
+                _dailyMatchActive = false;
+                string champ = string.IsNullOrEmpty(winnerBadge) ? "Draw" : winnerBadge;
+                int dailyScore = (r.Winner >= 0 ? 100 : 25) + Mathf.RoundToInt(Mathf.Max(0f, 120f - r.Seconds) * 2f) + Mathf.Max(0, PredictionBook.LastDelta);
+                DailyChallenge.SubmitLocal("Player", champ, dailyScore, r.Seconds);
+                if (!string.IsNullOrEmpty(GameSettings.DailyApiUrl))
+                {
+                    StartCoroutine(DailyChallenge.PostRemote(new DailyChallenge.Entry
+                    {
+                        date = DailyChallenge.TodayKey(),
+                        player = "Player",
+                        champion = champ,
+                        score = dailyScore,
+                        durationSec = r.Seconds
+                    }));
+                }
             }
 
             if (_heats.Count > 0) RecordHeatWinner(r.Winner);
@@ -136,8 +161,12 @@ namespace PoKingHill
             var pool = InGame();
             if (pool.Count < 8)
             {
-                _status = "Need at least 8 ticked fighters for 4x4 Heats";
-                return;
+                if (!RandomizePlayerSlots(true))
+                {
+                    _status = "Need available fighters for 4x4 Heats";
+                    return;
+                }
+                pool = new List<int>(playerSlots);
             }
             _heats.Clear();
             _heats.AddRange(BuildHeatsSchedule(pool));
@@ -170,7 +199,9 @@ namespace PoKingHill
             _heats.Clear();
             _tournamentMatch = false;
             TournamentChampion = "";
-            StartMatch(slots);
+            _dailyLaunching = true;
+            try { StartMatch(slots); }
+            finally { _dailyLaunching = false; }
             _status = $"Daily Match · Seed {DailyChallenge.TodaySeed()}";
             return true;
         }

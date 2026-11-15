@@ -279,6 +279,8 @@ namespace PoKingHill
         {
             ReplaySystem.StopActive();          // a replay restores its saved state when it ends: end it before placing anyone
             _bracket.Clear();
+            _heats.Clear();
+            _dailyMatchActive = false;
             _tournamentMatch = false;
             _resultUntil = 0; _roundsThisMatch = 0;
             foreach (var f in bodies) f.SetBrain(null, ObsBuilder.ObsDim, GoalMode.None, 0.3f, 0.8f);      // passive stance while the menu is up
@@ -402,6 +404,7 @@ namespace PoKingHill
             else Seat(2);
             if (statsRounds == 0 && !autoLaunch) roundsPerMatch = _tournamentMatch || _bracket.Count > 0 || _heats.Count > 0 ? 1 : GameSettings.RoundsPerMatch;   // PerfProbe/auto runs keep theirs
             if (!_heatsLaunching) _heats.Clear();
+            _dailyMatchActive = _dailyLaunching;
             _roundsThisMatch = 0;
             if (statsRounds == 0 && !autoLaunch && GameSettings.Intro && roster.Length > 0) { BeginIntro(); return; }
             ArmBrains();

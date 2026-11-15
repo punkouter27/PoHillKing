@@ -58,7 +58,7 @@ namespace PoKingHill.Tests
             var cam = Camera.main;
             var ps = doc != null ? doc.panelSettings : null;
             RenderTexture camRt = RenderTexture.GetTemporary(w, h, 24, RenderTextureFormat.ARGB32);
-            RenderTexture uiRt = ps != null ? RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32) : null;
+            RenderTexture uiRt = ps != null ? RenderTexture.GetTemporary(w, h, 24, RenderTextureFormat.ARGB32) : null;
             var prevCamRt = cam != null ? cam.targetTexture : null;
             var prevUiRt = ps != null ? ps.targetTexture : null;
             var camTex = new Texture2D(w, h, TextureFormat.RGBA32, false);
@@ -186,6 +186,14 @@ namespace PoKingHill.Tests
                 ClickButton(FindButton(root, "Agents"));
                 yield return null;
                 yield return CaptureComposite("02_menu_agents.png", doc);
+                var nextBioBtn = FindButton(root, "Next bio");
+                if (nextBioBtn == null) issues.Add("Agents tab missing 'Next bio' button.");
+                else
+                {
+                    ClickButton(nextBioBtn);
+                    yield return null;
+                    yield return CaptureComposite("02b_menu_agents_next.png", doc);
+                }
 
                 // Check Wikipedia live fetch for Kim/Trump/Grandpa
                 bool wikiDone = false; string wikiOut = "";
@@ -232,6 +240,9 @@ namespace PoKingHill.Tests
                 atmo?.RefreshTarget();
 
                 // 4. QUICK MATCH -> INTRO -> FIGHT (WITH SPEED 4X)
+                var preMoonRatings = new float[d.roster.Length];
+                for (int i = 0; i < d.roster.Length; i++) preMoonRatings[i] = Ladder.Rating(d.roster[i].name);
+
                 ClickButton(FindButton(root, "Play"));
                 yield return null;
                 ClickButton(FindButton(root, "Quick match"));
@@ -329,6 +340,12 @@ namespace PoKingHill.Tests
                 // Check Result Share KO highlight
                 var shareBtn = FindButton(root, "Share KO highlight");
                 Debug.Log($"[EXPLORE] Share KO button present: {shareBtn != null}, PredictionOutcome='{PredictionBook.LastOutcome}', Highlight='{replay?.HighlightSummary}'");
+                for (int i = 0; i < d.roster.Length; i++)
+                {
+                    float nowR = Ladder.Rating(d.roster[i].name);
+                    if (Mathf.Abs(nowR - preMoonRatings[i]) > 0.01f)
+                        issues.Add($"Unranked MoonGravity match altered Elo for {d.roster[i].name}: {preMoonRatings[i]} -> {nowR}");
+                }
 
                 // 5. DAILY MATCH COMPLETION & LEADERBOARD SUBMISSION CHECK!
                 d.EnterMenu();

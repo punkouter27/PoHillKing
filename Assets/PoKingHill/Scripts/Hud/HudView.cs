@@ -368,6 +368,7 @@ namespace PoKingHill
             _peekRow.style.display = sheet && _collapsed ? DisplayStyle.Flex : DisplayStyle.None;
             _debug.style.visibility = _sheet.style.display == DisplayStyle.Flex ? Visibility.Hidden : Visibility.Visible;     // a sheet always wins
             _caption.style.visibility = _sheet.style.display == DisplayStyle.Flex ? Visibility.Hidden : Visibility.Visible;   // never under a sheet
+            _feed.style.visibility = _sheet.style.display == DisplayStyle.Flex ? Visibility.Hidden : Visibility.Visible;
         }
 
         // ------------------------------------------------------------------ live strip

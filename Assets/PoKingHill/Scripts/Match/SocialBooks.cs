@@ -101,7 +101,7 @@ namespace PoKingHill
         public static string Settle(string winnerName)
         {
             Load();
-            if (string.IsNullOrEmpty(CurrentPick)) return null;
+            if (string.IsNullOrEmpty(CurrentPick)) { LastDelta = 0; LastOutcome = null; return null; }
             string pick = CurrentPick;
             float odds = CurrentOdds;
             CurrentPick = null;
