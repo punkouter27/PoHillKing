@@ -2,11 +2,14 @@ name: Build & Deploy WebGL
 
 # SAME FILE IN EVERY PO UNITY GAME. The reference copy is PoBox's; copy it with
 # PoPunkouterSoftware/scripts/sync-ci.ps1, never edit one game's copy. What differs per game
-# (builder method, Static Web App, resource group) lives in Tools/webgl.json.
+# (builder method) lives in Tools/webgl.json.
 #
-# It runs on the self-hosted `unity` runner (the dev PC), which has Unity, its license and the az
-# login. Push-only on purpose: the repo is public, and a pull_request trigger would let anyone's
-# fork run code on that PC. Never add one.
+# Push to master -> GitHub-hosted runner builds WebGL with GameCI (Unity in Docker) -> deploys to
+# the game's Azure Static Web App -> checks the live page. No self-hosted runner.
+#
+# Repo secrets it needs:
+#   UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD   Unity activation inside the GameCI container
+#   AZURE_STATIC_WEB_APPS_API_TOKEN              the game's Static Web App deployment token
 on:
   push:
     branches: [master]
@@ -21,14 +24,63 @@ concurrency:
 
 jobs:
   webgl:
-    runs-on: [self-hosted, unity]
-    timeout-minutes: 240
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
+      # The Unity WebGL image is large; the hosted runner's default free disk is not enough.
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+
       - uses: actions/checkout@v7
         with:
-          # Keeps Library/ (git-ignored) between runs: a cold Unity import takes up to an hour.
-          clean: false
           lfs: true
-      - name: Build, deploy and check the live page
-        shell: pwsh
-        run: ./Tools/ci_webgl.ps1
+
+      # Library/ is git-ignored and a cold Unity import is slow: cache it between runs.
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-WebGL-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: Library-WebGL-
+
+      - name: Read build method
+        id: cfg
+        run: echo "buildMethod=$(jq -r .buildMethod Tools/webgl.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Build WebGL
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+          buildMethod: ${{ steps.cfg.outputs.buildMethod }}
+
+      # Static Web Apps 404s .unityweb without this MIME config.
+      - name: Add Static Web App config
+        run: |
+          test -f Builds/WebGL/index.html || { echo "No WebGL build at Builds/WebGL"; exit 1; }
+          sudo cp Tools/webgl/staticwebapp.config.json Builds/WebGL/
+
+      - name: Deploy to Azure Static Web App
+        id: deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: Builds/WebGL
+          skip_app_build: true
+          skip_api_build: true
+
+      # The page is live and is a Unity WebGL page, not an old or empty site.
+      - name: Check the live page
+        env:
+          URL: ${{ steps.deploy.outputs.static_web_app_url }}
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS --max-time 30 "$URL" | grep -q 'loader.js'; then echo "Live: $URL"; exit 0; fi
+            sleep 15
+          done
+          echo "$URL did not serve the WebGL page"; exit 1

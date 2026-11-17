@@ -1,5 +1,5 @@
-# Deploys the WebGL build (Builds/WebGL, written by the game's WebGL build menu item or by
-# Tools/ci_webgl.ps1) to the game's Azure Static Web App, Free tier. The app and resource group
+# Deploys the WebGL build (Builds/WebGL, written by the game's WebGL build menu item or by CI
+# .github/workflows/webgl.yml) to the game's Azure Static Web App, Free tier. The app and resource group
 # come from Tools/webgl.json; sign in to the punkouter27 tenant first (`az login --tenant`; a
 # bare `az login` finds no subscription).
 #
@@ -28,7 +28,7 @@ if (-not $ResourceGroup) { $ResourceGroup = $cfg.resourceGroup }
 if (-not $AppName) { $AppName = $cfg.staticWebApp }
 
 if (-not (Test-Path (Join-Path $BuildDir "index.html"))) {
-    throw "No WebGL build at $BuildDir. Build it first (the game's WebGL build menu item, or Tools/ci_webgl.ps1)."
+    throw "No WebGL build at $BuildDir. Build it first (the game's WebGL build menu item, or CI)."
 }
 
 Copy-Item (Join-Path $PSScriptRoot "webgl\staticwebapp.config.json") $BuildDir -Force
