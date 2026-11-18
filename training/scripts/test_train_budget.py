@@ -1,3 +1,5 @@
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch

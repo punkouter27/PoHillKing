@@ -81,3 +81,6 @@ Assets/_Recovery.meta
 # summaries beside the datasets are committed)
 training/assets/mocap/raw/
 training/assets/mocap/*.npz
+
+# Generated Unity C# project files
+/*.csproj

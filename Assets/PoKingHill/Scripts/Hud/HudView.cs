@@ -125,7 +125,7 @@ namespace PoKingHill
             _fps.RegisterCallback<PointerUpEvent>(_ => _pressAt = -1);
             _fps.RegisterCallback<PointerLeaveEvent>(_ => _pressAt = -1);
             _fps.RegisterCallback<GeometryChangedEvent>(_ => DodgeCutouts());       // a wider text (telemetry line) may reach the cutout again
-            _title = Text("PoKingHill", "title shadow", _topBar);
+            _title = Text(string.IsNullOrEmpty(Application.productName) ? "PoHillKing" : Application.productName, "title shadow", _topBar);
             var right = El("top-right", _topBar);
             _menuBtn = Btn("", "icon-btn", ToggleMenu, right); _menuBtn.Add(new Icon(Icon.Kind.Menu)); _menuBtn.tooltip = "Menu";
 

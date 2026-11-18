@@ -7,7 +7,7 @@
       "runs": [
         {
           "label": "trump candidate",
-          "dir": "C:\\Users\\punko\\Downloads\\_CODEMATT\\PoHillKing\\training\\runs\\trump_hill4\\trump_bounded_261113_204506"
+          "dir": "PoHillKing\\training\\runs\\trump_hill4\\trump_bounded_261113_204506"
         }
       ],
       "metrics": [

@@ -3,8 +3,8 @@
 # come from Tools/webgl.json; sign in to the punkouter27 tenant first (`az login --tenant`; a
 # bare `az login` finds no subscription).
 #
-# SAME FILE IN EVERY PO UNITY GAME (reference copy: PoBox; copy it with
-# PoPunkouterSoftware/scripts/sync-ci.ps1).
+# SAME FILE IN EVERY PO UNITY GAME (reference copy: PoHillKing; copy it with
+# this repository).
 #
 #   pwsh -File Tools\deploy_webgl.ps1
 #

@@ -97,7 +97,7 @@
     "Unity parity"
   ],
   "tensorboard": "http://127.0.0.1:6007",
-  "log": "C:\\Users\\punko\\Downloads\\_CODEMATT\\PoHillKing\\DOCS\\20261113\\training-90min\\candidate-evaluation.log",
+  "log": "PoHillKing\\DOCS\\20261113\\training-90min\\candidate-evaluation.log",
   "child_pid": 27844,
   "updated": "2026-11-13T21:45:05.427041-05:00",
   "remaining_minutes": 7.46,
@@ -116,9 +116,9 @@
     }
   },
   "body": "trump",
-  "run_dir": "C:\\Users\\punko\\Downloads\\_CODEMATT\\PoHillKing\\training\\runs\\trump_hill4\\trump_bounded_261113_204506",
+  "run_dir": "PoHillKing\\training\\runs\\trump_hill4\\trump_bounded_261113_204506",
   "training": {
-    "checkpoint": "C:\\Users\\punko\\Downloads\\_CODEMATT\\PoHillKing\\training\\runs\\trump_hill4\\trump_bounded_261113_204506\\model_final.pt",
+    "checkpoint": "PoHillKing\\training\\runs\\trump_hill4\\trump_bounded_261113_204506\\model_final.pt",
     "iterations": 457,
     "bars": {
       "target_mean_reward_100_episodes": null,
