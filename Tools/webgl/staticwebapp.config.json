@@ -7,6 +7,10 @@
   },
   "routes": [
     {
+      "route": "/diag",
+      "rewrite": "/diag.html"
+    },
+    {
       "route": "/Build/*.unityweb",
       "headers": {
         "Content-Encoding": "gzip",

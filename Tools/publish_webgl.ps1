@@ -82,6 +82,17 @@ if (-not (Test-Path (Join-Path $buildDir 'index.html'))) { throw "No WebGL build
 
 # Static Web Apps 404s .unityweb without this MIME config.
 Copy-Item (Join-Path $PSScriptRoot 'webgl\staticwebapp.config.json') $buildDir -Force
+$buildStamp = Get-Date -Format 'yyMMdd'
+$diagHtml = @"
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Diagnostics</title>
+<style>body{margin:0;background:#0a0f0a;color:#e8efe8;font:14px/1.5 system-ui,sans-serif}header{display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #1c261c}header a{color:#e8efe8;text-decoration:none;font-weight:600}main{max-width:680px;margin:24px auto;padding:0 16px;display:grid;gap:12px}.card{background:#121a12;border:1px solid #1c261c;border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}.ok{color:#6fce8f;font-weight:600}.stamp{position:fixed;right:10px;bottom:6px;font-size:11px;color:#9aa69a}</style></head>
+<body><header><a href="/">WebGL Player</a><a href="/">← Back</a></header><main><h1>System status</h1>
+<div class="card"><span>WebGL build bundle (/index.html)</span><span class="ok">Ready</span></div>
+<div class="card"><span>3D renderer (WebGL2)</span><span id="gl" class="ok">Checking…</span></div>
+<div class="card"><span>Build version</span><span class="ok">v$buildStamp</span></div></main><span class="stamp">v$buildStamp</span>
+<script>document.getElementById('gl').textContent=document.createElement('canvas').getContext('webgl2')?'Healthy':'Unavailable';</script></body></html>
+"@
+[IO.File]::WriteAllText((Join-Path $buildDir 'diag.html'), $diagHtml)
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Compress-Archive -Path (Join-Path $buildDir '*') -DestinationPath $zip -CompressionLevel Optimal
 '{0}: {1:N1} MB' -f $zip, ((Get-Item $zip).Length / 1MB)

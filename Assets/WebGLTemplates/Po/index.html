@@ -10,9 +10,12 @@
       /* Not Unity's default page: that one draws a fixed canvas plus a footer and
          scrolls in any window shorter than the canvas. Here the canvas is the
          largest {{{ WIDTH }}}:{{{ HEIGHT }}} rectangle that fits the window, centred,
-         nothing else. */
-      html, body { margin: 0; height: 100%; background: #0a0f0a; overflow: hidden; }
+         with the fleet corners (title upper-left, settings gear upper-right, build stamp lower-right). */
+      html, body { margin: 0; height: 100%; background: #0a0f0a; overflow: hidden; font-family: system-ui, sans-serif; color: #e8efe8; }
       body { display: flex; align-items: center; justify-content: center; }
+      .po-brand { position: fixed; top: 10px; left: 14px; font-weight: 600; font-size: 14px; letter-spacing: 0.04em; color: #e8efe8; text-decoration: none; z-index: 5; opacity: 0.85; }
+      .po-gear { position: fixed; top: 8px; right: 12px; width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.16); background: rgba(16,22,16,0.8); color: #e8efe8; text-decoration: none; font-size: 16px; z-index: 5; }
+      .po-version { position: fixed; right: 10px; bottom: 6px; font-size: 11px; color: #9aa69a; pointer-events: none; z-index: 5; }
       #frame { position: relative; }
       #unity-canvas { display: block; background: #0a0f0a; outline: none; touch-action: none; }
       #loading { position: absolute; inset: 0; display: flex; flex-direction: column;
@@ -26,11 +29,14 @@
     </style>
   </head>
   <body>
+    <a class="po-brand" href="/">{{{ PRODUCT_NAME }}}</a>
+    <a class="po-gear" href="/diag" aria-label="Settings and diagnostics" title="Diagnostics (/diag)">⚙</a>
     <div id="frame">
       <canvas id="unity-canvas" tabindex="-1"></canvas>
       <div id="loading"><div>{{{ PRODUCT_NAME }}}</div><div id="bar"><div id="fill"></div></div></div>
       <div id="error"></div>
     </div>
+    <span class="po-version">v{{{ PRODUCT_VERSION }}}</span>
     <script>
       var canvas = document.getElementById("unity-canvas");
       var loading = document.getElementById("loading");
