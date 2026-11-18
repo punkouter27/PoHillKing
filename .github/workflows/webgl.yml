@@ -1,19 +1,26 @@
-name: Build & Deploy WebGL
+name: Deploy WebGL
 
 # SAME FILE IN EVERY PO UNITY GAME. The reference copy is PoBox's; copy it with
-# PoPunkouterSoftware/scripts/sync-ci.ps1, never edit one game's copy. What differs per game
-# (builder method) lives in Tools/webgl.json.
+# PoPunkouterSoftware/scripts/sync-ci.ps1, never edit one game's copy.
 #
-# Push to master -> GitHub-hosted runner builds WebGL with GameCI (Unity in Docker) -> deploys to
-# the game's Azure Static Web App -> checks the live page. No self-hosted runner.
+# The WebGL player is built LOCALLY (Unity needs a licence; CI has none) by Tools/publish_webgl.ps1,
+# which uploads it as webgl.zip on a GitHub Release tagged webgl-*. Publishing that release runs
+# this workflow on a GitHub-hosted runner: download the zip -> deploy to the game's Azure Static
+# Web App -> check the live page. No Unity, no self-hosted runner.
 #
-# Repo secrets it needs:
-#   UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD   Unity activation inside the GameCI container
-#   AZURE_STATIC_WEB_APPS_API_TOKEN              the game's Static Web App deployment token
+# Re-deploy an existing build: Actions -> Deploy WebGL -> Run workflow, with its tag
+# (empty = the newest webgl-* release).
+#
+# Repo secret it needs:
+#   AZURE_STATIC_WEB_APPS_API_TOKEN   the game's Static Web App deployment token
 on:
-  push:
-    branches: [master]
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: webgl-* release tag to deploy (empty = newest)
+        required: false
 
 permissions:
   contents: read
@@ -23,46 +30,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  webgl:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'webgl-')
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 30
     steps:
-      # The Unity WebGL image is large; the hosted runner's default free disk is not enough.
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          tool-cache: false
-
-      - uses: actions/checkout@v7
-        with:
-          lfs: true
-
-      # Library/ is git-ignored and a cold Unity import is slow: cache it between runs.
-      - uses: actions/cache@v4
-        with:
-          path: Library
-          key: Library-WebGL-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: Library-WebGL-
-
-      - name: Read build method
-        id: cfg
-        run: echo "buildMethod=$(jq -r .buildMethod Tools/webgl.json)" >> "$GITHUB_OUTPUT"
-
-      - name: Build WebGL
-        uses: game-ci/unity-builder@v4
+      - name: Download the WebGL build
         env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        with:
-          targetPlatform: WebGL
-          buildMethod: ${{ steps.cfg.outputs.buildMethod }}
-
-      # Static Web Apps 404s .unityweb without this MIME config.
-      - name: Add Static Web App config
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
-          test -f Builds/WebGL/index.html || { echo "No WebGL build at Builds/WebGL"; exit 1; }
-          sudo cp Tools/webgl/staticwebapp.config.json Builds/WebGL/
+          if [ -z "$TAG" ]; then
+            TAG=$(gh release list -R "$GITHUB_REPOSITORY" --limit 100 --json tagName,createdAt \
+              --jq '[.[] | select(.tagName | startswith("webgl-"))] | sort_by(.createdAt) | last | .tagName')
+          fi
+          test -n "$TAG" || { echo "No webgl-* release. Run Tools/publish_webgl.ps1 first."; exit 1; }
+          echo "Deploying $TAG"
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p webgl.zip -D .
+          mkdir site && unzip -q webgl.zip -d site
+          test -f site/index.html || { echo "webgl.zip of $TAG has no index.html at its root"; exit 1; }
+          test -f site/staticwebapp.config.json || { echo "webgl.zip of $TAG has no staticwebapp.config.json (.unityweb would 404)"; exit 1; }
 
       - name: Deploy to Azure Static Web App
         id: deploy
@@ -70,7 +57,7 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: upload
-          app_location: Builds/WebGL
+          app_location: site
           skip_app_build: true
           skip_api_build: true
 

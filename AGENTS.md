@@ -76,7 +76,7 @@ Standing directives for any coding agent working in this repo. Project-specific 
 
 ## CI/CD and Azure (same section in every Po repo)
 
-- A push to the default branch builds WebGL and deploys it to the game's Azure Static Web App (`.github/workflows/webgl.yml`). It runs on a GitHub-hosted runner (GameCI Unity build, no self-hosted runner, the dev PC can be off). Repo secrets: `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`, `AZURE_STATIC_WEB_APPS_API_TOKEN`. `tools/deploy_webgl.ps1` stays for a manual deploy, but CI is the normal path.
-- The workflow has no `pull_request` trigger: fork PRs would not get the secrets anyway, and a push to master is the deploy.
+- WebGL is built **locally** and deployed by CI: `pwsh -File Tools/publish_webgl.ps1` builds `Builds/WebGL` with the Unity on this PC (build method from `Tools/webgl.json`), zips it and publishes it as a GitHub Release tagged `webgl-<yyMMdd-HHmm>-<sha>` (HEAD must be pushed first; it keeps the newest 3). Publishing the release runs `.github/workflows/webgl.yml` on a GitHub-hosted runner, which deploys the zip to the game's Azure Static Web App and checks the live page. CI has no Unity licence and needs none. Repo secret: `AZURE_STATIC_WEB_APPS_API_TOKEN`. Re-deploy an older build with Actions → Deploy WebGL → Run workflow (tag, empty = newest). `Tools/deploy_webgl.ps1` stays for a direct deploy from this PC without GitHub.
+- A push to master does not deploy by itself; publishing a `webgl-*` release does. The workflow has no `pull_request` trigger.
 - Tests pass on any machine: no drive-letter, temp-folder or working-directory assumptions, and no live config value hard-coded as an expected result (read it from the same config the app reads).
 - A red run on the default branch gets an ntfy push from the CI watcher in PoPunkouterSoftware. Fix it, or say why it is red.
