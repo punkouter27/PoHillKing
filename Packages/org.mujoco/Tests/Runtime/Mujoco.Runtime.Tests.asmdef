@@ -14,7 +14,8 @@
     ],
     "autoReferenced": false,
     "defineConstraints": [
-        "UNITY_INCLUDE_TESTS"
+        "UNITY_INCLUDE_TESTS",
+        "MUJOCO_PACKAGE_TESTS"
     ],
     "versionDefines": [],
     "noEngineReferences": false
