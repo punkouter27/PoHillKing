@@ -10,7 +10,11 @@ hill brains keep away from a copy of themselves, kim_hill4b at a median 2.5 m, s
   .venv/Scripts/python.exe scripts/archive/sweep_mirror.py [--iters 200] [--bodies kim grandpa trump] [--push 1.0] [--stall -1.0] [--standoff -1.0] [--run mir2]
 Progress: runs/overnight/progress_mirror.txt; rows: runs/overnight/mirror_sweep.jsonl.
 """
-import argparse, os, sys
+
+import argparse
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import queue_hill as q
 import overnight_hill4 as w
@@ -22,19 +26,38 @@ SMOOTH_LOG = os.path.join(q.LOG_DIR, "progress_smooth.txt")
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--iters", type=int, default=200); ap.add_argument("--num-envs", type=int, default=1024)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--iters", type=int, default=200)
+    ap.add_argument("--num-envs", type=int, default=1024)
     ap.add_argument("--bodies", nargs="+", default=["kim", "grandpa", "trump"])
-    ap.add_argument("--push", type=float, default=1.0); ap.add_argument("--stall", type=float, default=-1.0)
-    ap.add_argument("--standoff", type=float, default=-1.0); ap.add_argument("--run", default="mir2"); a = ap.parse_args()
+    ap.add_argument("--push", type=float, default=1.0)
+    ap.add_argument("--stall", type=float, default=-1.0)
+    ap.add_argument("--standoff", type=float, default=-1.0)
+    ap.add_argument("--run", default="mir2")
+    a = ap.parse_args()
     label = f"mirror_push_out {a.push}, mirror_stalemate {a.stall}, mirror_standoff {a.standoff}"
     q.note(f"=== sweep_mirror: {a.bodies}, {label}, {a.iters} iterations: waiting for sweep_smooth ===")
     q.wait_done(SMOOTH_LOG, "sweep_smooth")
     q.ensure_tensorboard()
     ship = {b: h.shipped(b) for b in q.HUMANS}
     for me in a.bodies:
-        w.sweep_arm(me, f"{me}_{a.run}", ship, a.iters, a.num_envs,
-                    ["--reward", "draw=-20", f"mirror_push_out={a.push}", f"mirror_stalemate={a.stall}", f"mirror_standoff={a.standoff}"],
-                    label, ROWS, dict(push=a.push, stall=a.stall, standoff=a.standoff))
+        w.sweep_arm(
+            me,
+            f"{me}_{a.run}",
+            ship,
+            a.iters,
+            a.num_envs,
+            [
+                "--reward",
+                "draw=-20",
+                f"mirror_push_out={a.push}",
+                f"mirror_stalemate={a.stall}",
+                f"mirror_standoff={a.standoff}",
+            ],
+            label,
+            ROWS,
+            dict(push=a.push, stall=a.stall, standoff=a.standoff),
+        )
     q.note("=== sweep_mirror done ===")
 
 

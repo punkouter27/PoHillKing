@@ -1,4 +1,4 @@
-# Staged training (prepared 2026-10-17; stages 2, 3 and 6 trained 2026-10-18, see DOCS/rl_optimization_log.md)
+# Staged training (prepared 2026-10-17; stages 2, 3 and 6 trained 2026-10-18, see docs/rl_optimization_log.md)
 
 Everything below is opt-in. Existing rungs (r0 r1 r2 r3 r4 r4att r4sp r4league r4shove r4probe) produce the same
 configuration as before and, verified bit for bit, the same environment trajectories (see "Throughput" below).
@@ -166,7 +166,7 @@ One brain per body kind that takes over while a fighter is down (`MatchDirector.
 Gates: `scripts/getup_stats.py` (CPU, 200 drops: success within the game's 5 s count, time-to-stand quartiles) vs
 `ParityBatch.RunGetupStats` (Unity, Testbed_flat_1p, `GetupProbe`); then the game rule (since 2026-10-21 the hill rule,
 always on: no count, no limit, out only off the top): `duel_stats.py --getup --hill-rule` vs
-`ParityBatch.RunGetupDuelStats(robot, 200, -1, -1, true)`. Runs and numbers: DOCS/rl_optimization_log.md (2026-10-19).
+`ParityBatch.RunGetupDuelStats(robot, 200, -1, -1, true)`. Runs and numbers: docs/rl_optimization_log.md (2026-10-19).
 
 ## 8. Calibration, action path, rewards and curriculum (added 2026-10-20)
 
@@ -185,7 +185,7 @@ All opt-in; every existing rung is bitwise unchanged (`check_determinism.py`, r0
 Every finished run writes `graduation.json`; `export_policy.py` refuses a run with NaN updates or a missed
 `--graduate-reward` target unless `--force`, and writes or removes `<name>_action.json`. The CPU reference
 (`duel_stats.py`) reads the sidecar too. Queue: `scripts/queue_options.sh` (G1 runs repeat duel_u1's recipe and change
-one thing), then `scripts/queue_bodies.sh` (Kim's feet, Trump's hold). Results: DOCS/rl_optimization_log.md 2026-10-20.
+one thing), then `scripts/queue_bodies.sh` (Kim's feet, Trump's hold). Results: docs/rl_optimization_log.md 2026-10-20.
 
 ## New JSON keys for the Unity side (read with fallbacks)
 

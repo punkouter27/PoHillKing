@@ -1,7 +1,7 @@
 # Training lessons (G1, Kim, Trump; 2026-10-07 to 2026-10-20)
 
 What three bodies taught us about getting a physics-simulated fighter to stand, walk and push, written for the next
-custom rigged mesh. Every claim points at the run or measurement in `DOCS/rl_optimization_log.md` that showed it. The G1
+custom rigged mesh. Every claim points at the run or measurement in `docs/rl_optimization_log.md` that showed it. The G1
 left the game on 2026-10-20; its training code, checkpoints (`training/runs/`, `runs/league/`) and assets
 (`training/assets/g1`) stay, because the human recipes below were derived from it and the mixed-body scenes are built
 on it.
@@ -10,7 +10,7 @@ on it.
 
 | step | how | bar / check | lesson behind it |
 |---|---|---|---|
-| rig to profile | `tools/make_glb_fighter.py <body>` (rigged GLB, no Blender) or a Blender script like `make_kim.py`; then `koth/build_<body>.py` with mass, de Leva segment fractions, peak joint torques, human ranges, `DEFAULT_POSE` | the G1's 29 joint names and order, so networks, env and Unity runner are shared | Kim and Trump reuse every line of training and runtime code because of this |
+| rig to profile | `scripts/make_glb_fighter.py <body>` (rigged GLB, no Blender) or a Blender script like `make_kim.py`; then `koth/build_<body>.py` with mass, de Leva segment fractions, peak joint torques, human ranges, `DEFAULT_POSE` | the G1's 29 joint names and order, so networks, env and Unity runner are shared | Kim and Trump reuse every line of training and runtime code because of this |
 | gains | start from Kim's `PD_GAINS` scaled by **mass x height** (not mass) | 10 s passive hold in Warp and CPU MuJoCo, then Unity `ModelDumpCheck` 0 mismatches | Trump's mass-only scaling (x1.8) fell backwards after 5 s; mass x height (x2.2) holds with 0.35 deg lean |
 | feet | `build_human.py` keeps a 4 mm gap between the feet (`FOOT_GAP`) | `collision_audit.py`: 0 overlapping enabled pairs at zero, rest, T-pose | Kim's narrow stance started every episode with her foot boxes 3.6 mm into each other; fixed 2026-10-20, her brains measured the same before and after |
 | hold ctrl | `build_mjcf.symmetric_hold` mirror-averages the stance targets when a settle comes out asymmetric | `step_response.py`: left / right hold torques equal | a double stance is statically indeterminate: Trump settled leaning (ankle roll -2.6 / -0.6 Nm); brains were unaffected (targets are default + action) |

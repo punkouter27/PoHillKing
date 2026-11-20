@@ -12,7 +12,13 @@ RunGetupDuelStats) and the user's go. Waits for sweep_mirror.py to finish (one G
   .venv/Scripts/python.exe scripts/judge_hill.py [--bodies kim grandpa trump] [--extra runs/x/y/model_final.pt ...]
 Progress: runs/overnight/progress_judge.txt; rows: runs/overnight/judge_hill.json.
 """
-import argparse, glob, json, os, sys
+
+import argparse
+import glob
+import json
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import queue_hill as q
 import queue_hill4 as h
@@ -29,31 +35,42 @@ def judge(me, ckpt, ship, base=None):
     three = w.three_way(me, ckpt, ship)
     r = dict(ckpt=ckpt, three=q.mean(three, "learner_last_one_in"), jitter=q.mean(three, "jitter_rad"), duels={})
     if base is not None and (r["three"] < base["three"] + THREE_GAIN or r["jitter"] > JITTER_RATIO * base["jitter"]):
-        r["pass"] = False; return r
+        r["pass"] = False
+        return r
     for o in others:
-        r["duels"][o] = q.share(q.evaluate(me, ["--rung", f"{me}_vs_{o}", "--ckpt", ckpt, "--opponent", ship[o], "--seconds", "25"]))
+        r["duels"][o] = q.share(
+            q.evaluate(me, ["--rung", f"{me}_vs_{o}", "--ckpt", ckpt, "--opponent", ship[o], "--seconds", "25"])
+        )
     if base is not None:
         r["pass"] = all(r["duels"][o] >= min(DUEL_FLOOR, base["duels"][o] - DUEL_SLACK) for o in others)
     return r
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--bodies", nargs="+", default=list(q.HUMANS))
-    ap.add_argument("--extra", nargs="*", default=[]); a = ap.parse_args()
-    q.note(f"=== judge_hill: {a.bodies}; three-way >= shipped + {THREE_GAIN}, duels >= min({DUEL_FLOOR}, shipped - {DUEL_SLACK}), "
-           f"jitter <= {JITTER_RATIO} x shipped: waiting for sweep_mirror ===")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--bodies", nargs="+", default=list(q.HUMANS))
+    ap.add_argument("--extra", nargs="*", default=[])
+    a = ap.parse_args()
+    q.note(
+        f"=== judge_hill: {a.bodies}; three-way >= shipped + {THREE_GAIN}, duels >= min({DUEL_FLOOR}, shipped - {DUEL_SLACK}), "
+        f"jitter <= {JITTER_RATIO} x shipped: waiting for sweep_mirror ==="
+    )
     q.wait_done(MIRROR_LOG, "sweep_mirror")
     ship = {b: h.shipped(b) for b in q.HUMANS}
     res = json.load(open(OUT)) if os.path.exists(OUT) else {}
-    fmt = lambda r: (f"three-way {r['three']:.3f}, jitter {r['jitter']:.4f}"
-                     + "".join(f", vs {o} {s:.3f}" for o, s in r["duels"].items()))
+    fmt = lambda r: (
+        f"three-way {r['three']:.3f}, jitter {r['jitter']:.4f}"
+        + "".join(f", vs {o} {s:.3f}" for o, s in r["duels"].items())
+    )
     for me in a.bodies:
-        base = judge(me, ship[me], ship); q.note(f"{me} shipped: {fmt(base)}")
+        base = judge(me, ship[me], ship)
+        q.note(f"{me} shipped: {fmt(base)}")
         res[me] = dict(shipped=base, candidates={})
         cands = sorted(glob.glob(os.path.join(q.ROOT, "runs", f"{me}_hill4", "*", "model_final.pt")))
         cands = [os.path.relpath(c, q.ROOT).replace("\\", "/") for c in cands] + [c for c in a.extra if f"/{me}_" in c]
         for c in cands:
-            r = judge(me, c, ship, base); name = c.split("/")[-2]
+            r = judge(me, c, ship, base)
+            name = c.split("/")[-2]
             res[me]["candidates"][name] = r
             q.note(f"{name}: {fmt(r)} -> {'PASS' if r['pass'] else 'fail'}")
             json.dump(res, open(OUT, "w", encoding="utf-8"), indent=1)

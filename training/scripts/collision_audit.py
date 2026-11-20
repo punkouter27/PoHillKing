@@ -15,6 +15,7 @@ geoms red) and report.html. Exit code 1 when an enabled pair overlaps in zero, r
 
     uv run python scripts/collision_audit.py [--robots g1 kim trump] [--no-render]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,13 +30,15 @@ import numpy as np
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 ASSETS = ROOT / "training" / "assets"
-TOL = 1e-4          # m: deeper than this counts as overlap (contact solver margin aside)
+TOL = 1e-4  # m: deeper than this counts as overlap (contact solver margin aside)
 
 
 def body_tree(m):
     """Adjacency: same body or parent-child."""
+
     def adjacent(b1, b2):
         return b1 == b2 or m.body_parentid[b1] == b2 or m.body_parentid[b2] == b1
+
     return adjacent
 
 
@@ -46,16 +49,23 @@ def excluded(m, b1, b2):
 
 def robot_pairs(m, prefix="a_"):
     """Every pair of one fighter's collision geoms on non-adjacent bodies, and whether the simulation collides it."""
-    geoms = [g for g in range(m.ngeom) if m.geom_bodyid[g] != 0 and (m.geom_contype[g] or m.geom_conaffinity[g])
-             and name(m, mujoco.mjtObj.mjOBJ_BODY, m.geom_bodyid[g]).startswith(prefix)]
+    geoms = [
+        g
+        for g in range(m.ngeom)
+        if m.geom_bodyid[g] != 0
+        and (m.geom_contype[g] or m.geom_conaffinity[g])
+        and name(m, mujoco.mjtObj.mjOBJ_BODY, m.geom_bodyid[g]).startswith(prefix)
+    ]
     adjacent = body_tree(m)
     pairs = []
     for i, a in enumerate(geoms):
-        for b in geoms[i + 1:]:
+        for b in geoms[i + 1 :]:
             ba, bb = int(m.geom_bodyid[a]), int(m.geom_bodyid[b])
             if adjacent(ba, bb):
                 continue
-            on = bool((m.geom_contype[a] & m.geom_conaffinity[b]) or (m.geom_contype[b] & m.geom_conaffinity[a])) and not excluded(m, ba, bb)
+            on = bool(
+                (m.geom_contype[a] & m.geom_conaffinity[b]) or (m.geom_contype[b] & m.geom_conaffinity[a])
+            ) and not excluded(m, ba, bb)
             pairs.append((a, b, on))
     return geoms, pairs
 
@@ -67,7 +77,7 @@ def name(m, kind, i):
 def overlaps(m, d, pairs):
     """[(geom a, geom b, enabled, depth m)] for every pair that interpenetrates."""
     mujoco.mj_kinematics(m, d)
-    mujoco.mj_collision(m, d)          # fills geom_xpos/xmat for mj_geomDistance
+    mujoco.mj_collision(m, d)  # fills geom_xpos/xmat for mj_geomDistance
     fromto = np.zeros(6)
     out = []
     for a, b, on in pairs:
@@ -79,18 +89,28 @@ def overlaps(m, d, pairs):
 
 def tpose(m, rest, prefix="a_"):
     """Rest pose with both shoulder rolls set so the arm is horizontal and out to the side."""
-    q = rest.copy(); d = mujoco.MjData(m)
+    q = rest.copy()
+    d = mujoco.MjData(m)
     for side in ("left", "right"):
         j = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, f"{prefix}{side}_shoulder_roll_joint")
-        hand = next((mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, f"{prefix}{side}_{n}") for n in ("wrist_yaw_link", "wrist_roll_link", "elbow_link")
-                     if mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, f"{prefix}{side}_{n}") >= 0), -1)
+        hand = next(
+            (
+                mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, f"{prefix}{side}_{n}")
+                for n in ("wrist_yaw_link", "wrist_roll_link", "elbow_link")
+                if mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, f"{prefix}{side}_{n}") >= 0
+            ),
+            -1,
+        )
         assert j >= 0 and hand >= 0, f"no {prefix}{side} shoulder roll joint or hand"
-        adr = m.jnt_qposadr[j]; lo, hi = m.jnt_range[j]
+        adr = m.jnt_qposadr[j]
+        lo, hi = m.jnt_range[j]
         best, best_q = -1e9, q[adr]
         for target in (np.pi / 2, -np.pi / 2):
-            qq = q.copy(); qq[adr] = np.clip(target, lo, hi) if m.jnt_limited[j] else target
-            d.qpos[:] = qq; mujoco.mj_kinematics(m, d)
-            score = d.xpos[hand][2] + abs(d.xpos[hand][1])      # high and out to the side
+            qq = q.copy()
+            qq[adr] = np.clip(target, lo, hi) if m.jnt_limited[j] else target
+            d.qpos[:] = qq
+            mujoco.mj_kinematics(m, d)
+            score = d.xpos[hand][2] + abs(d.xpos[hand][1])  # high and out to the side
             if score > best:
                 best, best_q = score, qq[adr]
         q[adr] = best_q
@@ -99,32 +119,60 @@ def tpose(m, rest, prefix="a_"):
 
 def audit(robot: str):
     path = ASSETS / robot / "scene_koth_2p_train.xml"
-    m = mujoco.MjModel.from_xml_path(str(path)); d = mujoco.MjData(m)
+    m = mujoco.MjModel.from_xml_path(str(path))
+    d = mujoco.MjData(m)
     geoms, pairs = robot_pairs(m)
     rest = m.key_qpos[0].copy() if m.nkey else m.qpos0.copy()
-    zero = rest.copy()          # every hinge of fighter a_ at 0, its free joint and the other fighter as in the keyframe
+    zero = rest.copy()  # every hinge of fighter a_ at 0, its free joint and the other fighter as in the keyframe
     for j in range(m.njnt):
         if m.jnt_type[j] == mujoco.mjtJoint.mjJNT_HINGE and name(m, mujoco.mjtObj.mjOBJ_JOINT, j).startswith("a_"):
             zero[m.jnt_qposadr[j]] = 0.0
     poses = {"zero": zero, "rest": rest, "tpose": tpose(m, rest)}
-    res = {"robot": robot, "model": str(path.relative_to(ROOT)).replace("\\", "/"), "collision_geoms": len(geoms),
-           "pairs_non_adjacent": len(pairs), "pairs_enabled": sum(on for _, _, on in pairs),
-           "enabled_pairs": sorted({f"{name(m, mujoco.mjtObj.mjOBJ_GEOM, a)} / {name(m, mujoco.mjtObj.mjOBJ_GEOM, b)}" for a, b, on in pairs if on}),
-           "poses": {}, "swing": {}}
+    res = {
+        "robot": robot,
+        "model": str(path.relative_to(ROOT)).replace("\\", "/"),
+        "collision_geoms": len(geoms),
+        "pairs_non_adjacent": len(pairs),
+        "pairs_enabled": sum(on for _, _, on in pairs),
+        "enabled_pairs": sorted(
+            {
+                f"{name(m, mujoco.mjtObj.mjOBJ_GEOM, a)} / {name(m, mujoco.mjtObj.mjOBJ_GEOM, b)}"
+                for a, b, on in pairs
+                if on
+            }
+        ),
+        "poses": {},
+        "swing": {},
+    }
     for pose, q in poses.items():
-        d.qpos[:] = q; ov = overlaps(m, d, pairs)
+        d.qpos[:] = q
+        ov = overlaps(m, d, pairs)
         res["poses"][pose] = {
-            "enabled_overlaps": [(name(m, mujoco.mjtObj.mjOBJ_GEOM, a), name(m, mujoco.mjtObj.mjOBJ_GEOM, b), round(dep * 1000, 1)) for a, b, on, dep in ov if on],
-            "all_overlaps": [(name(m, mujoco.mjtObj.mjOBJ_GEOM, a), name(m, mujoco.mjtObj.mjOBJ_GEOM, b), round(dep * 1000, 1)) for a, b, on, dep in ov],
+            "enabled_overlaps": [
+                (name(m, mujoco.mjtObj.mjOBJ_GEOM, a), name(m, mujoco.mjtObj.mjOBJ_GEOM, b), round(dep * 1000, 1))
+                for a, b, on, dep in ov
+                if on
+            ],
+            "all_overlaps": [
+                (name(m, mujoco.mjtObj.mjOBJ_GEOM, a), name(m, mujoco.mjtObj.mjOBJ_GEOM, b), round(dep * 1000, 1))
+                for a, b, on, dep in ov
+            ],
         }
     # swing arcs: one hinge at a time through its range
     for j in range(m.njnt):
-        if m.jnt_type[j] != mujoco.mjtJoint.mjJNT_HINGE or not m.jnt_limited[j] or not name(m, mujoco.mjtObj.mjOBJ_JOINT, j).startswith("a_"):
+        if (
+            m.jnt_type[j] != mujoco.mjtJoint.mjJNT_HINGE
+            or not m.jnt_limited[j]
+            or not name(m, mujoco.mjtObj.mjOBJ_JOINT, j).startswith("a_")
+        ):
             continue
-        adr = m.jnt_qposadr[j]; lo, hi = m.jnt_range[j]
+        adr = m.jnt_qposadr[j]
+        lo, hi = m.jnt_range[j]
         worst_all, worst_on, hits_all, hits_on, pairs_seen = 0.0, 0.0, 0, 0, {}
         for a in np.linspace(lo, hi, 9):
-            q = rest.copy(); q[adr] = a; d.qpos[:] = q
+            q = rest.copy()
+            q[adr] = a
+            d.qpos[:] = q
             ov = overlaps(m, d, pairs)
             if ov:
                 hits_all += 1
@@ -137,8 +185,11 @@ def audit(robot: str):
                 if on:
                     worst_on = max(worst_on, dep)
         res["swing"][name(m, mujoco.mjtObj.mjOBJ_JOINT, j)] = {
-            "samples": 9, "with_any_overlap": hits_all, "with_enabled_overlap": hits_on,
-            "worst_any_mm": round(worst_all * 1000, 1), "worst_enabled_mm": round(worst_on * 1000, 1),
+            "samples": 9,
+            "with_any_overlap": hits_all,
+            "with_enabled_overlap": hits_on,
+            "worst_any_mm": round(worst_all * 1000, 1),
+            "worst_enabled_mm": round(worst_on * 1000, 1),
             "pairs": {k: round(v * 1000, 1) for k, v in sorted(pairs_seen.items(), key=lambda kv: -kv[1])[:4]},
         }
     return m, poses, pairs, res
@@ -147,62 +198,101 @@ def audit(robot: str):
 def render(m, q, pairs, file: pathlib.Path):
     """Collision primitives only (visual meshes hidden): red = overlap on a pair the simulation collides, amber = overlap
     on a pair it does not (would touch with every self-collision on), blue = clear. Front and side view side by side."""
-    d = mujoco.MjData(m); d.qpos[:] = q
+    d = mujoco.MjData(m)
+    d.qpos[:] = q
     ov = overlaps(m, d, pairs)
-    real = {g for a, b, on, _ in ov if on for g in (a, b)}             # pairs the simulation collides: red
-    would = {g for a, b, on, _ in ov if not on for g in (a, b)} - real  # would touch with every self-collision on: amber
+    real = {g for a, b, on, _ in ov if on for g in (a, b)}  # pairs the simulation collides: red
+    would = {
+        g for a, b, on, _ in ov if not on for g in (a, b)
+    } - real  # would touch with every self-collision on: amber
     rgba = m.geom_rgba.copy()
     for g in range(m.ngeom):
-        coll = m.geom_bodyid[g] != 0 and (m.geom_contype[g] or m.geom_conaffinity[g]) and name(m, mujoco.mjtObj.mjOBJ_BODY, m.geom_bodyid[g]).startswith("a_")
-        m.geom_rgba[g] = ([0.9, 0.15, 0.1, 0.95] if g in real else [0.95, 0.65, 0.15, 0.9] if g in would else [0.45, 0.65, 0.95, 0.75]) if coll else [0, 0, 0, 0]
+        coll = (
+            m.geom_bodyid[g] != 0
+            and (m.geom_contype[g] or m.geom_conaffinity[g])
+            and name(m, mujoco.mjtObj.mjOBJ_BODY, m.geom_bodyid[g]).startswith("a_")
+        )
+        m.geom_rgba[g] = (
+            (
+                [0.9, 0.15, 0.1, 0.95]
+                if g in real
+                else [0.95, 0.65, 0.15, 0.9]
+                if g in would
+                else [0.45, 0.65, 0.95, 0.75]
+            )
+            if coll
+            else [0, 0, 0, 0]
+        )
     m.geom_rgba[0] = [0, 0, 0, 0]
     try:
         r = mujoco.Renderer(m, 480, 360)
-        opt = mujoco.MjvOption(); opt.geomgroup[:] = 1
+        opt = mujoco.MjvOption()
+        opt.geomgroup[:] = 1
         frames = []
         for az in (180.0, 90.0):
             pel = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "a_pelvis")
-            cam = mujoco.MjvCamera(); cam.lookat[:] = d.xpos[pel] + np.array([0, 0, 0.1]); cam.distance = 3.6; cam.azimuth = az; cam.elevation = -8
-            mujoco.mj_forward(m, d); r.update_scene(d, cam, opt); frames.append(r.render())
+            cam = mujoco.MjvCamera()
+            cam.lookat[:] = d.xpos[pel] + np.array([0, 0, 0.1])
+            cam.distance = 3.6
+            cam.azimuth = az
+            cam.elevation = -8
+            mujoco.mj_forward(m, d)
+            r.update_scene(d, cam, opt)
+            frames.append(r.render())
         r.close()
     finally:
         m.geom_rgba[:] = rgba
     img = np.concatenate(frames, axis=1)
     try:
         from PIL import Image
+
         Image.fromarray(img).save(file)
     except ImportError:
         import imageio.v3 as iio
+
         iio.imwrite(file, img)
 
 
 def report_html(results, shots, out: pathlib.Path):
     def esc(x):
         return html.escape(str(x))
+
     rows = []
     for r in results:
         p = r["poses"]
-        rows.append(f"<tr><td>{esc(r['robot'])}</td><td>{r['collision_geoms']}</td><td>{r['pairs_non_adjacent']}</td><td>{r['pairs_enabled']}</td>"
-                    + "".join(f"<td class='{'bad' if p[k]['enabled_overlaps'] else 'good'}'>{len(p[k]['enabled_overlaps'])}</td><td>{len(p[k]['all_overlaps'])}</td>" for k in ("zero", "rest", "tpose"))
-                    + "</tr>")
+        rows.append(
+            f"<tr><td>{esc(r['robot'])}</td><td>{r['collision_geoms']}</td><td>{r['pairs_non_adjacent']}</td><td>{r['pairs_enabled']}</td>"
+            + "".join(
+                f"<td class='{'bad' if p[k]['enabled_overlaps'] else 'good'}'>{len(p[k]['enabled_overlaps'])}</td><td>{len(p[k]['all_overlaps'])}</td>"
+                for k in ("zero", "rest", "tpose")
+            )
+            + "</tr>"
+        )
     sections = []
     for r in results:
         sw = r["swing"]
         joints = sorted(sw.items(), key=lambda kv: -kv[1]["worst_any_mm"])
-        jrows = "".join(f"<tr><td><code>{esc(j)}</code></td><td>{v['with_enabled_overlap']}/{v['samples']}</td><td>{v['worst_enabled_mm']}</td>"
-                        f"<td>{v['with_any_overlap']}/{v['samples']}</td><td>{v['worst_any_mm']}</td><td>{esc(', '.join(f'{k} {mm} mm' for k, mm in v['pairs'].items()))}</td></tr>"
-                        for j, v in joints if v["with_any_overlap"])
+        jrows = "".join(
+            f"<tr><td><code>{esc(j)}</code></td><td>{v['with_enabled_overlap']}/{v['samples']}</td><td>{v['worst_enabled_mm']}</td>"
+            f"<td>{v['with_any_overlap']}/{v['samples']}</td><td>{v['worst_any_mm']}</td><td>{esc(', '.join(f'{k} {mm} mm' for k, mm in v['pairs'].items()))}</td></tr>"
+            for j, v in joints
+            if v["with_any_overlap"]
+        )
         tp = r["poses"]["tpose"]["all_overlaps"] + r["poses"]["rest"]["all_overlaps"]
-        figs = "".join(f"<figure><img src='{esc(s.name)}' alt='{esc(r['robot'])} {esc(pose)} collision primitives'><figcaption>{esc(r['robot'])}, {esc(pose)}: front and side; red = overlap the simulation collides, amber = would overlap with every self-collision on</figcaption></figure>"
-                       for (rb, pose), s in shots.items() if rb == r["robot"])
+        figs = "".join(
+            f"<figure><img src='{esc(s.name)}' alt='{esc(r['robot'])} {esc(pose)} collision primitives'><figcaption>{esc(r['robot'])}, {esc(pose)}: front and side; red = overlap the simulation collides, amber = would overlap with every self-collision on</figcaption></figure>"
+            for (rb, pose), s in shots.items()
+            if rb == r["robot"]
+        )
         sections.append(f"""
-  <h2>{esc(r['robot'])}</h2>
-  <p>{r['collision_geoms']} collision primitives, {r['pairs_non_adjacent']} pairs on non-adjacent bodies, of which the simulation collides
-  {r['pairs_enabled']}: {esc(', '.join(r['enabled_pairs'][:12]) or 'none')}{' ...' if len(r['enabled_pairs']) > 12 else ''}.</p>
-  <p>Rest and T-pose overlaps among all non-adjacent pairs: {esc(', '.join(f'{a} / {b} {mm} mm' for a, b, mm in tp) or 'none')}.</p>
+  <h2>{esc(r["robot"])}</h2>
+  <p>{r["collision_geoms"]} collision primitives, {r["pairs_non_adjacent"]} pairs on non-adjacent bodies, of which the simulation collides
+  {r["pairs_enabled"]}: {esc(", ".join(r["enabled_pairs"][:12]) or "none")}{" ..." if len(r["enabled_pairs"]) > 12 else ""}.</p>
+  <p>Rest and T-pose overlaps among all non-adjacent pairs: {esc(", ".join(f"{a} / {b} {mm} mm" for a, b, mm in tp) or "none")}.</p>
   <div class="pair">{figs}</div>
-  <table><tr><th>Joint swept</th><th>Enabled pairs overlap</th><th>Worst (mm)</th><th>Any pair overlaps</th><th>Worst (mm)</th><th>Deepest pairs</th></tr>{jrows or '<tr><td colspan=6>no overlap in any swing</td></tr>'}</table>""")
-    out.write_text(f"""<!doctype html>
+  <table><tr><th>Joint swept</th><th>Enabled pairs overlap</th><th>Worst (mm)</th><th>Any pair overlaps</th><th>Worst (mm)</th><th>Deepest pairs</th></tr>{jrows or "<tr><td colspan=6>no overlap in any swing</td></tr>"}</table>""")
+    out.write_text(
+        f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Self-Collision Audit</title>
 <style>
@@ -223,10 +313,12 @@ def report_html(results, shots, out: pathlib.Path):
   on bodies that are not the same or parent and child; overlap = deeper than {TOL * 1000:.1f} mm. "Enabled" = the simulation collides the pair
   (contype / conaffinity, no exclude). "Any" = every non-adjacent pair, which is what AGENTS.md section 3 asks to collide.</p>
   <table><tr><th>Body</th><th>Primitives</th><th>Non-adjacent pairs</th><th>Enabled</th>
-  <th>Zero: enabled</th><th>any</th><th>Rest: enabled</th><th>any</th><th>T-pose: enabled</th><th>any</th></tr>{''.join(rows)}</table>
-  {''.join(sections)}
+  <th>Zero: enabled</th><th>any</th><th>Rest: enabled</th><th>any</th><th>T-pose: enabled</th><th>any</th></tr>{"".join(rows)}</table>
+  {"".join(sections)}
 </main></body></html>
-""", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
 
 
 def main():
@@ -235,22 +327,30 @@ def main():
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--out", default=str(ROOT / "SCREENSHOTS" / f"collision-{dt.date.today():%y%m%d}"))
     a = ap.parse_args()
-    out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True)
+    out = pathlib.Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
     results, shots, fail = [], {}, False
     for robot in a.robots:
         m, poses, pairs, res = audit(robot)
         results.append(res)
         for pose in ("zero", "rest", "tpose"):
             e = res["poses"][pose]["enabled_overlaps"]
-            print(f"{robot:6s} {pose:6s} enabled overlaps {len(e)}  any {len(res['poses'][pose]['all_overlaps'])}" + (f"  {e}" if e else ""))
+            print(
+                f"{robot:6s} {pose:6s} enabled overlaps {len(e)}  any {len(res['poses'][pose]['all_overlaps'])}"
+                + (f"  {e}" if e else "")
+            )
             fail |= bool(e)
-        swing_on = sum(v["with_enabled_overlap"] > 0 for v in res["swing"].values()); swing_any = sum(v["with_any_overlap"] > 0 for v in res["swing"].values())
-        print(f"{robot:6s} swing: {swing_on} of {len(res['swing'])} joints overlap on an enabled pair, {swing_any} on any pair")
+        swing_on = sum(v["with_enabled_overlap"] > 0 for v in res["swing"].values())
+        swing_any = sum(v["with_any_overlap"] > 0 for v in res["swing"].values())
+        print(
+            f"{robot:6s} swing: {swing_on} of {len(res['swing'])} joints overlap on an enabled pair, {swing_any} on any pair"
+        )
         if not a.no_render:
             for pose in ("rest", "tpose"):
                 f = out / f"{robot}_{pose}.png"
                 try:
-                    render(m, poses[pose], pairs, f); shots[(robot, pose)] = f
+                    render(m, poses[pose], pairs, f)
+                    shots[(robot, pose)] = f
                 except Exception as ex:  # no OpenGL context: the numbers still stand
                     print(f"render skipped ({ex})")
     (out / "collision_audit.json").write_text(json.dumps(results, indent=1), encoding="utf-8")

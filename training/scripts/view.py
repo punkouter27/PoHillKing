@@ -2,11 +2,18 @@
   uv run python scripts/view.py [scene_koth_2p_train.xml] [--no-boxes]
 Every 4 s a pool box is fired at a robot, the same way training and Unity do it (write qpos/qvel of the free joint).
 Viewer keys: space = pause, backspace = reset, double-click + ctrl-drag = push a body."""
-import os, sys, time
+
+import os
+import sys
+import time
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import mujoco, mujoco.viewer, numpy as np
+import mujoco
+import mujoco.viewer
+import numpy as np
 from koth.build_mjcf import ASSETS
 from koth import cpu_sim
+
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 scene = os.path.join(ASSETS, args[0] if args else "scene_koth_2p_train.xml")
 boxes = "--no-boxes" not in sys.argv
@@ -28,20 +35,25 @@ with mujoco.viewer.launch_passive(m, d) as v:
     while v.is_running():
         t0 = time.perf_counter()
         if boxes and pool and d.time >= next_fire:
-            target = d.qpos[roots[shot % len(roots)]:][:3] + np.array([0, 0, 0.1])
+            target = d.qpos[roots[shot % len(roots)] :][:3] + np.array([0, 0, 0.1])
             ang = rng.uniform(0, 2 * np.pi)
             start = target + np.array([3 * np.cos(ang), 3 * np.sin(ang), 0.3])
             vel = (target - start) / np.linalg.norm(target - start) * rng.uniform(3, 8)
             q, dof = pool[shot % len(pool)]
-            d.qpos[q:q + 7] = [*start, 1, 0, 0, 0]; d.qvel[dof:dof + 6] = [*vel, 0, 0, 0]
+            d.qpos[q : q + 7] = [*start, 1, 0, 0, 0]
+            d.qvel[dof : dof + 6] = [*vel, 0, 0, 0]
             life[shot % len(pool)] = d.time + 2.5
-            shot += 1; next_fire = d.time + 4.0
-        for i, (q, dof) in enumerate(pool):     # pin parked boxes, same rule as training and Unity
+            shot += 1
+            next_fire = d.time + 4.0
+        for i, (q, dof) in enumerate(pool):  # pin parked boxes, same rule as training and Unity
             if d.time >= life[i]:
-                d.qpos[q:q + 7] = park[i]; d.qvel[dof:dof + 6] = 0
-        for _ in range(8):                      # 8 x 2 ms = 16 ms per frame, ~real time at 60 fps
+                d.qpos[q : q + 7] = park[i]
+                d.qvel[dof : dof + 6] = 0
+        for _ in range(8):  # 8 x 2 ms = 16 ms per frame, ~real time at 60 fps
             mujoco.mj_step(m, d)
-        if d.time < 0.02:                       # viewer reset (backspace) -> restore the stance
-            mujoco.mj_resetDataKeyframe(m, d, 0); next_fire = 3.0; life = [0.0] * len(pool)
+        if d.time < 0.02:  # viewer reset (backspace) -> restore the stance
+            mujoco.mj_resetDataKeyframe(m, d, 0)
+            next_fire = 3.0
+            life = [0.0] * len(pool)
         v.sync()
         time.sleep(max(0, 0.016 - (time.perf_counter() - t0)))

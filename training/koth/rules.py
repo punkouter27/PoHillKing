@@ -11,10 +11,11 @@ Unity reads the same numbers from joint_map.json "arena" (written by koth/build_
               cfg["terminate_on_leg_contact"], own foot-foot / foot-shin contact. The tipped threshold is looser
               than FALL_UP on purpose (a stumble that recovers is not a fall during training).
 """
+
 import numpy as np
 
 PLATEAU_R = 1.5
-SLOPE_K = 1.0 / 9.0          # z = -k (r - 1.5)^2  -> 45 deg at r = 6
+SLOPE_K = 1.0 / 9.0  # z = -k (r - 1.5)^2  -> 45 deg at r = 6
 OUT_RADIUS = 1.7
 FALL_HEIGHT = 0.3
 FALL_UP = 0.3
@@ -43,4 +44,10 @@ def is_out(pos, quat, arena: bool = True) -> bool:
 
 def arena_json() -> dict:
     """The joint_map.json "arena" object (Unity mirror)."""
-    return {"plateau_r": PLATEAU_R, "slope_k": SLOPE_K, "out_radius": OUT_RADIUS, "fall_height": FALL_HEIGHT, "fall_up": FALL_UP}
+    return {
+        "plateau_r": PLATEAU_R,
+        "slope_k": SLOPE_K,
+        "out_radius": OUT_RADIUS,
+        "fall_height": FALL_HEIGHT,
+        "fall_up": FALL_UP,
+    }

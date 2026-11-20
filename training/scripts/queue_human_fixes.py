@@ -5,7 +5,12 @@
 Starts TensorBoard on port 6006, gates every checkpoint on graduation & evaluation bars before exporting
 to Assets/PoKingHill/Models/<robot>/, and prunes intermediate checkpoints when finished.
 """
-import json, os, socket, subprocess, sys, time
+
+import json
+import os
+import socket
+import subprocess
+import sys
 from datetime import datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,7 +35,11 @@ def ensure_tensorboard():
             note("TensorBoard already listening on :6006")
             return
     tb = os.path.join(ROOT, ".venv", "Scripts", "tensorboard.exe")
-    cmd = [tb, "--logdir", "runs", "--port", "6006"] if os.path.exists(tb) else [PY, "-m", "tensorboard.main", "--logdir", "runs", "--port", "6006"]
+    cmd = (
+        [tb, "--logdir", "runs", "--port", "6006"]
+        if os.path.exists(tb)
+        else [PY, "-m", "tensorboard.main", "--logdir", "runs", "--port", "6006"]
+    )
     subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     note("Started TensorBoard on http://localhost:6006")
 
@@ -92,28 +101,93 @@ def step1_grandpa_finetune():
         w = walker_ckpt("grandpa")
         a = att_ckpt("grandpa")
         f1 = "runs/r4league/grandpa_fight1/model_final.pt"
-        rc = run_cmd([
-            "scripts/train.py", "--rung", "r4league", "--name", "grandpa_fight2",
-            "--num-envs", "2048", "--iters", "400", "--warm", f1, "--critic-warmup", "20",
-            "--opponent", f"{w}:stand", f"{w}:stand", a, f1,
-            "--reward", "self_edge=-5.0", "termination=-25.0", "--leg-contact-rule", "unity"
-        ], robot="grandpa", log_path=os.path.join(LOG_DIR, "grandpa_fight2.log"))
+        rc = run_cmd(
+            [
+                "scripts/train.py",
+                "--rung",
+                "r4league",
+                "--name",
+                "grandpa_fight2",
+                "--num-envs",
+                "2048",
+                "--iters",
+                "400",
+                "--warm",
+                f1,
+                "--critic-warmup",
+                "20",
+                "--opponent",
+                f"{w}:stand",
+                f"{w}:stand",
+                a,
+                f1,
+                "--reward",
+                "self_edge=-5.0",
+                "termination=-25.0",
+                "--leg-contact-rule",
+                "unity",
+            ],
+            robot="grandpa",
+            log_path=os.path.join(LOG_DIR, "grandpa_fight2.log"),
+        )
         if rc != 0:
             note(f"Fix #6: grandpa_fight2 FAILED (rc={rc})")
             return
     w = walker_ckpt("grandpa")
     f1 = "runs/r4league/grandpa_fight1/model_final.pt"
-    att_rows = run_eval_rows(["--rung", "r4att", "--ckpt", ckpt, "--opponent", w, "--seeds", "3", "--num-envs", "256", "--seconds", "15", "--leg-contact-rule", "unity"], robot="grandpa")
-    vs_f1 = run_eval_rows(["--rung", "r4league", "--ckpt", ckpt, "--opponent", f1, "--seeds", "3", "--num-envs", "256", "--seconds", "25", "--leg-contact-rule", "unity"], robot="grandpa")
+    att_rows = run_eval_rows(
+        [
+            "--rung",
+            "r4att",
+            "--ckpt",
+            ckpt,
+            "--opponent",
+            w,
+            "--seeds",
+            "3",
+            "--num-envs",
+            "256",
+            "--seconds",
+            "15",
+            "--leg-contact-rule",
+            "unity",
+        ],
+        robot="grandpa",
+    )
+    vs_f1 = run_eval_rows(
+        [
+            "--rung",
+            "r4league",
+            "--ckpt",
+            ckpt,
+            "--opponent",
+            f1,
+            "--seeds",
+            "3",
+            "--num-envs",
+            "256",
+            "--seconds",
+            "25",
+            "--leg-contact-rule",
+            "unity",
+        ],
+        robot="grandpa",
+    )
     with open(os.path.join(LOG_DIR, "grandpa_fight2_eval.json"), "w", encoding="utf-8") as f:
         json.dump({"r4att": att_rows, "vs_fight1": vs_f1}, f, indent=2)
     win_att = sum(r.get("attacker_ejects_defender", 0.0) for r in att_rows) / max(len(att_rows), 1)
-    win_f1 = sum(r.get("attacker_ejects_defender", 0.0) / max(r.get("attacker_ejects_defender", 0.0) + r.get("attacker_lost", 0.0), 1e-6) for r in vs_f1) / max(len(vs_f1), 1)
+    win_f1 = sum(
+        r.get("attacker_ejects_defender", 0.0)
+        / max(r.get("attacker_ejects_defender", 0.0) + r.get("attacker_lost", 0.0), 1e-6)
+        for r in vs_f1
+    ) / max(len(vs_f1), 1)
     note(f"Fix #6: grandpa_fight2 r4att win_rate={win_att:.3f} (fight1=0.790), vs fight1 decided share={win_f1:.3f}")
     if win_att >= 0.79 and win_f1 >= 0.48:
         run_cmd(["scripts/export_policy.py", "--ckpt", ckpt, "--name", "fighter", "--value"], robot="grandpa")
         run_cmd(["scripts/export_mlp.py"], robot="grandpa")
-        note("Fix #6: promoted grandpa_fight2 -> Assets/PoKingHill/Models/grandpa/fighter_policy.onnx + fighter_mlp.bytes")
+        note(
+            "Fix #6: promoted grandpa_fight2 -> Assets/PoKingHill/Models/grandpa/fighter_policy.onnx + fighter_mlp.bytes"
+        )
     else:
         note("Fix #6: keeping grandpa_fight1 as shipped fighter (grandpa_fight2 kept in runs/r4league/grandpa_fight2)")
 
@@ -125,10 +199,23 @@ def step2_human_getup():
         ckpt = f"runs/getup/{name}/model_final.pt"
         if not os.path.exists(os.path.join(ROOT, ckpt)):
             note(f"Fix #2: starting {name} (getup, 1600 iters, 4096 envs, graduate-reward 18)")
-            rc = run_cmd([
-                "scripts/train.py", "--rung", "getup", "--name", name,
-                "--num-envs", "4096", "--iters", "1600", "--graduate-reward", "18"
-            ], robot=who, log_path=os.path.join(LOG_DIR, f"{name}.log"))
+            rc = run_cmd(
+                [
+                    "scripts/train.py",
+                    "--rung",
+                    "getup",
+                    "--name",
+                    name,
+                    "--num-envs",
+                    "4096",
+                    "--iters",
+                    "1600",
+                    "--graduate-reward",
+                    "18",
+                ],
+                robot=who,
+                log_path=os.path.join(LOG_DIR, f"{name}.log"),
+            )
             if rc != 0:
                 note(f"Fix #2: {name} FAILED (rc={rc})")
                 continue
@@ -139,7 +226,11 @@ def step2_human_getup():
         note(f"Fix #2: {name} eval stand_by_4s={up4:.3f}")
         run_cmd(["scripts/export_policy.py", "--ckpt", ckpt, "--name", "getup"], robot=who)
         # Also record CPU MuJoCo getup_stats.json for the Unity gate
-        run_cmd(["scripts/getup_stats.py", "--policy", "getup", "--drops", "200"], robot=who, log_path=os.path.join(LOG_DIR, f"{name}_cpu_stats.json"))
+        run_cmd(
+            ["scripts/getup_stats.py", "--policy", "getup", "--drops", "200"],
+            robot=who,
+            log_path=os.path.join(LOG_DIR, f"{name}_cpu_stats.json"),
+        )
         note(f"Fix #2: exported Assets/PoKingHill/Models/{who}/getup_policy.onnx")
 
 
@@ -150,7 +241,10 @@ def step3_cross_human():
     for me in humans:
         for other in humans:
             if me != other:
-                run_cmd(["-m", "koth.build_mjcf", "mix", me, other], log_path=os.path.join(LOG_DIR, f"build_mix_{me}_{other}.log"))
+                run_cmd(
+                    ["-m", "koth.build_mjcf", "mix", me, other],
+                    log_path=os.path.join(LOG_DIR, f"build_mix_{me}_{other}.log"),
+                )
 
     for me in humans:
         others = [h for h in humans if h != me]
@@ -163,13 +257,34 @@ def step3_cross_human():
             if not os.path.exists(os.path.join(ROOT, ckpt)):
                 note(f"Fix #3: starting {stage_name} ({rung}, ladder curriculum, 300 iters, 2048 envs)")
                 ow, oa, of = walker_ckpt(other), att_ckpt(other), best_fighter_ckpt(other)
-                rc = run_cmd([
-                    "scripts/train.py", "--rung", rung, "--name", stage_name,
-                    "--num-envs", "2048", "--iters", "300", "--warm", cur,
-                    "--opponent", f"{ow}:stand", oa, of,
-                    "--frozen-deterministic", "--critic-warmup", "15", "--reward", "draw=-20",
-                    "--curriculum", "ladder"
-                ], robot=me, log_path=os.path.join(LOG_DIR, f"{stage_name}.log"))
+                rc = run_cmd(
+                    [
+                        "scripts/train.py",
+                        "--rung",
+                        rung,
+                        "--name",
+                        stage_name,
+                        "--num-envs",
+                        "2048",
+                        "--iters",
+                        "300",
+                        "--warm",
+                        cur,
+                        "--opponent",
+                        f"{ow}:stand",
+                        oa,
+                        of,
+                        "--frozen-deterministic",
+                        "--critic-warmup",
+                        "15",
+                        "--reward",
+                        "draw=-20",
+                        "--curriculum",
+                        "ladder",
+                    ],
+                    robot=me,
+                    log_path=os.path.join(LOG_DIR, f"{stage_name}.log"),
+                )
                 if rc != 0:
                     note(f"Fix #3: {stage_name} FAILED (rc={rc})")
                     break
@@ -182,13 +297,35 @@ def step3_cross_human():
         if not os.path.exists(os.path.join(ROOT, final_ckpt)):
             note(f"Fix #3: starting {final_name} ({own_rung} own-body anchor, 200 iters, 2048 envs)")
             mw, ma, mf = walker_ckpt(me), att_ckpt(me), best_fighter_ckpt(me)
-            rc = run_cmd([
-                "scripts/train.py", "--rung", own_rung, "--name", final_name,
-                "--num-envs", "2048", "--iters", "200", "--warm", cur,
-                "--opponent", f"{mw}:stand", f"{mw}:stand", ma, mf,
-                "--critic-warmup", "10", "--reward", "self_edge=-5.0", "termination=-25.0",
-                "--leg-contact-rule", "unity"
-            ], robot=me, log_path=os.path.join(LOG_DIR, f"{final_name}.log"))
+            rc = run_cmd(
+                [
+                    "scripts/train.py",
+                    "--rung",
+                    own_rung,
+                    "--name",
+                    final_name,
+                    "--num-envs",
+                    "2048",
+                    "--iters",
+                    "200",
+                    "--warm",
+                    cur,
+                    "--opponent",
+                    f"{mw}:stand",
+                    f"{mw}:stand",
+                    ma,
+                    mf,
+                    "--critic-warmup",
+                    "10",
+                    "--reward",
+                    "self_edge=-5.0",
+                    "termination=-25.0",
+                    "--leg-contact-rule",
+                    "unity",
+                ],
+                robot=me,
+                log_path=os.path.join(LOG_DIR, f"{final_name}.log"),
+            )
             if rc != 0:
                 note(f"Fix #3: {final_name} FAILED (rc={rc})")
                 continue
@@ -196,24 +333,110 @@ def step3_cross_human():
         # Evaluate cross-human and own-body bars
         eval_summary = {}
         mw, mf = walker_ckpt(me), best_fighter_ckpt(me)
-        eval_summary["r4att_own"] = run_eval_rows(["--rung", "r4att", "--ckpt", final_ckpt, "--opponent", mw, "--seeds", "3", "--num-envs", "256", "--seconds", "15", "--leg-contact-rule", "unity"], robot=me)
-        eval_summary["vs_own_fight1"] = run_eval_rows(["--rung", own_rung, "--ckpt", final_ckpt, "--opponent", mf, "--seeds", "3", "--num-envs", "256", "--seconds", "25", "--leg-contact-rule", "unity"], robot=me)
+        eval_summary["r4att_own"] = run_eval_rows(
+            [
+                "--rung",
+                "r4att",
+                "--ckpt",
+                final_ckpt,
+                "--opponent",
+                mw,
+                "--seeds",
+                "3",
+                "--num-envs",
+                "256",
+                "--seconds",
+                "15",
+                "--leg-contact-rule",
+                "unity",
+            ],
+            robot=me,
+        )
+        eval_summary["vs_own_fight1"] = run_eval_rows(
+            [
+                "--rung",
+                own_rung,
+                "--ckpt",
+                final_ckpt,
+                "--opponent",
+                mf,
+                "--seeds",
+                "3",
+                "--num-envs",
+                "256",
+                "--seconds",
+                "25",
+                "--leg-contact-rule",
+                "unity",
+            ],
+            robot=me,
+        )
         for other in others:
             of = best_fighter_ckpt(other)
-            eval_summary[f"vs_{other}"] = run_eval_rows(["--rung", f"{me}_vs_{other}", "--ckpt", final_ckpt, "--opponent", of, "--seeds", "3", "--num-envs", "256", "--seconds", "25", "--leg-contact-rule", "unity"], robot=me)
-            eval_summary[f"base_vs_{other}"] = run_eval_rows(["--rung", f"{me}_vs_{other}", "--ckpt", mf, "--opponent", of, "--seeds", "3", "--num-envs", "256", "--seconds", "25", "--leg-contact-rule", "unity"], robot=me)
+            eval_summary[f"vs_{other}"] = run_eval_rows(
+                [
+                    "--rung",
+                    f"{me}_vs_{other}",
+                    "--ckpt",
+                    final_ckpt,
+                    "--opponent",
+                    of,
+                    "--seeds",
+                    "3",
+                    "--num-envs",
+                    "256",
+                    "--seconds",
+                    "25",
+                    "--leg-contact-rule",
+                    "unity",
+                ],
+                robot=me,
+            )
+            eval_summary[f"base_vs_{other}"] = run_eval_rows(
+                [
+                    "--rung",
+                    f"{me}_vs_{other}",
+                    "--ckpt",
+                    mf,
+                    "--opponent",
+                    of,
+                    "--seeds",
+                    "3",
+                    "--num-envs",
+                    "256",
+                    "--seconds",
+                    "25",
+                    "--leg-contact-rule",
+                    "unity",
+                ],
+                robot=me,
+            )
         with open(os.path.join(LOG_DIR, f"{final_name}_eval.json"), "w", encoding="utf-8") as f:
             json.dump(eval_summary, f, indent=2)
 
-        att_win = sum(r.get("attacker_ejects_defender", 0.0) for r in eval_summary["r4att_own"]) / max(len(eval_summary["r4att_own"]), 1)
-        decided = lambda r: r.get("attacker_ejects_defender", 0.0) / max(r.get("attacker_ejects_defender", 0.0) + r.get("attacker_lost", 0.0), 1e-6)
-        xh_win = sum(sum(decided(r) for r in eval_summary[f"vs_{o}"]) / max(len(eval_summary[f"vs_{o}"]), 1) for o in others) / len(others)
-        base_xh_win = sum(sum(decided(r) for r in eval_summary[f"base_vs_{o}"]) / max(len(eval_summary[f"base_vs_{o}"]), 1) for o in others) / len(others)
-        note(f"Fix #3: {final_name} r4att_own={att_win:.3f}, cross-human decided share={xh_win:.3f} (baseline={base_xh_win:.3f})")
+        att_win = sum(r.get("attacker_ejects_defender", 0.0) for r in eval_summary["r4att_own"]) / max(
+            len(eval_summary["r4att_own"]), 1
+        )
+        decided = lambda r: (
+            r.get("attacker_ejects_defender", 0.0)
+            / max(r.get("attacker_ejects_defender", 0.0) + r.get("attacker_lost", 0.0), 1e-6)
+        )
+        xh_win = sum(
+            sum(decided(r) for r in eval_summary[f"vs_{o}"]) / max(len(eval_summary[f"vs_{o}"]), 1) for o in others
+        ) / len(others)
+        base_xh_win = sum(
+            sum(decided(r) for r in eval_summary[f"base_vs_{o}"]) / max(len(eval_summary[f"base_vs_{o}"]), 1)
+            for o in others
+        ) / len(others)
+        note(
+            f"Fix #3: {final_name} r4att_own={att_win:.3f}, cross-human decided share={xh_win:.3f} (baseline={base_xh_win:.3f})"
+        )
         if att_win >= 0.75 and xh_win > base_xh_win:
             run_cmd(["scripts/export_policy.py", "--ckpt", final_ckpt, "--name", "fighter", "--value"], robot=me)
             run_cmd(["scripts/export_mlp.py"], robot=me)
-            note(f"Fix #3: promoted {final_name} -> Assets/PoKingHill/Models/{me}/fighter_policy.onnx + fighter_mlp.bytes")
+            note(
+                f"Fix #3: promoted {final_name} -> Assets/PoKingHill/Models/{me}/fighter_policy.onnx + fighter_mlp.bytes"
+            )
         else:
             note(f"Fix #3: {final_name} evaluated and saved; keeping baseline fighter_policy.onnx for {me}")
 
@@ -230,4 +453,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

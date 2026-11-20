@@ -8,7 +8,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 MIN=${1:-25}; ENVS=${2:-2048}; PY=.venv/Scripts/python.exe
-OUT=../DOCS/20261114/amp-walker; mkdir -p "$OUT"
+OUT=../docs/20261114/amp-walker; mkdir -p "$OUT"
 export KOTH_ROBOT=kim
 WARM=runs/amp/kim_walker_warm.pt
 [ -f "$WARM" ] || $PY scripts/onnx_to_ckpt.py --onnx ../Assets/PoKingHill/Models/kim/walker_policy.onnx --out "$WARM"
