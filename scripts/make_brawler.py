@@ -1,12 +1,15 @@
 """Generate the CC0 procedural heavyweight wrestler "Brawler" (1.84 m, 118 kg) rig JSON and GLB scaffold.
 
-  uv --directory training run python ..\tools\make_brawler.py
+  uv --directory training run python ..\tools\\make_brawler.py
 
 Writes:
   training/assets/brawler/brawler_rig.json
   Assets/PoKingHill/Fighters/Brawler/brawler.glb
 """
-import json, os, struct
+
+import json
+import os
+import struct
 import numpy as np
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -14,26 +17,71 @@ HEIGHT = 1.84
 
 
 def _box_mesh(lo, hi):
-    x0, y0, z0 = lo; x1, y1, z1 = hi
-    v = np.array([
-        [x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0],
-        [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1],
-    ], dtype=np.float32)
-    idx = np.array([
-        0, 2, 1, 0, 3, 2,
-        4, 5, 6, 4, 6, 7,
-        0, 1, 5, 0, 5, 4,
-        1, 2, 6, 1, 6, 5,
-        2, 3, 7, 2, 7, 6,
-        3, 0, 4, 3, 4, 7,
-    ], dtype=np.uint16)
+    x0, y0, z0 = lo
+    x1, y1, z1 = hi
+    v = np.array(
+        [
+            [x0, y0, z0],
+            [x1, y0, z0],
+            [x1, y1, z0],
+            [x0, y1, z0],
+            [x0, y0, z1],
+            [x1, y0, z1],
+            [x1, y1, z1],
+            [x0, y1, z1],
+        ],
+        dtype=np.float32,
+    )
+    idx = np.array(
+        [
+            0,
+            2,
+            1,
+            0,
+            3,
+            2,
+            4,
+            5,
+            6,
+            4,
+            6,
+            7,
+            0,
+            1,
+            5,
+            0,
+            5,
+            4,
+            1,
+            2,
+            6,
+            1,
+            6,
+            5,
+            2,
+            3,
+            7,
+            2,
+            7,
+            6,
+            3,
+            0,
+            4,
+            3,
+            4,
+            7,
+        ],
+        dtype=np.uint16,
+    )
     return v, idx
 
 
 def build_rig() -> dict:
     # Model coordinates: +x forward, +y left, +z up. Feet rest at z = 0.
     def bone(head, tail, half_ext, r50):
-        h = np.array(head, dtype=float); t = np.array(tail, dtype=float); e = np.array(half_ext, dtype=float)
+        h = np.array(head, dtype=float)
+        t = np.array(tail, dtype=float)
+        e = np.array(half_ext, dtype=float)
         lo = np.minimum(h, t) - e
         hi = np.maximum(h, t) + e
         return {
@@ -60,7 +108,9 @@ def build_rig() -> dict:
         bones[f"LowerArm.{side}"] = bone([0.01, s * 0.27, 1.17], [0.04, s * 0.28, 0.91], [0.050, 0.050, 0.02], 0.048)
         bones[f"Hand.{side}"] = bone([0.04, s * 0.28, 0.91], [0.04, s * 0.28, 0.78], [0.045, 0.032, 0.01], 0.036)
         bones[f"UpperLeg.{side}"] = bone([0.0, s * 0.125, 0.95], [0.01, s * 0.130, 0.51], [0.092, 0.092, 0.04], 0.092)
-        bones[f"LowerLeg.{side}"] = bone([0.01, s * 0.130, 0.51], [-0.01, s * 0.130, 0.085], [0.062, 0.062, 0.03], 0.060)
+        bones[f"LowerLeg.{side}"] = bone(
+            [0.01, s * 0.130, 0.51], [-0.01, s * 0.130, 0.085], [0.062, 0.062, 0.03], 0.060
+        )
         bones[f"Foot.{side}"] = bone([-0.01, s * 0.130, 0.085], [0.08, s * 0.130, 0.035], [0.065, 0.052, 0.035], 0.050)
         bones[f"Toe.{side}"] = bone([0.08, s * 0.130, 0.035], [0.185, s * 0.130, 0.0], [0.045, 0.050, 0.02], 0.035)
 
@@ -99,7 +149,16 @@ def write_procedural_glb(path: str, rig: dict):
         "scene": 0,
         "scenes": [{"nodes": [0]}],
         "nodes": [{"name": "Brawler", "mesh": 0}],
-        "materials": [{"name": "WrestlerMat", "pbrMetallicRoughness": {"baseColorFactor": [0.78, 0.32, 0.22, 1.0], "roughnessFactor": 0.65, "metallicFactor": 0.0}}],
+        "materials": [
+            {
+                "name": "WrestlerMat",
+                "pbrMetallicRoughness": {
+                    "baseColorFactor": [0.78, 0.32, 0.22, 1.0],
+                    "roughnessFactor": 0.65,
+                    "metallicFactor": 0.0,
+                },
+            }
+        ],
         "meshes": [{"primitives": [{"attributes": {"POSITION": 1}, "indices": 0, "material": 0}]}],
         "bufferViews": [
             {"buffer": 0, "byteOffset": 0, "byteLength": len(ib), "target": 34963},
@@ -107,8 +166,14 @@ def write_procedural_glb(path: str, rig: dict):
         ],
         "accessors": [
             {"bufferView": 0, "componentType": 5123, "count": int(len(indices)), "type": "SCALAR"},
-            {"bufferView": 1, "componentType": 5126, "count": int(len(verts)), "type": "VEC3",
-             "min": verts.min(0).round(4).tolist(), "max": verts.max(0).round(4).tolist()},
+            {
+                "bufferView": 1,
+                "componentType": 5126,
+                "count": int(len(verts)),
+                "type": "VEC3",
+                "min": verts.min(0).round(4).tolist(),
+                "max": verts.max(0).round(4).tolist(),
+            },
         ],
         "buffers": [{"byteLength": len(blob)}],
     }
@@ -117,8 +182,10 @@ def write_procedural_glb(path: str, rig: dict):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:
         f.write(struct.pack("<III", 0x46546C67, 2, 12 + 8 + len(js) + 8 + len(blob)))
-        f.write(struct.pack("<II", len(js), 0x4E4F534A)); f.write(js)
-        f.write(struct.pack("<II", len(blob), 0x004E4942)); f.write(blob)
+        f.write(struct.pack("<II", len(js), 0x4E4F534A))
+        f.write(js)
+        f.write(struct.pack("<II", len(blob), 0x004E4942))
+        f.write(blob)
 
 
 def main():

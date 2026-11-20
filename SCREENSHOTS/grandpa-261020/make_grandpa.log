@@ -26,7 +26,7 @@ INFO MeshOptimizer is available, use library at C:\Program Files\WindowsApps\Ble
 00:17:12 | INFO: Primitives created: 1
 00:17:12 | INFO: Finished glTF 2.0 export in 1.038954734802246 s
 
-   exported C:\Users\punko\Downloads\PoHillKing\Assets\Art\Exports\FBX\Grandpa\Character_TPose.fbx (28554 KB) and C:\Users\punko\Downloads\PoHillKing\Assets\Art\Exports\GLB\Grandpa.glb
+   exported <repo>\Assets\Art\Exports\FBX\Grandpa\Character_TPose.fbx (28554 KB) and <repo>\Assets\Art\Exports\GLB\Grandpa.glb
 4. game rest pose: arms 20.0 degrees out; bbox [-0.21  -0.446  0.   ] [0.256 0.422 1.743]
    Hips         head [0.0, 0.0, 0.9545000195503235]  r50 0.1609  r80 0.185  verts 164
    UpperLeg.L   head [-0.0, 0.10209999978542328, 0.934499979019165]  r50 0.1068  r80 0.1235  verts 2844
@@ -54,7 +54,7 @@ Info: 1077 vertex weights limited
 FBX export starting... 'C:\\Users\\punko\\Downloads\\PoHillKing\\Assets\\PoKingHill\\Fighters\\Grandpa\\grandpa.fbx'
 (bpy.data.armatures['GrandpaRig'], 'POSE')
 export finished in 0.2873 sec.
-   wrote C:\Users\punko\Downloads\PoHillKing\training\assets\grandpa\grandpa_rig.json, C:\Users\punko\Downloads\PoHillKing\Assets\PoKingHill\Fighters\Grandpa/grandpa.fbx, textures ['grandpa_albedo.png', 'grandpa_normal.png']
+   wrote <repo>\training\assets\grandpa\grandpa_rig.json, <repo>\Assets\PoKingHill\Fighters\Grandpa/grandpa.fbx, textures ['grandpa_albedo.png', 'grandpa_normal.png']
 Info: Saved as "Grandpa.blend"
-5. archived C:\Users\punko\Downloads\PoHillKing\Assets\Art\Raw\Grandpa~\Grandpa.blend
+5. archived <repo>\Assets\Art\Raw\Grandpa~\Grandpa.blend
 DONE

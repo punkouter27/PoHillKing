@@ -4,7 +4,7 @@ Warp 1.18.0 initialized:
      "cpu"      : "Intel64 Family 6 Model 165 Stepping 2, GenuineIntel"
      "cuda:0"   : "NVIDIA GeForce RTX 2060" (6 GiB, sm_75, mempool enabled)
    Kernel cache:
-     \\?\C:\Users\punko\AppData\Local\NVIDIA\warp\Cache\1.18.0
+     \<warp cache>\1.18.0
 Module mujoco_warp._src.smooth 7937da7 load on device 'cuda:0' took 6.00 ms  (cached)
 Module _nxn_broadphase__locals__kernel_5424cb63 5424cb6 load on device 'cuda:0' took 2.43 ms  (cached)
 Module ccd_kernel_builder__locals__ccd_kernel_d0b4d6b7 d0b4d6b load on device 'cuda:0' took 4.52 ms  (cached)

@@ -1,16 +1,13 @@
-# Deploys the WebGL build (Builds/WebGL, written by the game's WebGL build menu item or by CI
-# .github/workflows/webgl.yml) to the game's Azure Static Web App, Free tier. The app and resource group
-# come from Tools/webgl.json; sign in to the punkouter27 tenant first (`az login --tenant`; a
+# Deploys the WebGL build in Builds/WebGL (written by scripts/publish_webgl.ps1 -NoPublish or the menu
+# Tools/PoHillKing/Build WebGL) straight from this PC to the game's Azure Static Web App, Free tier. The app and resource group
+# come from scripts/webgl.json; sign in to the punkouter27 tenant first (`az login --tenant`; a
 # bare `az login` finds no subscription).
 #
-# SAME FILE IN EVERY PO UNITY GAME (reference copy: PoHillKing; copy it with
-# this repository).
-#
-#   pwsh -File Tools\deploy_webgl.ps1
+#   pwsh -File scripts\deploy_webgl.ps1
 #
 # Static Web Apps 404s any extension it has no MIME type for, and every file a
 # Unity build with the decompression fallback writes ends in .unityweb, so
-# Tools/webgl/staticwebapp.config.json is copied into the build first. The build
+# scripts/webgl/staticwebapp.config.json is copied into the build first. The build
 # folder is git-ignored and rewritten by every build; the config lives here.
 #
 # The SWA CLI is pinned on purpose.

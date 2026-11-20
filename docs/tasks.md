@@ -142,14 +142,14 @@ Render and audio only: no physics input changes, every component inert in the st
 - [x] F.5 Shockwave (`ShockwaveFeature` renderer feature, only queued while a wave runs) and ground dust ring on hard hits.
 - [x] F.6 Lightning (bolt, flash, distance-delayed thunder) past half storm or with a live thunderstorm; red danger light on the fighter furthest past the rim.
 - [x] F.7 `FX/Fighter.shader` on every opaque fighter material: seat-colour rim (red at the edge), wear from contact force, wet after the sea (plus drips), impact flash.
-- [x] F.8 Summit upgrade in Blender (headless `tools/make_mountain_map.py`, no MCP server connected): crags, ruined colonnade, three banners swaying in the wind (`FX/Banner.shader`, `_KothWind`), hill LOD0-2 (Low forces LOD1), Cycles-baked AO; `.blend` archived in `Assets/Art/Raw/Mountain~`, GLB in `Assets/Art/Exports/GLB`. Report `SCREENSHOTS/map-261019/report.html`.
+- [x] F.8 Summit upgrade in Blender (headless `scripts/make_mountain_map.py`, no MCP server connected): crags, ruined colonnade, three banners swaying in the wind (`FX/Banner.shader`, `_KothWind`), hill LOD0-2 (Low forces LOD1), Cycles-baked AO; `.blend` archived in `Assets/Art/Raw/Mountain~`, GLB in `Assets/Art/Exports/GLB`. Report `SCREENSHOTS/map-261019/report.html`.
 - [x] F.9 `QualityTier`: Low / Medium / High / Auto presets (Auto steps down in a player under 45 FPS), two-line telemetry pill, `perf` block in the telemetry JSONL.
 - [x] F.10 Self-collision audit (`training/scripts/collision_audit.py`, EditMode `CollisionTests`): G1 and Trump clean; Kim's foot boxes overlap 3.5 mm in her rest pose (fix at her next retrain).
 - Settings split again: Match (rules) and Show (picture, sound). UI report `SCREENSHOTS/gfx-261019/report.html`; audit `SCREENSHOTS/collision-261019/report.html`.
 
 ## Phase G — Lifelike fighters, music, voice, motion prior (2026-11-14)
 
-Render and audio only except G.6 (after the round) and G.7 (training, opt-in). No shipped ONNX, sidecar or MJCF changed. Notes and measurements: `DOCS/20261114/lifelike-features.md`; captures `SCREENSHOTS/life-261114/report.html`.
+Render and audio only except G.6 (after the round) and G.7 (training, opt-in). No shipped ONNX, sidecar or MJCF changed. Notes and measurements: `docs/20261114/lifelike-features.md`; captures `SCREENSHOTS/life-261114/report.html`.
 - [x] G.1 Head look-at (`LifeSigns`, `SkinFollower.Look`): opponent, the rim, the camera, the ground for the beaten. No eyes or lids to move.
 - [x] G.2 Breathing and exertion: chest swell and rate from `Biometrics.strain`, face flush.
 - [x] G.3 Soft parts: belly, hair, chest on springs (`SoftSpring`), as vertex offsets.

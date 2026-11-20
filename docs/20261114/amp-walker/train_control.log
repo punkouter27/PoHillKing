@@ -4,7 +4,7 @@ Warp 1.18.0 initialized:
      "cpu"      : "Intel64 Family 6 Model 165 Stepping 2, GenuineIntel"
      "cuda:0"   : "NVIDIA GeForce RTX 2060" (6 GiB, sm_75, mempool enabled)
    Kernel cache:
-     \\?\C:\Users\punko\AppData\Local\NVIDIA\warp\Cache\1.18.0
+     \<warp cache>\1.18.0
 Module mujoco_warp._src.smooth 7937da7 load on device 'cuda:0' took 5.24 ms  (cached)
 Module _nxn_broadphase__locals__kernel_5424cb63 5424cb6 load on device 'cuda:0' took 1.38 ms  (cached)
 Module ccd_kernel_builder__locals__ccd_kernel_d0b4d6b7 d0b4d6b load on device 'cuda:0' took 1.72 ms  (cached)
@@ -77,7 +77,7 @@ Critic Model: MLPModel(
 )
 warm start actor: 0 tensors padded
 warm start critic: 0 tensors padded
-Storing git diff for 'PoHillKing' in: C:\Users\punko\Downloads\_CODEMATT\PoHillKing\training\runs\kim_r1b\walker_control\git\PoHillKing.diff
+Storing git diff for 'PoHillKing' in: <repo>\training\runs\kim_r1b\walker_control\git\PoHillKing.diff
 ################################################################################
 [1m                          Learning iteration 0/100000                           [0m 
 
@@ -23409,4 +23409,4 @@ critic warm-up over after 15 updates: the actor learns from now on
                                     ETA: 2 days, 23:47:25
 
 training time budget reached; saving the completed update
-saved C:\Users\punko\Downloads\_CODEMATT\PoHillKing\training\runs\kim_r1b\walker_control
+saved <repo>\training\runs\kim_r1b\walker_control

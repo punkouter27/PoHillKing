@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b0f17">
+<title>System status · __TITLE__</title>
+<!-- Written by scripts/publish_webgl.ps1 from scripts/webgl/diag.template.html and scripts/webgl.json (diagChecks).
+     Every row is probed live from this browser; nothing is shown as healthy without a response. -->
+<style>
+  :root { --bg: #0b0f17; --surface: #121826; --line: #232b3d; --text: #e6e9f2; --muted: #9aa3b5; --accent: #6366f1;
+          --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;
+           border-bottom: 1px solid var(--line); background: var(--surface); }
+  header a { color: var(--text); text-decoration: none; font-weight: 600; }
+  header a.back { color: var(--muted); font-weight: 500; }
+  main { max-width: 760px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 22px; margin: 4px 0 16px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 24px 0 8px; }
+  .banner { padding: 14px 16px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); font-weight: 600; }
+  .banner.ok { border-color: var(--ok); } .banner.bad { border-color: var(--bad); } .banner.wait { border-color: var(--accent); }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 16px; background: var(--surface);
+         border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; }
+  .row .name { font-weight: 600; } .row .detail { grid-column: 1 / -1; color: var(--muted); font-size: 12px; word-break: break-all; }
+  .state { font-weight: 600; white-space: nowrap; } .state.ok { color: var(--ok); } .state.bad { color: var(--bad); }
+  .state.warn { color: var(--warn); } .state.off { color: var(--muted); } .state.wait { color: var(--accent); }
+  footer { position: fixed; right: 0; bottom: 0; left: 0; height: 20px; padding: 0 12px; display: flex; justify-content: flex-end;
+           align-items: center; font-size: 11px; color: var(--muted); background: var(--bg); }
+</style>
+</head>
+<body>
+<header><a href="/">__TITLE__</a><a class="back" href="/">Back to the game</a></header>
+<main>
+  <h1>System status</h1>
+  <div id="banner" class="banner wait">Checking…</div>
+  <div id="sections"></div>
+</main>
+<footer id="version">v__VERSION__</footer>
+<script>
+(function () {
+  var VERSION = "__VERSION__";
+  var CHECKS = __CHECKS__;      // [{section, name, url, used}] from scripts/webgl.json
+  var BUNDLE = __BUNDLE__;      // the Build/ files of this build
+  var order = ["API", "Data", "Services"];
+  var rows = [];
+
+  CHECKS.forEach(function (c) { rows.push({ section: c.section, name: c.name, url: c.url, detail: c.used, kind: "fetch" }); });
+  BUNDLE.forEach(function (f) { rows.push({ section: "Data", name: "Build bundle: " + f, url: "Build/" + f, kind: "head" }); });
+  rows.push({ section: "Data", name: "Build version", kind: "version" });
+  rows.push({ section: "Services", name: "3D renderer (WebGL2)", kind: "webgl2" });
+
+  var holder = document.getElementById("sections");
+  order.forEach(function (s) {
+    var list = rows.filter(function (r) { return r.section === s; });
+    if (!list.length) return;
+    var h = document.createElement("h2"); h.textContent = s; holder.appendChild(h);
+    list.forEach(function (r) {
+      var el = document.createElement("div"); el.className = "row";
+      el.innerHTML = '<span class="name"></span><span class="state wait">Checking…</span><span class="detail"></span>';
+      el.querySelector(".name").textContent = r.name;
+      el.querySelector(".detail").textContent = (r.url ? r.url : "") + (r.detail ? (r.url ? " · " : "") + r.detail : "");
+      holder.appendChild(el); r.el = el;
+    });
+  });
+
+  function set(r, cls, text) { var s = r.el.querySelector(".state"); s.className = "state " + cls; s.textContent = text; r.state = cls; }
+  function timed(url, method) {
+    var ctl = new AbortController(); var t0 = performance.now(); var timer = setTimeout(function () { ctl.abort(); }, 10000);
+    return fetch(url, { method: method, cache: "no-store", signal: ctl.signal, mode: "cors" })
+      .then(function (res) { clearTimeout(timer); return { ok: res.ok, status: res.status, ms: Math.round(performance.now() - t0) }; })
+      .catch(function (e) { clearTimeout(timer); return { ok: false, status: e.name === "AbortError" ? "timeout" : "network error", ms: Math.round(performance.now() - t0) }; });
+  }
+
+  var jobs = rows.map(function (r) {
+    if (r.kind === "version") {
+      set(r, "ok", "v" + VERSION); return Promise.resolve();
+    }
+    if (r.kind === "webgl2") {
+      var ok = !!document.createElement("canvas").getContext("webgl2");
+      set(r, ok ? "ok" : "bad", ok ? "Available" : "Unavailable"); return Promise.resolve();
+    }
+    if (!r.url) { set(r, "off", "Not configured"); return Promise.resolve(); }
+    return timed(r.url, r.kind === "head" ? "HEAD" : "GET").then(function (x) {
+      if (x.ok) set(r, "ok", "OK · " + x.ms + " ms"); else set(r, "bad", "Failed (" + x.status + ") · " + x.ms + " ms");
+    });
+  });
+
+  Promise.all(jobs).then(function () {
+    var bad = rows.filter(function (r) { return r.state === "bad"; }).length;
+    var b = document.getElementById("banner");
+    b.className = "banner " + (bad ? "bad" : "ok");
+    b.textContent = bad ? ("Degraded: " + bad + " of " + rows.length + " checks failing") : "All systems operational";
+  });
+})();
+</script>
+</body>
+</html>

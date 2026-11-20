@@ -1,0 +1,28 @@
+{
+  "title": "PoHillKing",
+  "buildMethod": "PoKingHill.EditorTools.WebGLBuild.Build",
+  "staticWebApp": "pohillking",
+  "resourceGroup": "PoHillKing",
+  "subscription": "14d963a2-badc-4a1f-9900-553bf01f8de2",
+  "_diagChecks": "What /diag (diag.html, written by scripts/publish_webgl.ps1) probes live from the browser. section: API | Data | Services. url: fetched with latency; an empty url means the game has no endpoint configured for that dependency (shown as 'Not configured', never as Ready). The build bundle files (Build/*) and WebGL2 are always checked.",
+  "diagChecks": [
+    {
+      "section": "API",
+      "name": "Daily score API (Azure Function, scripts/daily-api)",
+      "url": "",
+      "used": "DailyChallenge.PostRemote, only when Settings > Daily API URL is set; the daily board is otherwise kept on the device"
+    },
+    {
+      "section": "Services",
+      "name": "Live weather (Open-Meteo)",
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=46.8&longitude=8.2&current=cloud_cover,wind_speed_10m,precipitation,weather_code",
+      "used": "LiveAtmosphere (Settings > Live weather)"
+    },
+    {
+      "section": "Services",
+      "name": "Fighter bios (Wikipedia REST)",
+      "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Sumo",
+      "used": "AgentBioService (Agents tab)"
+    }
+  ]
+}

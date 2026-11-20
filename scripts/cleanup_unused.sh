@@ -2,8 +2,8 @@
 # Deletes what the cleanups set aside in archive/ (archive/clean-<YYMMDD>: scripts, brains, scenes and MuJoCo imports
 # moved out of Assets), after a dry run. Everything tracked comes back with `git checkout HEAD -- <path>` (before the
 # commit that removes it) or from history; untracked items do not.
-#   bash tools/cleanup_unused.sh                    # dry run: list everything, with file counts and MB
-#   bash tools/cleanup_unused.sh --apply            # delete the default set (and prune training runs)
+#   bash scripts/cleanup_unused.sh                    # dry run: list everything, with file counts and MB
+#   bash scripts/cleanup_unused.sh --apply            # delete the default set (and prune training runs)
 #   add --builds      the git-ignored player build in Builds/ (BuildPlayer makes a new one)
 # MuJoCo import folders are never listed by hand: a folder under Assets/Local/MjImports is unused only when no scene,
 # prefab, material or asset outside it references one of the GUIDs that exist only in that folder.

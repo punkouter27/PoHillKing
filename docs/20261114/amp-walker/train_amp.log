@@ -4,7 +4,7 @@ Warp 1.18.0 initialized:
      "cpu"      : "Intel64 Family 6 Model 165 Stepping 2, GenuineIntel"
      "cuda:0"   : "NVIDIA GeForce RTX 2060" (6 GiB, sm_75, mempool enabled)
    Kernel cache:
-     \\?\C:\Users\punko\AppData\Local\NVIDIA\warp\Cache\1.18.0
+     \<warp cache>\1.18.0
 Module mujoco_warp._src.smooth 7937da7 load on device 'cuda:0' took 2.41 ms  (cached)
 Module _nxn_broadphase__locals__kernel_5424cb63 5424cb6 load on device 'cuda:0' took 0.98 ms  (cached)
 Module ccd_kernel_builder__locals__ccd_kernel_d0b4d6b7 d0b4d6b load on device 'cuda:0' took 1.32 ms  (cached)
@@ -77,9 +77,9 @@ Critic Model: MLPModel(
 )
 warm start actor: 0 tensors padded
 warm start critic: 0 tensors padded
-motion prior: C:\Users\punko\Downloads\_CODEMATT\PoHillKing\training\assets\mocap\cmu_style_kim.npz (19764 pairs), weight 0.5/s, discriminator from scratch
-Storing git diff for 'PoHillKing' in: C:\Users\punko\Downloads\_CODEMATT\PoHillKing\training\runs\kim_r1b\walker_amp\git\PoHillKing.diff
-C:\Users\punko\Downloads\_CODEMATT\PoHillKing\training\koth\amp.py:136: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+motion prior: <repo>\training\assets\mocap\cmu_style_kim.npz (19764 pairs), weight 0.5/s, discriminator from scratch
+Storing git diff for 'PoHillKing' in: <repo>\training\runs\kim_r1b\walker_amp\git\PoHillKing.diff
+<repo>\training\koth\amp.py:136: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
 Consider using tensor.detach() first. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\autograd\generated\python_variable_methods.cpp:837.)
   self.stats.update(d_expert=float(de.mean()), d_policy=float(dp.mean()), loss=float(loss))
 ################################################################################
@@ -25614,4 +25614,4 @@ critic warm-up over after 15 updates: the actor learns from now on
                                     ETA: 3 days, 1:31:01
 
 training time budget reached; saving the completed update
-saved C:\Users\punko\Downloads\_CODEMATT\PoHillKing\training\runs\kim_r1b\walker_amp
+saved <repo>\training\runs\kim_r1b\walker_amp

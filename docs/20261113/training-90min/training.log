@@ -4,8 +4,8 @@ Warp 1.18.0 initialized:
      "cpu"      : "Intel64 Family 6 Model 165 Stepping 2, GenuineIntel"
      "cuda:0"   : "NVIDIA GeForce RTX 2060" (6 GiB, sm_75, mempool enabled)
    Kernel cache:
-     \\?\C:\Users\punko\AppData\Local\NVIDIA\warp\Cache\1.18.0
-C:\Users\punko\Downloads\_CODEMATT\PoHillKing\training\.venv\Lib\site-packages\mujoco_warp\_src\io.py:863: UserWarning: MULTICCD is enabled, but the scene contains CCD pairs without multicontact support: [('CAPSULE', 'MESH')]. At most 1 contact will be generated for these pairs.
+     \<warp cache>\1.18.0
+<repo>\training\.venv\Lib\site-packages\mujoco_warp\_src\io.py:863: UserWarning: MULTICCD is enabled, but the scene contains CCD pairs without multicontact support: [('CAPSULE', 'MESH')]. At most 1 contact will be generated for these pairs.
   warnings.warn(
 Module mujoco_warp._src.smooth 7937da7 load on device 'cuda:0' took 2.38 ms  (cached)
 Module _nxn_broadphase__locals__kernel_5424cb63 5424cb6 load on device 'cuda:0' took 1.12 ms  (cached)
@@ -82,7 +82,7 @@ Critic Model: MLPModel(
 )
 warm start actor: 0 tensors padded
 warm start critic: 0 tensors padded
-Storing git diff for 'PoHillKing' in: C:\Users\punko\Downloads\_CODEMATT\PoHillKing\training\runs\trump_hill4\trump_bounded_261113_204506\git\PoHillKing.diff
+Storing git diff for 'PoHillKing' in: <repo>\training\runs\trump_hill4\trump_bounded_261113_204506\git\PoHillKing.diff
 ################################################################################
 [1m                          Learning iteration 0/100000                           [0m 
 
@@ -22953,4 +22953,4 @@ self-play: live opponents = learner at iteration 449
                                     ETA: 8 days, 8:03:46
 
 training time budget reached; saving the completed update
-saved C:\Users\punko\Downloads\_CODEMATT\PoHillKing\training\runs\trump_hill4\trump_bounded_261113_204506
+saved <repo>\training\runs\trump_hill4\trump_bounded_261113_204506
