@@ -15,7 +15,7 @@ Inside a finished run (one with model_final.pt), the intermediate model_<iterati
 A top-level runs/*.log is pruned when the run it is named after is finished or pruned, or after --log-days idle.
 Never pruned: runs/league, runs/overnight, runs/audits, anything named in runs/league/champion.txt, every runs/...
 path the queue scripts and the docs mention (scripts/**/*.sh, docs/rl_optimization_log.md, STAGED_TRAINING.md, docs/tasks.md,
-CLAUDE.md), anything modified within --idle-minutes (a live run), and folders given with --keep."""
+AGENTS.md), anything modified within --idle-minutes (a live run), and folders given with --keep."""
 
 import argparse
 import glob
@@ -34,7 +34,7 @@ REFERENCE_FILES = [
     "STAGED_TRAINING.md",
     "../docs/rl_optimization_log.md",
     "../docs/tasks.md",
-    "../CLAUDE.md",
+    "../AGENTS.md",
 ]
 CKPT = re.compile(r"model_(\d+)\.pt$")
 
