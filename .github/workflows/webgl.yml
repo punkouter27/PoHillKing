@@ -1,19 +1,24 @@
-name: Deploy WebGL
+name: PoHillKing
 
-# SAME FILE IN EVERY PO UNITY GAME. The reference copy is PoBox's; copy it with
-# PoPunkouterSoftware/scripts/sync-ci.ps1, never edit one game's copy.
+# The repo's only workflow.
 #
-# The WebGL player is built LOCALLY (Unity needs a licence; CI has none) by Tools/publish_webgl.ps1,
-# which uploads it as webgl.zip on a GitHub Release tagged webgl-*. Publishing that release runs
-# this workflow on a GitHub-hosted runner: download the zip -> deploy to the game's Azure Static
-# Web App -> check the live page. No Unity, no self-hosted runner.
+# push / pull_request -> Python checks of training/ and scripts/: ruff check, ruff format --check, pytest (the CPU
+#   tier: tests marked `gpu` skip themselves without CUDA).
+# release (webgl-*) -> deploy. The WebGL player is built LOCALLY with the exact Unity editor (Unity cannot be
+#   licensed in CI) by scripts/publish_webgl.ps1, which runs the EditMode tests, builds, and uploads webgl.zip to a
+#   GitHub Release tagged webgl-*. Publishing that release runs the deploy job: download the zip -> deploy to the
+#   game's Azure Static Web App -> check the live page and /diag.
 #
-# Re-deploy an existing build: Actions -> Deploy WebGL -> Run workflow, with its tag
-# (empty = the newest webgl-* release).
+# Re-deploy an existing build: Actions -> PoHillKing -> Run workflow, with its tag (empty = the newest webgl-* release).
 #
 # Repo secret it needs:
 #   AZURE_STATIC_WEB_APPS_API_TOKEN   the game's Static Web App deployment token
 on:
+  push:
+    branches: [master]
+    paths: ["**.py", "pyproject.toml", "training/pyproject.toml", "training/config/**", ".github/workflows/webgl.yml"]
+  pull_request:
+    paths: ["**.py", "pyproject.toml", "training/pyproject.toml", "training/config/**", ".github/workflows/webgl.yml"]
   release:
     types: [published]
   workflow_dispatch:
@@ -25,15 +30,37 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: webgl-${{ github.repository }}
-  cancel-in-progress: true
-
 jobs:
-  deploy:
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'webgl-')
+  python:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - name: ruff check
+        run: uvx ruff check .
+      - name: ruff format --check
+        run: uvx ruff format --check .
+      - name: pytest (CPU tier)
+        run: |
+          uv venv .venv
+          uv pip install --python .venv --index-url https://download.pytorch.org/whl/cpu torch
+          uv pip install --python .venv pytest numpy "mujoco==3.15.0" "mujoco-warp==3.15.0" "warp-lang>=1.18" \
+            "rsl-rl-lib>=5.5" tensordict onnx onnxruntime onnxscript
+          .venv/bin/python -m pytest -q
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'webgl-'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: webgl-deploy-${{ github.repository }}
+      cancel-in-progress: true
     steps:
       - name: Download the WebGL build
         env:
@@ -44,11 +71,12 @@ jobs:
             TAG=$(gh release list -R "$GITHUB_REPOSITORY" --limit 100 --json tagName,createdAt \
               --jq '[.[] | select(.tagName | startswith("webgl-"))] | sort_by(.createdAt) | last | .tagName')
           fi
-          test -n "$TAG" || { echo "No webgl-* release. Run Tools/publish_webgl.ps1 first."; exit 1; }
+          test -n "$TAG" || { echo "No webgl-* release. Run scripts/publish_webgl.ps1 first."; exit 1; }
           echo "Deploying $TAG"
           gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p webgl.zip -D .
           mkdir site && unzip -q webgl.zip -d site
           test -f site/index.html || { echo "webgl.zip of $TAG has no index.html at its root"; exit 1; }
+          test -f site/diag.html || { echo "webgl.zip of $TAG has no diag.html"; exit 1; }
           test -f site/staticwebapp.config.json || { echo "webgl.zip of $TAG has no staticwebapp.config.json (.unityweb would 404)"; exit 1; }
 
       - name: Deploy to Azure Static Web App
@@ -61,13 +89,19 @@ jobs:
           skip_app_build: true
           skip_api_build: true
 
-      # The page is live and is a Unity WebGL page, not an old or empty site.
-      - name: Check the live page
+      # The page is live and is this build's Unity WebGL page, and /diag is this build's status page.
+      - name: Check the live page and /diag
         env:
           URL: ${{ steps.deploy.outputs.static_web_app_url }}
         run: |
+          want=$(grep -o 'name="po-version" content="[0-9]*"' site/index.html | grep -o '[0-9]\{6\}' || true)
           for i in $(seq 1 20); do
-            if curl -fsS --max-time 30 "$URL" | grep -q 'loader.js'; then echo "Live: $URL"; exit 0; fi
+            page=$(curl -fsS --max-time 30 "$URL" || true)
+            diag=$(curl -fsS --max-time 30 "$URL/diag" || true)
+            if echo "$page" | grep -q 'loader.js' && echo "$diag" | grep -q 'System status' \
+               && { [ -z "$want" ] || { echo "$page" | grep -q "$want" && echo "$diag" | grep -q "v$want"; }; }; then
+              echo "Live: $URL (v$want) and $URL/diag"; exit 0
+            fi
             sleep 15
           done
-          echo "$URL did not serve the WebGL page"; exit 1
+          echo "$URL did not serve this build's page and /diag"; exit 1
