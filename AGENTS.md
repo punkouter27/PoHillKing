@@ -94,6 +94,19 @@ every publish. Tests never write into tracked files.
 | Tests | Python from the repo root: `uv run --no-project --python Training/.venv/Scripts/python.exe --with pytest python -m pytest` (tests marked `gpu` need CUDA, `slow` ones take longer); `uvx ruff check .` and `uvx ruff format --check .` clean. Unity: EditMode tests (`Assets/_Project/Core/Tests/Editor`) run before every publish; PlayMode tests (`Core/Tests/PlayMode`) in batch mode with `-force-d3d11` (section 3). |
 | CI | `.github/workflows/webgl.yml`: every push, PR and release -> ruff format --check, ruff check, pytest (CPU tier); a `webgl-*` release (or a manual run) -> after those, deploy to the Static Web App with the release's commit stamped as the `X-Commit` header, then check that the live page answers with that `X-Commit` and this build's version and that `/diag` answers. Unity cannot be licensed in CI, so the Unity tests and the WebGL build run locally (`scripts/publish_webgl.ps1`). Repo secret `AZURE_STATIC_WEB_APPS_API_TOKEN`. |
 
+### Deliberate deviations
+
+| Deviation | Why | Commit sha / date | How to undo |
+|---|---|---|---|
+| Layout moved to `Assets/_Project/...` + `/Training`, overriding the owner's `688b911` description (`Assets/PoKingHill`, lowercase `training/`) | the v3 layout rule is newer; 122 `git mv` renames, GUIDs kept | `20030c1` 2026-11-22 | `git revert 20030c1` |
+| `Assets/Local/MjImports`, `Assets/Art/{Raw,Exports}`, `Assets/Plugins`, `Assets/WebGLTemplates` stay outside `_Project` | the org.mujoco importer hard-codes MjImports; the others are tool/Unity paths | `20030c1` 2026-11-22 | — |
+| Unity build and tests run locally only; CI runs the Python checks and deploys the locally built release | Unity cannot be licensed in CI (owner design) | `c08c408` 2026-11-22 | — |
+| 96 `CS0618` warnings in the WebGL build log, all in vendored `Packages/org.mujoco` | third-party code, WebGL target only; game code has 0 | 2026-11-22 | patch the vendored plugin |
+| AMP motion prior stays opt-in (`--amp`) | owner decision | `90ca0db` 2026-11-14 | make `--amp` the default and retrain |
+| Demo mode is off for the PlayMode suite (`ShowcaseSuite`) except its own test | tests idling on the menu must not be taken over | `c08c408` 2026-11-22 | — |
+| /diag: the daily-score Azure Function shows a neutral **Off** (no Function App deployed, no URL set) | switched off on purpose; not counted in the banner | `c08c408` 2026-11-22 | deploy `scripts/daily-api` and set its URL |
+| Shipped brains predate the joint-torque penalty; self-collision is off between a fighter's own limbs | retraining and re-gating every brain is a multi-hour GPU job, not started | 2026-11-20 | retrain |
+
 ## 1.3 House rules
 
 ### 1.3.1 Workflow, Tooling & Asset Pipeline
@@ -263,14 +276,18 @@ Tests (`Assets/_Project/Core/Tests`): EditMode `PhysXAudit` (no PhysX components
 
 - One Unity at a time on this project: a batch-mode run (tests, WebGL build, parity gate) cannot open the project while an editor has it open, and two editors corrupt `Library/`. Drive an open editor with the Unity CLI instead (section 1.4). Close every Unity you started when you are done.
 - One 4096-environment training run at a time (the 12 GB GPU); evals and duel statistics wait for it or run on the CPU (`duel_stats.py`).
-- One headless browser at a time for the WebGL checks; never run test suites against the live site (Azure Static Web Apps free tier): live checks are a handful of page loads.
+- One headless browser at a time for the WebGL checks.
+- **Hosting:** Azure Static Web App `pohillking`, Free tier. Never run test suites against the live site; live checks =
+  at most 6 page loads + /diag + X-Commit.
 - `master` is the only branch. Commit your own files only (`git add <paths>`, never `git add -A` over someone's work in progress), `git fetch` and `git rebase origin/master` for unpushed commits only, never force-push, never delete releases (`publish_webgl.ps1` keeps every release unless `-Keep N` is passed).
 - Training runs and queues own `Training/runs/` (git-ignored): never delete a run written in the last 24 hours or one a queue may resume (section 1.3.2).
 - Tests never write into tracked files (captures go to `Temp/`); `git status` is clean after any test run.
 
 # 3. Verify the repo
 
-From the repo root, in order; every step must pass (a test that fails only sometimes is a failure). Close the editor first.
+The one command sequence below verifies the repo, from the repo root, in order; every step must pass (a test that
+fails only sometimes is a failure). Close the editor first. Last full run (2026-11-22): pytest 11 passed; EditMode
+65/65; PlayMode 13 passed, 2 `[Explicit]` skipped; 0 `warning CS` in game code.
 
 ```bash
 # Python (CI runs the same three)
