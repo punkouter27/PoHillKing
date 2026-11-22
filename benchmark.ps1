@@ -1,0 +1,9 @@
+# Opens the training Benchmark page (benchmark/page.html) for this repo: one button runs ~10 s of the real training
+# loop and records step time, machine and machine load in benchmark/history.json (commit it to compare laptops).
+$ErrorActionPreference = 'Stop'
+$py = Join-Path $PSScriptRoot 'training/.venv/Scripts/python.exe'
+if (-not (Test-Path $py)) {
+    Write-Host 'Creating the training environment (uv sync in training/)...'
+    Push-Location (Join-Path $PSScriptRoot 'training'); uv sync; Pop-Location
+}
+& $py (Join-Path $PSScriptRoot 'benchmark/serve.py') @args
