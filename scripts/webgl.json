@@ -4,7 +4,7 @@
   "staticWebApp": "pohillking",
   "resourceGroup": "PoHillKing",
   "subscription": "14d963a2-badc-4a1f-9900-553bf01f8de2",
-  "_diagChecks": "What /diag (diag.html, written by scripts/publish_webgl.ps1) probes live from the browser. section: API | Data | Services. url: fetched with latency; an empty url means the game has no endpoint configured for that dependency (shown as 'Not configured', never as Ready). The build bundle files (Build/*) and WebGL2 are always checked.",
+  "_diagChecks": "What /diag (diag.html, written by scripts/publish_webgl.ps1) probes live from the browser. section: API | Data | Services. url: fetched with latency; an empty url means the game has no endpoint configured for that dependency (shown as a neutral 'Off': switched off on purpose, not counted in the banner). The build bundle files (Build/*) and WebGL2 are always checked.",
   "diagChecks": [
     {
       "section": "API",

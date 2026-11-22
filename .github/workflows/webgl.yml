@@ -2,12 +2,13 @@ name: PoHillKing
 
 # The repo's only workflow.
 #
-# push / pull_request -> Python checks of training/ and scripts/: ruff check, ruff format --check, pytest (the CPU
-#   tier: tests marked `gpu` skip themselves without CUDA).
-# release (webgl-*) -> deploy. The WebGL player is built LOCALLY with the exact Unity editor (Unity cannot be
-#   licensed in CI) by scripts/publish_webgl.ps1, which runs the EditMode tests, builds, and uploads webgl.zip to a
-#   GitHub Release tagged webgl-*. Publishing that release runs the deploy job: download the zip -> deploy to the
-#   game's Azure Static Web App -> check the live page and /diag.
+# Every push, pull request, release and manual run -> Python checks of Training/ and scripts/: ruff format --check,
+#   ruff check, pytest (the CPU tier: tests marked `gpu` skip themselves without CUDA).
+# release (webgl-*) or manual run -> deploy, after the Python checks. The WebGL player is built LOCALLY with the exact
+#   Unity editor (Unity cannot be licensed in CI) by scripts/publish_webgl.ps1, which runs the EditMode tests, builds,
+#   and uploads webgl.zip to a GitHub Release tagged webgl-* at the build's commit. The deploy job: download the zip ->
+#   stamp that commit into every response as X-Commit -> deploy to the game's Azure Static Web App -> check that the
+#   live page is this build (X-Commit = the release's commit, the page's version) and that /diag answers.
 #
 # Re-deploy an existing build: Actions -> PoHillKing -> Run workflow, with its tag (empty = the newest webgl-* release).
 #
@@ -16,9 +17,7 @@ name: PoHillKing
 on:
   push:
     branches: [master]
-    paths: ["**.py", "pyproject.toml", "training/pyproject.toml", "training/config/**", ".github/workflows/webgl.yml"]
   pull_request:
-    paths: ["**.py", "pyproject.toml", "training/pyproject.toml", "training/config/**", ".github/workflows/webgl.yml"]
   release:
     types: [published]
   workflow_dispatch:
@@ -32,7 +31,6 @@ permissions:
 
 jobs:
   python:
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -42,10 +40,10 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.11"
-      - name: ruff check
-        run: uvx ruff check .
       - name: ruff format --check
         run: uvx ruff format --check .
+      - name: ruff check
+        run: uvx ruff check .
       - name: pytest (CPU tier)
         run: |
           uv venv .venv
@@ -55,6 +53,7 @@ jobs:
           .venv/bin/python -m pytest -q
 
   deploy:
+    needs: python
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'webgl-'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -78,6 +77,12 @@ jobs:
           test -f site/index.html || { echo "webgl.zip of $TAG has no index.html at its root"; exit 1; }
           test -f site/diag.html || { echo "webgl.zip of $TAG has no diag.html"; exit 1; }
           test -f site/staticwebapp.config.json || { echo "webgl.zip of $TAG has no staticwebapp.config.json (.unityweb would 404)"; exit 1; }
+          # The commit the build was made from (the release is tagged at it) goes into every response as X-Commit.
+          SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)
+          test -n "$SHA" || { echo "Cannot resolve $TAG to a commit"; exit 1; }
+          jq --arg sha "$SHA" '.globalHeaders = ((.globalHeaders // {}) + {"X-Commit": $sha})' site/staticwebapp.config.json > swa.json
+          mv swa.json site/staticwebapp.config.json
+          echo "SHA=$SHA" >> "$GITHUB_ENV"
 
       - name: Deploy to Azure Static Web App
         id: deploy
@@ -89,19 +94,25 @@ jobs:
           skip_app_build: true
           skip_api_build: true
 
-      # The page is live and is this build's Unity WebGL page, and /diag is this build's status page.
-      - name: Check the live page and /diag
+      # The page is live, is this build's Unity WebGL page (X-Commit = the release's commit, its version stamp), and
+      # /diag is this build's status page.
+      - name: Check the live page, X-Commit and /diag
         env:
           URL: ${{ steps.deploy.outputs.static_web_app_url }}
         run: |
           want=$(grep -o 'name="po-version" content="[0-9]*"' site/index.html | grep -o '[0-9]\{6\}' || true)
           for i in $(seq 1 20); do
-            page=$(curl -fsS --max-time 30 "$URL" || true)
-            diag=$(curl -fsS --max-time 30 "$URL/diag" || true)
-            if echo "$page" | grep -q 'loader.js' && echo "$diag" | grep -q 'System status' \
-               && { [ -z "$want" ] || { echo "$page" | grep -q "$want" && echo "$diag" | grep -q "v$want"; }; }; then
-              echo "Live: $URL (v$want) and $URL/diag"; exit 0
+            live=$(curl -fsS -o /dev/null -D - --max-time 30 "$URL/" | tr -d '\r' | awk -F': ' 'tolower($1)=="x-commit"{print $2}')
+            page=$(curl -fsS --max-time 30 "$URL/" || true)
+            if [ "$live" = "$SHA" ] && echo "$page" | grep -q 'loader.js' && { [ -z "$want" ] || echo "$page" | grep -q "$want"; }; then
+              echo "Live: $URL at X-Commit $live (v$want)"
+              diag=$(curl -fsS --max-time 30 "$URL/diag" || true)
+              echo "$diag" | grep -q 'System status' || { echo "/diag did not answer"; exit 1; }
+              [ -z "$want" ] || echo "$diag" | grep -q "v$want" || { echo "/diag is not v$want"; exit 1; }
+              echo "/diag answers (v$want)"
+              exit 0
             fi
+            echo "waiting: X-Commit '$live', want $SHA"
             sleep 15
           done
-          echo "$URL did not serve this build's page and /diag"; exit 1
+          echo "$URL did not serve this build (X-Commit $SHA)"; exit 1

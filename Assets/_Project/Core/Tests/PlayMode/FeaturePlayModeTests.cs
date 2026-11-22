@@ -10,7 +10,7 @@ namespace PoKingHill.Tests
     /// <summary>
     /// End-to-end PlayMode verification of the new gameplay, camera, batching, tournament,
     /// atmosphere, and HUD features in Game.unity, saving visual verification screenshots
-    /// to SCREENSHOTS/features-261114.
+    /// to Temp/features-261114 (the reviewed captures are in SCREENSHOTS/features-261114).
     /// </summary>
     public class FeaturePlayModeTests
     {
@@ -60,7 +60,8 @@ namespace PoKingHill.Tests
             var prevAtmo = GameSettings.Atmosphere;
             var prevMod = GameSettings.Modifier;
             var prevIntro = GameSettings.Intro;
-            string shotDir = Path.Combine(Path.GetDirectoryName(Application.dataPath), "SCREENSHOTS", "features-261114");
+            // Captures go to the project's Temp folder: tests never write into tracked files (SCREENSHOTS/ holds the reviewed set).
+            string shotDir = Path.Combine(Path.GetDirectoryName(Application.dataPath), "Temp", "features-261114");
 
             try
             {

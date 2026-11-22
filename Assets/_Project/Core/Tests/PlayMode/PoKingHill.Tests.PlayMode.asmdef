@@ -5,7 +5,8 @@
         "UnityEngine.TestRunner",
         "PoKingHill",
         "Mujoco.Runtime",
-        "Unity.InferenceEngine"
+        "Unity.InferenceEngine",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

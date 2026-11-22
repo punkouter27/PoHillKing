@@ -28,6 +28,8 @@ namespace PoKingHill
         public CinemachineTargetGroup group;
         public CinemachineImpulseSource impulse;
         public Transform summitAnchor;
+        [Tooltip("Optional: the tuning asset (Data/Resources/CameraSettings.asset when empty); it overrides the four values below at start")]
+        public CameraSettings settings;
         public float orbitDegPerSecond = 18f, cutAbove = 0.5f, cutUnder = 0.6f, cutSeconds = 3f;
 
         readonly HashSet<PolicyRunner> _shown = new();
@@ -51,6 +53,8 @@ namespace PoKingHill
 
         void OnEnable()
         {
+            var cs = settings != null ? settings : CameraSettings.Current;
+            orbitDegPerSecond = cs.orbitDegPerSecond; cutAbove = cs.cutAbove; cutUnder = cs.cutUnder; cutSeconds = cs.cutSeconds;
             MatchEvents.Impact += OnImpact;
             MatchEvents.RoundStarted += OnRound;
             if (summitAnchor != null && !_hasSummitOrig) { _summitOrig = summitAnchor.position; _hasSummitOrig = true; }

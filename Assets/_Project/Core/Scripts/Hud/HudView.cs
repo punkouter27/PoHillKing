@@ -10,7 +10,7 @@ namespace PoKingHill
     /// The whole UI in UI Toolkit, one 9:16 column that never scrolls (styles in UI/Hud.uss). Split by concern:
     /// this file (layout, gestures, live strip, intro), HudView.Menu.cs (menu, settings, results), HudView.Debug.cs
     /// (debug panel, layout audit), HudWidgets.cs (vitals strip, icons).
-    ///   corners   TL title · TR menu · BR version; with GameSettings.DevTools also TC FPS (hold it for the debug
+    ///   corners   TL title · TR menu (and RL on touch screens) · BR version (title and version hidden in a browser page, which draws them); with GameSettings.DevTools also TC FPS (hold it for the debug
     ///             panel; it steps aside from a punch-hole camera, Screen.cutouts) and BL debug
     ///   live      one row of fighter badges, or two compact rows for 12+ seats (seat-coloured initials, wins pip, status tag, vitals strip; it throbs
     ///             at the edge, and a tap makes the camera follow that fighter, BroadcastCamera.FollowSeat), round
@@ -21,6 +21,7 @@ namespace PoKingHill
     ///             next). A sheet swipes down (or its grabber is tapped) to a peek pill; a swipe up from the bottom
     ///             edge brings it back, or opens the menu during a round. A sheet taller than the room between the
     ///             corners turns dense.
+    ///   overlay   Tab or the RL button: FPS, episode reward, inference latency, curriculum stage, benchmark (HudView.Overlay.cs)
     ///   debug     developer tools only: two-finger tap, holding the FPS pill or the BL button: tabs Perf | View | Tools
     /// Safe-area padding follows Screen.safeArea. State comes from MatchDirector and MatchEvents; nothing here touches
     /// the simulation except through the director's and the replay's public methods. Tests and captures can lay the HUD
@@ -145,7 +146,7 @@ namespace PoKingHill
             _bottomBar = El("bottom-bar", _safe);
             _debugBtn = Btn("", "icon-btn", ToggleDebug, _bottomBar); _debugBtn.Add(new Icon(Icon.Kind.Sliders)); _debugBtn.tooltip = "Debug (or tap with two fingers, or hold the FPS pill)";
             _status = Text("", "status shadow clip", _bottomBar);
-            Text(BuildInfo.Version, "version shadow", _bottomBar);
+            _versionLabel = Text(BuildInfo.Version, "version shadow", _bottomBar);
 
             _debug = El("debug-panel", _column); _debug.style.display = DisplayStyle.None;
             _debugTabs = El("tabs", _debug); _debugBody = El("", _debug); _debugText = new Label();
@@ -161,6 +162,7 @@ namespace PoKingHill
             _peekRow.style.display = DisplayStyle.None;
             EdgeSwipe();
             ApplyDevTools();
+            BuildOverlay();
         }
 
         /// <summary>The FPS pill and the debug button are developer tools (GameSettings.DevTools); the version stays.
@@ -442,6 +444,7 @@ namespace PoKingHill
             _debug.style.bottom = 128 + _bottomInset;
             ApplyVisibility();
             UpdateHudFeatures();
+            UpdateOverlay();
             HandleHotkeys();
             if (_devTools) TwoFingerTap();
         }
@@ -450,6 +453,7 @@ namespace PoKingHill
         {
             var kb = Keyboard.current;
             if (kb == null || director == null) return;
+            if (kb.tabKey.wasPressedThisFrame) { ToggleOverlay(); return; }
             if (kb.f1Key.wasPressedThisFrame) { director.CycleMode(); return; }
             if (kb.f2Key.wasPressedThisFrame) { BroadcastCamera.CycleMode(); return; }
             if (kb.f3Key.wasPressedThisFrame) { ToggleDebug(); return; }

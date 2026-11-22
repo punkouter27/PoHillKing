@@ -2,7 +2,7 @@
 # .github/workflows/webgl.yml, which deploys the release's webgl.zip to the game's Azure Static Web App on a
 # GitHub-hosted runner and checks the live page and /diag. No Unity licence is needed in CI.
 #
-#   pwsh -File scripts\publish_webgl.ps1               # EditMode tests, build, zip, publish release, prune old ones
+#   pwsh -File scripts\publish_webgl.ps1               # EditMode tests, build, zip, publish release (older releases are kept)
 #   pwsh -File scripts\publish_webgl.ps1 -NoPublish    # tests, build and zip only (then scripts\deploy_webgl.ps1 if wanted)
 #   pwsh -File scripts\publish_webgl.ps1 -SkipBuild    # publish the existing Builds/WebGL (no tests, no build)
 #
@@ -16,7 +16,7 @@
 param(
     [switch] $SkipBuild,
     [switch] $NoPublish,
-    [int] $Keep = 3          # webgl-* releases to keep, the new one included
+    [int] $Keep = 0          # > 0: prune to this many webgl-* releases, the new one included (0 = delete nothing)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -110,7 +110,8 @@ gh release create $tag $zip -R $repo --target $sha --title "WebGL v$version ($st
 if ($LASTEXITCODE -ne 0) { throw "gh release create failed ($LASTEXITCODE)." }
 "PUBLISHED $tag  ->  deploy: https://github.com/$repo/actions/workflows/webgl.yml"
 
-# Keep only the newest $Keep webgl-* releases (and their tags).
+# Only when asked (-Keep N): keep the newest N webgl-* releases (and their tags). By default nothing is deleted.
+if ($Keep -le 0) { return }
 $old = gh release list -R $repo --limit 100 --json tagName,createdAt |
     ConvertFrom-Json | Where-Object { $_.tagName -like 'webgl-*' } |
     Sort-Object createdAt -Descending | Select-Object -Skip $Keep

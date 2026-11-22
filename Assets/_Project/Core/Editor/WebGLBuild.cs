@@ -15,7 +15,7 @@ namespace PoKingHill.EditorTools
     ///
     /// Gzip with the decompression fallback: Static Web Apps does not send the Content-Encoding
     /// header a compressed Unity build otherwise needs, so the loader unpacks the files itself.
-    /// The canvas is 540 x 960.
+    /// The page (Assets/WebGLTemplates/Po) sizes the canvas to the window between its top bar and footer, any aspect.
     /// The MCP bridge's UNITY_MCP_* defines are stripped for the build, as for Android, so its
     /// runtime (and the NuGet closure behind it) stays out of the player.
     ///

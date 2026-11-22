@@ -28,6 +28,8 @@
   .state.warn { color: var(--warn); } .state.off { color: var(--muted); } .state.wait { color: var(--accent); }
   footer { position: fixed; right: 0; bottom: 0; left: 0; height: 20px; padding: 0 12px; display: flex; justify-content: flex-end;
            align-items: center; font-size: 11px; color: var(--muted); background: var(--bg); }
+  /* On a phone the stamp follows the content instead of floating over the last rows. */
+  @media (max-width: 600px) { footer { position: static; height: auto; padding: 8px 16px 16px; } main { padding-bottom: 8px; } }
 </style>
 </head>
 <body>
@@ -47,8 +49,9 @@
   var rows = [];
 
   CHECKS.forEach(function (c) { rows.push({ section: c.section, name: c.name, url: c.url, detail: c.used, kind: "fetch" }); });
+  rows.push({ section: "API", name: "Game page (this build: loader and v" + VERSION + ")", url: "./", kind: "page" });
+  rows.push({ section: "API", name: "Deployed commit (X-Commit header)", url: "./", kind: "commit" });
   BUNDLE.forEach(function (f) { rows.push({ section: "Data", name: "Build bundle: " + f, url: "Build/" + f, kind: "head" }); });
-  rows.push({ section: "Data", name: "Build version", kind: "version" });
   rows.push({ section: "Services", name: "3D renderer (WebGL2)", kind: "webgl2" });
 
   var holder = document.getElementById("sections");
@@ -66,32 +69,51 @@
   });
 
   function set(r, cls, text) { var s = r.el.querySelector(".state"); s.className = "state " + cls; s.textContent = text; r.state = cls; }
-  function timed(url, method) {
+  function timed(url, method, body) {
     var ctl = new AbortController(); var t0 = performance.now(); var timer = setTimeout(function () { ctl.abort(); }, 10000);
     return fetch(url, { method: method, cache: "no-store", signal: ctl.signal, mode: "cors" })
-      .then(function (res) { clearTimeout(timer); return { ok: res.ok, status: res.status, ms: Math.round(performance.now() - t0) }; })
+      .then(function (res) {
+        var r = { ok: res.ok, status: res.status, commit: res.headers.get("x-commit"), size: res.headers.get("content-length") };
+        return (body ? res.text() : Promise.resolve("")).then(function (text) {
+          clearTimeout(timer); r.text = text; r.ms = Math.round(performance.now() - t0); return r;
+        });
+      })
       .catch(function (e) { clearTimeout(timer); return { ok: false, status: e.name === "AbortError" ? "timeout" : "network error", ms: Math.round(performance.now() - t0) }; });
   }
 
   var jobs = rows.map(function (r) {
-    if (r.kind === "version") {
-      set(r, "ok", "v" + VERSION); return Promise.resolve();
+    if (r.kind === "page") {
+      return timed(r.url, "GET", true).then(function (x) {
+        var mine = x.ok && x.text.indexOf("loader.js") >= 0 && x.text.indexOf('content="' + VERSION + '"') >= 0;
+        if (mine) set(r, "ok", "OK · " + x.ms + " ms");
+        else set(r, "bad", x.ok ? "Other build · " + x.ms + " ms" : "Failed (" + x.status + ") · " + x.ms + " ms");
+      });
+    }
+    if (r.kind === "commit") {
+      return timed(r.url, "HEAD").then(function (x) {
+        if (x.ok && x.commit) set(r, "ok", x.commit.slice(0, 7) + " · " + x.ms + " ms");
+        else set(r, "bad", x.ok ? "Missing" : "Failed (" + x.status + ")");
+      });
     }
     if (r.kind === "webgl2") {
       var ok = !!document.createElement("canvas").getContext("webgl2");
       set(r, ok ? "ok" : "bad", ok ? "Available" : "Unavailable"); return Promise.resolve();
     }
-    if (!r.url) { set(r, "off", "Not configured"); return Promise.resolve(); }
+    // No URL: the dependency is switched off on purpose (Off is neutral and does not count toward the banner).
+    if (!r.url) { set(r, "off", "Off"); return Promise.resolve(); }
     return timed(r.url, r.kind === "head" ? "HEAD" : "GET").then(function (x) {
-      if (x.ok) set(r, "ok", "OK · " + x.ms + " ms"); else set(r, "bad", "Failed (" + x.status + ") · " + x.ms + " ms");
+      var size = r.kind === "head" && x.size ? " · " + Math.round(x.size / 1024) + " KB" : "";
+      if (x.ok) set(r, "ok", "OK · " + x.ms + " ms" + size); else set(r, "bad", "Failed (" + x.status + ") · " + x.ms + " ms");
     });
   });
 
   Promise.all(jobs).then(function () {
-    var bad = rows.filter(function (r) { return r.state === "bad"; }).length;
+    var live = rows.filter(function (r) { return r.state !== "off"; }), off = rows.length - live.length;
+    var bad = live.filter(function (r) { return r.state === "bad"; }).length;
     var b = document.getElementById("banner");
     b.className = "banner " + (bad ? "bad" : "ok");
-    b.textContent = bad ? ("Degraded: " + bad + " of " + rows.length + " checks failing") : "All systems operational";
+    b.textContent = (bad ? "Degraded: " + bad + " of " + live.length + " live checks failing" : "All systems operational (" + live.length + " live checks)")
+      + (off ? " · " + off + " off on purpose" : "");
   });
 })();
 </script>

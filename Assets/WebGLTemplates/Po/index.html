@@ -3,64 +3,73 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#0a0f0a">
+    <meta name="theme-color" content="#0b0f17">
+    <meta name="po-version" content="{{{ PRODUCT_VERSION }}}">
     <link rel="icon" href="data:,">
     <title>{{{ PRODUCT_NAME }}}</title>
     <style>
-      /* Not Unity's default page: that one draws a fixed canvas plus a footer and
-         scrolls in any window shorter than the canvas. Here the canvas is the
-         largest {{{ WIDTH }}}:{{{ HEIGHT }}} rectangle that fits the window, centred,
-         with the fleet corners (title upper-left, settings gear upper-right, build stamp lower-right). */
-      html, body { margin: 0; height: 100%; background: #0a0f0a; overflow: hidden; font-family: system-ui, sans-serif; color: #e8efe8; }
-      body { display: flex; align-items: center; justify-content: center; }
-      .po-brand { position: fixed; top: 10px; left: 14px; font-weight: 600; font-size: 14px; letter-spacing: 0.04em; color: #e8efe8; text-decoration: none; z-index: 5; opacity: 0.85; }
-      .po-gear { position: fixed; top: 8px; right: 12px; width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.16); background: rgba(16,22,16,0.8); color: #e8efe8; text-decoration: none; font-size: 16px; z-index: 5; }
-      .po-version { position: fixed; right: 10px; bottom: 6px; font-size: 11px; color: #9aa69a; pointer-events: none; z-index: 5; }
-      #frame { position: relative; }
-      #unity-canvas { display: block; background: #0a0f0a; outline: none; touch-action: none; }
-      #loading { position: absolute; inset: 0; display: flex; flex-direction: column;
-                 align-items: center; justify-content: center; gap: 14px;
-                 font: 600 14px/1 system-ui, sans-serif; letter-spacing: 0.12em; color: #e8efe8; }
-      #bar { width: 60%; height: 6px; border-radius: 3px; background: #1c261c; overflow: hidden; }
-      #fill { width: 0; height: 100%; background: #f5c542; }
-      #error { position: absolute; left: 8%; right: 8%; bottom: 8%; display: none;
-               padding: 12px; border-radius: 6px; background: #5a1a1a; color: #fff;
-               font: 13px/1.4 system-ui, sans-serif; }
+      /* PoHillKing's page around the WebGL player. The chrome is drawn here, once, OUTSIDE the canvas, so it can never
+         sit on the game's HUD (which hides its own title and version in a browser: HudView.PageDrawsChrome): a 44 px top
+         bar (the name, the fullscreen and /diag buttons) and a 20 px footer with the build's version. The canvas fills
+         everything between them in any orientation (16:9 or 9:16); the HUD lays itself out in a 9:16 column. */
+      :root { --bg: #0b0f17; --surface: #121826; --line: #1f2737; --text: #e6e9f2; --muted: #9aa3b5; --accent: #6366f1;
+              --bar: 44px; --foot: 20px; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
+                   font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+      body { display: flex; flex-direction: column; height: 100dvh; }
+      .po-bar { flex: 0 0 var(--bar); height: var(--bar); display: flex; align-items: center; gap: 8px;
+                padding: 0 max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
+                background: var(--surface); border-bottom: 1px solid var(--line); }
+      .po-brand { color: var(--text); text-decoration: none; font-weight: 700; font-size: 15px; letter-spacing: 0.02em; }
+      .po-spacer { flex: 1; }
+      .po-btn { width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: 8px;
+                border: 1px solid var(--line); background: var(--bg); color: var(--text); text-decoration: none;
+                font: 16px/1 system-ui, sans-serif; cursor: pointer; padding: 0; }
+      .po-btn:hover, .po-btn:focus-visible { border-color: var(--accent); outline: none; }
+      #frame { position: relative; flex: 1 1 auto; min-height: 0; }
+      #unity-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: var(--bg);
+                      outline: none; touch-action: none; }
+      .po-foot { flex: 0 0 var(--foot); height: var(--foot); display: flex; align-items: center; justify-content: flex-end;
+                 padding: 0 max(10px, env(safe-area-inset-right)); background: var(--surface); border-top: 1px solid var(--line);
+                 font-size: 11px; color: var(--muted); }
+      #loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+                 gap: 14px; font-weight: 600; font-size: 14px; letter-spacing: 0.12em; color: var(--text); }
+      #bar { width: min(60%, 360px); height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+      #fill { width: 0; height: 100%; background: var(--accent); }
+      #error { position: absolute; left: 8%; right: 8%; bottom: 8%; display: none; padding: 12px; border-radius: 6px;
+               background: #5a1a1a; color: #fff; font-size: 13px; line-height: 1.4; }
     </style>
   </head>
   <body>
-    <a class="po-brand" href="/">{{{ PRODUCT_NAME }}}</a>
-    <a class="po-gear" href="/diag" aria-label="Settings and diagnostics" title="Diagnostics (/diag)">⚙</a>
+    <header class="po-bar">
+      <a class="po-brand" href="/">{{{ PRODUCT_NAME }}}</a>
+      <span class="po-spacer"></span>
+      <button class="po-btn" id="fullscreen" type="button" aria-label="Fullscreen" title="Fullscreen">⛶</button>
+      <a class="po-btn" href="/diag" aria-label="System status" title="System status (/diag)">⚙</a>
+    </header>
     <div id="frame">
       <canvas id="unity-canvas" tabindex="-1"></canvas>
-      <div id="loading"><div>{{{ PRODUCT_NAME }}}</div><div id="bar"><div id="fill"></div></div></div>
+      <div id="loading"><div>Loading…</div><div id="bar"><div id="fill"></div></div></div>
       <div id="error"></div>
     </div>
-    <span class="po-version">v{{{ PRODUCT_VERSION }}}</span>
+    <footer class="po-foot"><span class="po-version">v{{{ PRODUCT_VERSION }}}</span></footer>
     <script>
       var canvas = document.getElementById("unity-canvas");
       var loading = document.getElementById("loading");
       var fill = document.getElementById("fill");
       var errorBox = document.getElementById("error");
-
-      // Keep the build's canvas aspect (WebGLBuild sets it).
-      function fit() {
-        var height = window.innerHeight;
-        var width = Math.round(height * {{{ WIDTH }}} / {{{ HEIGHT }}});
-        if (width > window.innerWidth) {
-          width = window.innerWidth;
-          height = Math.round(width * {{{ HEIGHT }}} / {{{ WIDTH }}});
-        }
-        canvas.style.width = width + "px";
-        canvas.style.height = height + "px";
-      }
-      window.addEventListener("resize", fit);
-      fit();
+      var instance = null;
 
       function showError(message) {
         errorBox.textContent = message;
         errorBox.style.display = "block";
       }
+
+      document.getElementById("fullscreen").addEventListener("click", function () {
+        if (instance) instance.SetFullscreen(1);
+        else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+      });
 
       var buildUrl = "Build";
       var config = {
@@ -71,10 +80,9 @@
         companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
         productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
         productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+        matchWebGLToCanvasSize: true,
         showBanner: function (message, type) {
-          if (type === "error") {
-            showError(message);
-          }
+          if (type === "error") showError(message);
         },
       };
 
@@ -83,7 +91,8 @@
       script.onload = function () {
         createUnityInstance(canvas, config, function (progress) {
           fill.style.width = (100 * progress) + "%";
-        }).then(function () {
+        }).then(function (unity) {
+          instance = unity;
           loading.style.display = "none";
           canvas.focus();
         }).catch(function (message) {
