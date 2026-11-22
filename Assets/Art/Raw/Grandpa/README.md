@@ -6,8 +6,8 @@ everything derived from it:
 
 1. `"$LOCALAPPDATA/Microsoft/WindowsApps/blender-launcher.exe" -b --factory-startup --python tools/make_grandpa.py`
    (log and renders: `SCREENSHOTS/grandpa-261020/`) cleans the mesh, rigs it (bone heat), and writes
-   - `Assets/PoKingHill/Fighters/Grandpa/grandpa.fbx` + 2k textures: the game asset, arms hanging 20 degrees out;
-   - `training/assets/grandpa/grandpa_rig.json`: joints and limb thickness for the physics body;
+   - `Assets/_Project/Agents/Fighters/Grandpa/grandpa.fbx` + 2k textures: the game asset, arms hanging 20 degrees out;
+   - `Training/assets/grandpa/grandpa_rig.json`: joints and limb thickness for the physics body;
    - `Assets/Art/Exports/FBX/Grandpa/Character_TPose.fbx` (textures embedded) and `Assets/Art/Exports/GLB/Grandpa.glb`:
      the rig in a T-pose with a walk cycle, for use outside the game;
    - `Assets/Art/Raw/Grandpa~/Grandpa.blend`: the rigged scene.

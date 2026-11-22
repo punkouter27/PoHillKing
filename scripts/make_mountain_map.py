@@ -5,7 +5,7 @@
 Headless: blender -b --factory-startup --python scripts/make_mountain_map.py (the Microsoft Store build runs through
 %LOCALAPPDATA%/Microsoft/WindowsApps/blender-launcher.exe).
 
-Builds these meshes and their textures and exports them to Assets/PoKingHill/Maps/Mountain (mountain.fbx):
+Builds these meshes and their textures and exports them to Assets/_Project/Environments/Maps/Mountain (mountain.fbx):
   Mountain   the hill itself, radius 10.5 m, in three levels of detail (Mountain_LOD0-2 under one parent; Unity
              makes them a LODGroup, QualityTier's Low preset forces LOD1). Physics is untouched: the collision shape
              stays the dome from koth/build_mjcf.py (flat disc r < 1.5 m at z = 0, then z = -(r - 1.5)^2 / 9). The
@@ -34,7 +34,7 @@ import bpy
 import numpy as np
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(globals().get("__file__", bpy.data.filepath or "."))))
-OUT = globals().get("OUT") or os.path.join(REPO, "Assets", "PoKingHill", "Maps", "Mountain")
+OUT = globals().get("OUT") or os.path.join(REPO, "Assets", "_Project", "Environments", "Maps", "Mountain")
 PLATEAU_R, SLOPE_K = 1.5, 1.0 / 9.0  # must equal koth/build_mjcf.py
 EXACT_R = 1.9  # visible surface = collision dome inside this radius
 R_MAX = 10.5  # mountain mesh and texture half-extent; the sea starts 6 m down (r = 8.85)

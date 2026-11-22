@@ -4,7 +4,7 @@
 GLB under the same name, then regenerate everything derived from it:
 
 1. In Blender: `exec(open(r"<repo>/tools/make_kim.py").read())`
-   writes `Assets/PoKingHill/Fighters/Kim/` (mesh + textures) and `training/assets/kim/kim_rig.json`.
+   writes `Assets/_Project/Agents/Fighters/Kim/` (mesh + textures) and `Training/assets/kim/kim_rig.json`.
 2. `cd training && KOTH_ROBOT=kim .venv/Scripts/python.exe -m koth.build_mjcf`
    rebuilds her physics body and scenes from the new measurements.
 3. In Unity: `ParityBatch.ImportAll` with `-kothRobot kim` re-imports her testbed scenes.

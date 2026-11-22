@@ -6,9 +6,9 @@ Works in its own Blender scene ("Kim"). Steps:
   1. import the scan, drop its test animation, scale it to HEIGHT_M, turn it to face +X and stand it on z = 0, so
      Blender coordinates are MuJoCo coordinates (x forward, y left, z up, metres);
   2. lower the arms from the T-pose to hang straight down and make that the new rest pose. The physics model
-     (training/koth/build_kim.py) uses this rest pose as its zero pose, so in Unity a bone simply follows its body;
+     (Training/koth/build_kim.py) uses this rest pose as its zero pose, so in Unity a bone simply follows its body;
   3. measure each limb's thickness from the vertices skinned to it;
-  4. write training/assets/kim/kim_rig.json and export Assets/PoKingHill/Fighters/Kim/kim.fbx + textures.
+  4. write Training/assets/kim/kim_rig.json and export Assets/_Project/Agents/Fighters/Kim/kim.fbx + textures.
 """
 
 import json
@@ -22,8 +22,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(globals().get("__file__",
 GLB = os.path.join(
     REPO, "Assets", "Art", "Raw", "Kim", "Kim.glb"
 )  # the editable original; re-run this script after changing it
-OUT_UNITY = os.path.join(REPO, "Assets", "PoKingHill", "Fighters", "Kim")
-OUT_RIG = os.path.join(REPO, "training", "assets", "kim", "kim_rig.json")
+OUT_UNITY = os.path.join(REPO, "Assets", "_Project", "Agents", "Fighters", "Kim")
+OUT_RIG = os.path.join(REPO, "Training", "assets", "kim", "kim_rig.json")
 HEIGHT_M = 1.60
 ARM_CHAIN = ["UpperArm", "LowerArm", "Hand"]
 

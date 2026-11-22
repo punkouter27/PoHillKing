@@ -22,10 +22,10 @@
 crashlytics-build.properties
 
 # Python
-training/.venv/
-training/**/__pycache__/
-training/runs/
-training/checkpoints/
+Training/.venv/
+Training/**/__pycache__/
+Training/runs/
+Training/checkpoints/
 *.pyc
 
 # OS
@@ -38,35 +38,35 @@ scripts/polyhaven/
 # Android native build intermediates (Unity player build); 950e3e1 committed them by accident
 .utmp/
 
-# Written by Assets/PoKingHill/Editor/BuildVersion.cs (YYMMDD of the last commit)
-Assets/PoKingHill/Resources/build_version.txt
-Assets/PoKingHill/Resources/build_version.txt.meta
+# Written by Assets/_Project/Core/Editor/BuildVersion.cs (YYMMDD of the last commit)
+Assets/_Project/Data/Resources/build_version.txt
+Assets/_Project/Data/Resources/build_version.txt.meta
 
 # Two-fighter gate scene, rebuilt by ParityBatch.RunDuelStats / RunDuelParity
-Assets/PoKingHill/Scenes/Gate_duel_2p.unity
-Assets/PoKingHill/Scenes/Gate_duel_2p.unity.meta
+Assets/_Project/Scenes/Gate_duel_2p.unity
+Assets/_Project/Scenes/Gate_duel_2p.unity.meta
 
 # MuJoCo native warnings file (written next to the project when a simulation goes unstable, e.g. by plugin tests)
 MUJOCO_LOG.TXT
-Assets/PoKingHill/Scenes/Gate_ffa_4p.unity
-Assets/PoKingHill/Scenes/Gate_ffa_4p.unity.meta
-Assets/PoKingHill/Scenes/Gate_ffa_6p.unity
-Assets/PoKingHill/Scenes/Gate_ffa_6p.unity.meta
-Assets/PoKingHill/Scenes/Gate_duel_kim_2p.unity
-Assets/PoKingHill/Scenes/Gate_duel_kim_2p.unity.meta
-Assets/PoKingHill/Scenes/Gate_duel_trump_2p.unity
-Assets/PoKingHill/Scenes/Gate_duel_trump_2p.unity.meta
-Assets/PoKingHill/Scenes/Gate_ffa_7p.unity
-Assets/PoKingHill/Scenes/Gate_ffa_7p.unity.meta
-Assets/PoKingHill/Scenes/Gate_duel_grandpa_2p.unity
-Assets/PoKingHill/Scenes/Gate_duel_grandpa_2p.unity.meta
-Assets/PoKingHill/Scenes/Gate_ffa_humans.unity
-Assets/PoKingHill/Scenes/Gate_ffa_humans.unity.meta
+Assets/_Project/Scenes/Gate_ffa_4p.unity
+Assets/_Project/Scenes/Gate_ffa_4p.unity.meta
+Assets/_Project/Scenes/Gate_ffa_6p.unity
+Assets/_Project/Scenes/Gate_ffa_6p.unity.meta
+Assets/_Project/Scenes/Gate_duel_kim_2p.unity
+Assets/_Project/Scenes/Gate_duel_kim_2p.unity.meta
+Assets/_Project/Scenes/Gate_duel_trump_2p.unity
+Assets/_Project/Scenes/Gate_duel_trump_2p.unity.meta
+Assets/_Project/Scenes/Gate_ffa_7p.unity
+Assets/_Project/Scenes/Gate_ffa_7p.unity.meta
+Assets/_Project/Scenes/Gate_duel_grandpa_2p.unity
+Assets/_Project/Scenes/Gate_duel_grandpa_2p.unity.meta
+Assets/_Project/Scenes/Gate_ffa_humans.unity
+Assets/_Project/Scenes/Gate_ffa_humans.unity.meta
 # Unity observation dumps for obs_audit.py (ParityBatch.RunObsDump): large, regenerated on demand
-training/assets/*/unity_obs_*
+Training/assets/*/unity_obs_*
 
 # Python build metadata and Unity crash recovery
-training/*.egg-info/
+Training/*.egg-info/
 Assets/_Recovery/
 Assets/_Recovery.meta
 
@@ -77,10 +77,10 @@ Assets/_Recovery.meta
 .aura/
 .vscode/mcp.json
 
-# Motion capture: clips fetched and datasets built by training/scripts/fetch_mocap.py (rebuilt in seconds; the .json
+# Motion capture: clips fetched and datasets built by Training/scripts/fetch_mocap.py (rebuilt in seconds; the .json
 # summaries beside the datasets are committed)
-training/assets/mocap/raw/
-training/assets/mocap/*.npz
+Training/assets/mocap/raw/
+Training/assets/mocap/*.npz
 
 # Generated Unity C# project files
 /*.csproj

@@ -15,8 +15,8 @@ Works in its own Blender scene ("Grandpa"). Steps:
      Exported with a walk cycle as Assets/Art/Exports/FBX/Grandpa/Character_TPose.fbx (textures embedded) and
      Assets/Art/Exports/GLB/Grandpa.glb; the walk is checked for stretched edges and rendered;
   4. game rest pose: arms hanging ARM_OUT_DEG out from the body, made the rest pose (the physics zero pose,
-     training/koth/build_grandpa.py), limb thickness measured from the vertices each bone owns; writes
-     training/assets/grandpa/grandpa_rig.json and Assets/PoKingHill/Fighters/Grandpa/grandpa.fbx + 2k textures;
+     Training/koth/build_grandpa.py), limb thickness measured from the vertices each bone owns; writes
+     Training/assets/grandpa/grandpa_rig.json and Assets/_Project/Agents/Fighters/Grandpa/grandpa.fbx + 2k textures;
   5. archives the scene as Assets/Art/Raw/Grandpa~/Grandpa.blend (the ~ keeps Unity from importing it).
 Blender's stdout does not come back through the Store build's launcher, so everything is logged to LOG.
 """
@@ -35,8 +35,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(globals().get("__file__",
 GLB = os.path.join(REPO, "Assets", "Art", "Raw", "Grandpa", "Grandpa.glb")
 OUT_TPOSE = os.path.join(REPO, "Assets", "Art", "Exports", "FBX", "Grandpa", "Character_TPose.fbx")
 OUT_GLB = os.path.join(REPO, "Assets", "Art", "Exports", "GLB", "Grandpa.glb")
-OUT_UNITY = os.path.join(REPO, "Assets", "PoKingHill", "Fighters", "Grandpa")
-OUT_RIG = os.path.join(REPO, "training", "assets", "grandpa", "grandpa_rig.json")
+OUT_UNITY = os.path.join(REPO, "Assets", "_Project", "Agents", "Fighters", "Grandpa")
+OUT_RIG = os.path.join(REPO, "Training", "assets", "grandpa", "grandpa_rig.json")
 OUT_BLEND = os.path.join(REPO, "Assets", "Art", "Raw", "Grandpa~", "Grandpa.blend")
 SHOTS = os.path.join(REPO, "SCREENSHOTS", "grandpa-261020")
 LOG = os.path.join(SHOTS, "make_grandpa.log")

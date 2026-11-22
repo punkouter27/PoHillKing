@@ -2,7 +2,7 @@
 
 `Mountain.blend` is the scene `tools/make_mountain_map.py` builds: the hill in three levels of detail
 (`Mountain_LOD0-2`), loose rocks, crags, the ruined colonnade, the banners and the distant peaks, with the
-textures it writes to `Assets/PoKingHill/Maps/Mountain` referenced (not packed). The folder name ends in `~`
+textures it writes to `Assets/_Project/Environments/Maps/Mountain` referenced (not packed). The folder name ends in `~`
 so Unity does not try to import the `.blend` (that needs a Blender it can find, and the game only uses the FBX).
 `Assets/Art/Exports/GLB/Mountain.glb` is the same scene as a self-contained GLB for reference.
 

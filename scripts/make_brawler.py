@@ -3,8 +3,8 @@
   uv --directory training run python ..\tools\\make_brawler.py
 
 Writes:
-  training/assets/brawler/brawler_rig.json
-  Assets/PoKingHill/Fighters/Brawler/brawler.glb
+  Training/assets/brawler/brawler_rig.json
+  Assets/_Project/Agents/Fighters/Brawler/brawler.glb
 """
 
 import json
@@ -190,11 +190,11 @@ def write_procedural_glb(path: str, rig: dict):
 
 def main():
     rig = build_rig()
-    out_rig = os.path.join(REPO, "training", "assets", "brawler", "brawler_rig.json")
+    out_rig = os.path.join(REPO, "Training", "assets", "brawler", "brawler_rig.json")
     os.makedirs(os.path.dirname(out_rig), exist_ok=True)
     with open(out_rig, "w", encoding="utf-8") as f:
         json.dump(rig, f, indent=1)
-    out_glb = os.path.join(REPO, "Assets", "PoKingHill", "Fighters", "Brawler", "brawler.glb")
+    out_glb = os.path.join(REPO, "Assets", "_Project", "Agents", "Fighters", "Brawler", "brawler.glb")
     write_procedural_glb(out_glb, rig)
     print(f"brawler: wrote {out_rig} and {out_glb} ({os.path.getsize(out_glb) // 1024} KB)")
 

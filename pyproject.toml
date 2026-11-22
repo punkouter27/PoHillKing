@@ -9,8 +9,8 @@ dev = ["pytest>=8.0", "ruff>=0.8"]
 # Tests: `pytest` runs every tier that needs no GPU (the CI tier on push); tests marked `gpu` need CUDA
 # (MuJoCo Warp kernels) and are skipped where no GPU is present. `-m "not slow"` is the quick tier.
 [tool.pytest.ini_options]
-pythonpath = ["training", "training/scripts"]
-testpaths = ["training/scripts", "training/tests"]
+pythonpath = ["Training", "Training/scripts"]
+testpaths = ["Training/scripts", "Training/tests"]
 markers = [
     "slow: takes more than ~10 s (MuJoCo rollouts, ONNX export)",
     "gpu: needs CUDA (MuJoCo Warp / torch on the GPU)",
@@ -19,7 +19,7 @@ markers = [
 [tool.ruff]
 line-length = 120
 target-version = "py311"
-extend-exclude = ["training/runs", "training/.venv", "Library", "Temp", "Packages", "Assets"]
+extend-exclude = ["Training/runs", "Training/.venv", "Library", "Temp", "Packages", "Assets"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "W6"]
@@ -29,5 +29,5 @@ ignore = ["E731", "E741"]
 [tool.ruff.lint.per-file-ignores]
 # Blender scripts run inside Blender's own Python: `bpy` imports sit inside functions after sys.path set-up.
 "scripts/make_*.py" = ["E402"]
-# Training entry points put training/ on sys.path before importing koth.
-"training/scripts/**/*.py" = ["E402"]
+# Training entry points put Training/ on sys.path before importing koth.
+"Training/scripts/**/*.py" = ["E402"]

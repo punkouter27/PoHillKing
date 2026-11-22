@@ -1,8 +1,0 @@
-{
-  "_comment": "Motion-quality penalty weights of the base reward (koth/env.py default_cfg). Each term is weight * value * control dt per step; a rung may still override them, and train.py --reward k=v overrides both. joint_torque (sum of actuator force squared) was added on 2026-11-20 and no shipped brain was trained with it: changing a weight here affects only the next training run, never the ONNX brains in Assets/PoKingHill/Models.",
-  "ang_vel_xy": -0.05,
-  "action_rate": -0.01,
-  "feet_slip": -0.1,
-  "joint_vel": -0.0002,
-  "joint_torque": -1e-05
-}

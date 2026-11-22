@@ -6,13 +6,13 @@ Contract (Steps 1–2, approved): MuJoCo Warp standalone training; Unitree G1 29
 PD position targets at 50 Hz over a 2 ms sim step (decimation 10); style rewards only (no mocap);
 ladder R0–R5; Unity 6000.6.0f1 + org.mujoco plugin + com.unity.ai.inference 2.6; PhysX fully bypassed.
 
-Repo layout (Unity project at root, Python under `training/`):
+Repo layout (Unity project at root, Python under `Training/`):
 
 ```
 PoHillKing/
   tasks.md                      this file
   rl_optimization_log.md        run log + decisions
-  training/                     uv project (py3.11: mujoco, mujoco_warp, warp-lang, brax, jax, torch, onnx)
+  Training/                     uv project (py3.11: mujoco, mujoco_warp, warp-lang, brax, jax, torch, onnx)
     assets/g1/                  g1_koth.xml + meshes + arena hfield (.npy + .png)
     koth/                       env, rewards, buoyancy, pool, dr, joint_map
     scripts/                    train, dump_model, export_onnx, record_reference
@@ -28,7 +28,7 @@ PoHillKing/
 ## Phase 0 — Repo & toolchain
 
 - [x] 0.1 `git init`; Unity `.gitignore` (Library, Temp, Logs, obj, UserSettings, *.csproj, *.slnx); first commit of the template.
-- [x] 0.2 `training/pyproject.toml` via uv: mujoco>=3.3, mujoco-warp, warp-lang (CUDA 12.8+ build for the RTX 5070 Ti / Blackwell), brax, jax[cuda12], torch (CPU is fine), onnx, onnxruntime, numpy, tensorboard. Lockfile committed.
+- [x] 0.2 `Training/pyproject.toml` via uv: mujoco>=3.3, mujoco-warp, warp-lang (CUDA 12.8+ build for the RTX 5070 Ti / Blackwell), brax, jax[cuda12], torch (CPU is fine), onnx, onnxruntime, numpy, tensorboard. Lockfile committed.
 - [x] 0.3 Smoke test: load menagerie g1.xml in mujoco_warp, step 1024 envs × 100 steps on GPU, print steps/s. Record in rl_optimization_log.md.
 - [x] 0.4 Install org.mujoco: add `https://github.com/google-deepmind/mujoco.git?path=unity#<tag>` to Packages/manifest.json at the tag matching the pip mujoco version; place matching `mujoco.dll` in the package. Editor compiles, `MjScene` resolves.
 - [x] 0.5 Install `com.unity.ai.inference` 2.6. `Unity.InferenceEngine.Worker` resolves.
@@ -37,7 +37,7 @@ PoHillKing/
 
 ## Phase A — Physics body & arena derivation (Python only)
 
-- [x] A.1 Copy menagerie `unitree_g1` meshes to `training/assets/g1/`. Author `g1_koth.xml` on `g1_mjx_feetonly.xml` conventions: position actuators kp 75 / ankle-pitch 20 / ankle-roll+wrists 2; joint damping/armature/frictionloss per Step 2; Euler; dt 0.002; iterations 3; ls_iterations 5; eulerdamp off; `stand` keyframe.
+- [x] A.1 Copy menagerie `unitree_g1` meshes to `Training/assets/g1/`. Author `g1_koth.xml` on `g1_mjx_feetonly.xml` conventions: position actuators kp 75 / ankle-pitch 20 / ankle-roll+wrists 2; joint damping/armature/frictionloss per Step 2; Euler; dt 0.002; iterations 3; ls_iterations 5; eulerdamp off; `stand` keyframe.
 - [x] A.2 Collision set: foot boxes 0.09×0.03×0.008; thigh/shin/torso/upper-arm/forearm/hand capsules; head sphere. Bitmasks: robot A=1, robot B=2, arena=4. Self-collision off except foot–foot and foot–shin. Friction 0.6 feet, 0.8 body.
 - [x] A.3 Arena: convex mesh dome `assets/arena.obj` (flat disc r≤1.5 m at z=0; z(r)=−k(r−1.5)², 45° at r≈6 m; 10 m deep). Was an hfield: mujoco_warp emits only one contact per hfield pair, so feet would rock and CPU/Unity would differ from training. Roughness dropped (hull); slope bumps as separate static geoms are a later option.
 - [x] A.4 Projectile pool: 4 × 0.2 m, 2 kg box bodies with free joints, parked floating in the sky (x≈100, z=50) and re-pinned every control step; no shelf, no contacts while parked.
@@ -47,11 +47,11 @@ PoHillKing/
 - [x] A.8 Self-check: `scene_koth_2p.xml` in `mujoco.viewer`, hold `stand` ctrl for 10 s with no policy → both robots stay up. Save the pelvis-height trace (t=1,3,5,10 s) to the log for B.10.
 - [x] A.9 Commit.
 
-> **Phase B result (2026-10-08):** scenes are imported by `PoKingHill/Import testbed scenes` (plugin MJCF importer, `Assets/PoKingHill/Editor/ParityBatch.cs`), not hand-placed. `ModelDumpCheck` passes with 0 mismatches on both scenes. Zero-brain hold: Unity pelvis height 0.77973 / 0.77986 / 0.77978 / 0.77981 / 0.77981 at t = 0.5 / 1 / 3 / 5 / 10 s vs Python 0.7797 / 0.7799 / 0.7798 / 0.7798 / 0.7798. mj_step 0.15 ms (1 robot), 0.28–0.35 ms (2 robots). B.6 (sea), B.8 (HUD) and B.13 are still open; B.9's hold policy is built into `PolicyRunner` (no ONNX needed for it).
+> **Phase B result (2026-10-08):** scenes are imported by `PoKingHill/Import testbed scenes` (plugin MJCF importer, `Assets/_Project/Core/Editor/ParityBatch.cs`), not hand-placed. `ModelDumpCheck` passes with 0 mismatches on both scenes. Zero-brain hold: Unity pelvis height 0.77973 / 0.77986 / 0.77978 / 0.77981 / 0.77981 at t = 0.5 / 1 / 3 / 5 / 10 s vs Python 0.7797 / 0.7799 / 0.7798 / 0.7798 / 0.7798. mj_step 0.15 ms (1 robot), 0.28–0.35 ms (2 robots). B.6 (sea), B.8 (HUD) and B.13 are still open; B.9's hold policy is built into `PolicyRunner` (no ONNX needed for it).
 
 ## Phase B — Early Unity ingestion & zero-brain parity test (CRITICAL, before any training)
 
-- [x] B.1 Asset → Import MuJoCo Scene on `training/assets/g1/scene_koth_2p_unity.xml` (and `scene_flat_1p_unity.xml`). Record what imports cleanly: arena mesh, excludes, actuator gainprm/biasprm, solver options. Anything unsupported → change the MJCF on the Python side first. Never let the two diverge.
+- [x] B.1 Asset → Import MuJoCo Scene on `Training/assets/g1/scene_koth_2p_unity.xml` (and `scene_flat_1p_unity.xml`). Record what imports cleanly: arena mesh, excludes, actuator gainprm/biasprm, solver options. Anything unsupported → change the MJCF on the Python side first. Never let the two diverge.
 - [x] B.2 Zero-PhysX audit: EditMode test asserts 0 Collider, 0 Rigidbody, 0 CharacterController, 0 Joint in every PoKingHill scene.
 - [x] B.3 `JointMap.cs`: on `postInitEvent`, resolve the 29 canonical names → qpos/qvel/actuator ids for both robots via `mj_name2id`; hard assert all found; log the map.
 - [x] B.4 `ModelDumpCheck.cs`: dump the Unity-compiled mjModel to the A.6 schema and diff against `model_dump.json` (mass/range 1e-6, kp exact, timestep exact). PlayMode test fails on any mismatch.
@@ -144,7 +144,7 @@ Render and audio only: no physics input changes, every component inert in the st
 - [x] F.7 `FX/Fighter.shader` on every opaque fighter material: seat-colour rim (red at the edge), wear from contact force, wet after the sea (plus drips), impact flash.
 - [x] F.8 Summit upgrade in Blender (headless `scripts/make_mountain_map.py`, no MCP server connected): crags, ruined colonnade, three banners swaying in the wind (`FX/Banner.shader`, `_KothWind`), hill LOD0-2 (Low forces LOD1), Cycles-baked AO; `.blend` archived in `Assets/Art/Raw/Mountain~`, GLB in `Assets/Art/Exports/GLB`. Report `SCREENSHOTS/map-261019/report.html`.
 - [x] F.9 `QualityTier`: Low / Medium / High / Auto presets (Auto steps down in a player under 45 FPS), two-line telemetry pill, `perf` block in the telemetry JSONL.
-- [x] F.10 Self-collision audit (`training/scripts/collision_audit.py`, EditMode `CollisionTests`): G1 and Trump clean; Kim's foot boxes overlap 3.5 mm in her rest pose (fix at her next retrain).
+- [x] F.10 Self-collision audit (`Training/scripts/collision_audit.py`, EditMode `CollisionTests`): G1 and Trump clean; Kim's foot boxes overlap 3.5 mm in her rest pose (fix at her next retrain).
 - Settings split again: Match (rules) and Show (picture, sound). UI report `SCREENSHOTS/gfx-261019/report.html`; audit `SCREENSHOTS/collision-261019/report.html`.
 
 ## Phase G — Lifelike fighters, music, voice, motion prior (2026-11-14)

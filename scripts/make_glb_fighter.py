@@ -1,12 +1,12 @@
-"""Prepare a rigged GLB character as a fighter without Blender (numpy + Pillow; run with training/.venv's python):
+"""Prepare a rigged GLB character as a fighter without Blender (numpy + Pillow; run with Training/.venv's python):
 
-    training/.venv/Scripts/python.exe scripts/make_glb_fighter.py trump
+    Training/.venv/Scripts/python.exe scripts/make_glb_fighter.py trump
 
 Reads Assets/Art/Raw/<Name>/<Name>.glb (the editable original) and writes
-  training/assets/<robot>/<robot>_rig.json   bone heads/tails and limb thickness, in MuJoCo coordinates and metres, in the
+  Training/assets/<robot>/<robot>_rig.json   bone heads/tails and limb thickness, in MuJoCo coordinates and metres, in the
                                              format scripts/make_kim.py writes (semantic bone names: Hips, UpperArm.L, ...),
                                              plus each bone's source name and the scale and turn that map the GLB onto it;
-  Assets/PoKingHill/Fighters/<Name>/<robot>.glb  the same skinned mesh with 2k textures, imported by glTFast.
+  Assets/_Project/Agents/Fighters/<Name>/<robot>.glb  the same skinned mesh with 2k textures, imported by glTFast.
 
 Unlike Kim's scan the character is used in its own rest pose (arms already hang down), so the GLB is not edited: the
 physics zero pose is built from this rest pose (koth/build_human.py) and the Unity skin follower scales the character
@@ -240,10 +240,10 @@ def main(robot):
     src = os.path.join(REPO, "Assets", "Art", "Raw", spec["name"], spec["name"] + ".glb")
     j, blob = read_glb(src)
     r = rig(robot, j, blob)
-    out_rig = os.path.join(REPO, "training", "assets", robot, f"{robot}_rig.json")
+    out_rig = os.path.join(REPO, "Training", "assets", robot, f"{robot}_rig.json")
     os.makedirs(os.path.dirname(out_rig), exist_ok=True)
     json.dump(r, open(out_rig, "w"), indent=1)
-    out_dir = os.path.join(REPO, "Assets", "PoKingHill", "Fighters", spec["name"])
+    out_dir = os.path.join(REPO, "Assets", "_Project", "Agents", "Fighters", spec["name"])
     os.makedirs(out_dir, exist_ok=True)
     blob2 = shrink_textures(j, blob)
     write_glb(os.path.join(out_dir, robot + ".glb"), j, blob2)

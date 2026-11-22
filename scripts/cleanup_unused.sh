@@ -12,7 +12,7 @@ apply=0; builds=0
 for a in "$@"; do case $a in --apply) apply=1;; --builds) builds=1;; *) echo "unknown option $a"; exit 2;; esac; done
 
 paths=(
-  archive/*/                                           # whatever a cleanup moved out of Assets and training/scripts
+  archive/*/                                           # whatever a cleanup moved out of Assets and Training/scripts
   Assets/_Recovery Assets/_Recovery.meta               # Unity crash-recovery scene (untracked)
   Assets/tmpshot Assets/tmpshot.meta                   # Unity CLI capture folder (capture_game_view writes under Assets/)
 )
@@ -35,9 +35,9 @@ files=$( [ ${#existing[@]} -gt 0 ] && find "${existing[@]}" -type f | wc -l || e
 mb=$( [ ${#existing[@]} -gt 0 ] && du -smc "${existing[@]}" | tail -1 | cut -f1 || echo 0)
 echo "$files files, about ${mb} MB:"; printf '  %s\n' "${existing[@]}" | grep -v '\.meta$'
 
-echo; echo "training runs (training/scripts/prune_runs.py):"
-py=training/.venv/Scripts/python.exe; [ -x "$py" ] || py=python
-(cd training && "../$py" scripts/prune_runs.py $([ $apply = 1 ] && echo --apply) | tail -3)
+echo; echo "training runs (Training/scripts/prune_runs.py):"
+py=Training/.venv/Scripts/python.exe; [ -x "$py" ] || py=python
+(cd Training && "../$py" scripts/prune_runs.py $([ $apply = 1 ] && echo --apply) | tail -3)
 
 if [ $apply = 0 ]; then echo; echo "dry run: pass --apply to delete"; exit 0; fi
 tracked=$(git ls-files -- "${existing[@]}"); [ -n "$tracked" ] && git rm -r -q --cached -- "${existing[@]}" 2>/dev/null
