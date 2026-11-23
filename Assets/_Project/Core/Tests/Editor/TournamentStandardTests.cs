@@ -120,9 +120,6 @@ namespace PoKingHill.Tests
             Assert.AreEqual("Voices/kim/hurt-3", SoundPool.VoicePath("Kim", SoundPool.VoiceEmotion.Hurt, 3));
             Assert.AreEqual("Voices/trump/celebrate-5", SoundPool.VoicePath("Trump (Bulldozer: 102 kg)", SoundPool.VoiceEmotion.Celebrate, 9));
             Assert.AreEqual("Voices/grandpa/insult-1", SoundPool.VoicePath("Grandpa", SoundPool.VoiceEmotion.Insult, 0));
-            Assert.AreEqual(SoundPool.Emotion.Pain, SoundPool.BaseOf(SoundPool.VoiceEmotion.Hurt));
-            Assert.AreEqual(SoundPool.Emotion.Triumph, SoundPool.BaseOf(SoundPool.VoiceEmotion.Celebrate));
-            Assert.AreEqual(SoundPool.Emotion.Strain, SoundPool.BaseOf(SoundPool.VoiceEmotion.Angry));
             Assert.AreEqual(SoundPool.VoiceEmotion.Hurt, SoundPool.StandardOf(SoundPool.Emotion.Pain));
             Assert.AreEqual(SoundPool.VoiceEmotion.Celebrate, SoundPool.StandardOf(SoundPool.Emotion.Triumph));
             Assert.AreEqual(SoundPool.VoiceEmotion.Angry, SoundPool.StandardOf(SoundPool.Emotion.Strain));
