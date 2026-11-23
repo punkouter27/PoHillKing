@@ -62,7 +62,7 @@ namespace PoKingHill
         public int selectedMap;
         public Vector2 spawnRadiusA = new(0.5f, 1.2f), spawnRadiusB = new(0.5f, 1.2f);
         const float MinSpawnGap = 1f;
-        public float roundSeconds = 25f, outRadius = 1.7f;
+        public float roundSeconds = 25f, outRadius = 2.8f;
         [Tooltip("Out radius used for crowded 12+ fighter matches to give the larger field room to fight.")]
         public float crowdedOutRadius = 3.2f;
         [Tooltip("How long the winner panel stays up before the next round or the menu")] public float pauseBetweenRounds = 5f;
@@ -221,6 +221,7 @@ namespace PoKingHill
                 _downAt = new double[bodies.Length]; _stoodAt = new double[bodies.Length]; _getups = new int[bodies.Length];
                 _agentWins = new int[Mathf.Max(1, roster.Length)];
                 _arena = bodies[0].Spec?.arena ?? new ArenaSpec();
+                outRadius = (float)_arena.out_radius; OutRadiusNow = outRadius;   // the out rule is training's (koth/rules.py)
                 MjScene.Instance.SyncTransformsOncePerFrame = bodies.Length == PlayersPerMatch;
                 if (playerSlots.Length != PlayersPerMatch) RandomizePlayerSlots(true);
                 if (autoLaunch) Launch(); else EnterMenu();

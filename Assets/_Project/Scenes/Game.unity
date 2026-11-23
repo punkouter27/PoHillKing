@@ -212437,7 +212437,7 @@ MonoBehaviour:
   spawnRadiusA: {x: 0.5, y: 1.2}
   spawnRadiusB: {x: 0.5, y: 1.2}
   roundSeconds: 25
-  outRadius: 1.7
+  outRadius: 2.8
   crowdedOutRadius: 3.2
   pauseBetweenRounds: 5
   roundsPerMatch: 1

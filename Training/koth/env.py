@@ -40,7 +40,7 @@ from koth.obs import (
 )
 from koth.action_map import spec_of as action_spec, ckpt_spec as ckpt_action_spec, is_default as action_is_default
 from koth.actor import Actor
-from koth.rules import PLATEAU_R, SLOPE_K, OUT_RADIUS, FALL_HEIGHT, TRAIN_TIP_UP
+from koth.rules import PLATEAU_R, SLOPE_K, BEVEL_W, BEVEL_S, OUT_RADIUS, FALL_HEIGHT, TRAIN_TIP_UP
 
 ROBOT = os.environ.get("KOTH_ROBOT", "g1")
 ASSETS = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", ROBOT))
@@ -56,10 +56,21 @@ def reward_penalties() -> dict:
 
 
 def terrain_height(xy: torch.Tensor, arena: bool) -> torch.Tensor:
-    """Ground height under world xy (..., 2). Flat floor = 0; arena = analytic dome profile."""
+    """Ground height under world xy (..., 2). Flat floor = 0; arena = the platform profile of koth/rules.py ground_z."""
     if not arena:
         return torch.zeros(xy.shape[:-1], device=xy.device)
-    return -SLOPE_K * (xy.norm(dim=-1) - PLATEAU_R).clamp(min=0) ** 2
+    d = (xy.norm(dim=-1) - PLATEAU_R).clamp(min=0)
+    e = (d - BEVEL_W).clamp(min=0)
+    rim = BEVEL_S / (2 * BEVEL_W) * d.clamp(max=BEVEL_W) ** 2 if BEVEL_W > 0 else 0.0 * d
+    return -rim - BEVEL_S * e - SLOPE_K * e**2
+
+
+def terrain_slope(xy: torch.Tensor) -> torch.Tensor:
+    """|dz/dr| of the arena ground under world xy (..., 2) (koth/rules.py ground_slope)."""
+    d = (xy.norm(dim=-1) - PLATEAU_R).clamp(min=0)
+    e = (d - BEVEL_W).clamp(min=0)
+    rim = BEVEL_S / BEVEL_W * d.clamp(max=BEVEL_W) if BEVEL_W > 0 else 0.0 * d
+    return torch.where(e > 0, BEVEL_S + 2 * SLOPE_K * e, rim)
 
 
 def robot_mass(robot: str) -> float:
@@ -1157,7 +1168,7 @@ class KothEnv:
                         fight[:, None], torch.stack([rk * torch.cos(ang), rk * torch.sin(ang)], 1), xy[:, k]
                     )
         if xy is not None:
-            slope = 2 * SLOPE_K * (xy.norm(dim=2) - PLATEAU_R).clamp(min=0)
+            slope = terrain_slope(xy)
             q[:, self.rq + 0] = xy[:, :, 0]
             q[:, self.rq + 1] = xy[:, :, 1]
             q[:, self.rq + 2] = self.key_root_z + terrain_height(xy, self.arena) + 0.02 + 0.12 * slope
@@ -1679,7 +1690,7 @@ class KothEnv:
             orad = opos[:, :2].norm(dim=1)
             t["ring_advantage"] = (orad - radius).clamp(-1.0, 1.0)  # be more central than the opponent
             t["opp_radius"] = orad.clamp(max=OUT_RADIUS) / OUT_RADIUS  # how far out the opponent is
-            t["self_edge"] = (radius - 1.2).clamp(min=0.0)  # my own margin to the rim
+            t["self_edge"] = (radius - (PLATEAU_R - 0.3)).clamp(min=0.0)  # my own margin to the rim
             t["push_out"] = ((ovel[:, :2] * opos[:, :2]).sum(1) / orad.clamp(min=0.1)).clamp(
                 -1.0, 2.0
             ) * near  # its outward speed while I am on it
@@ -1719,7 +1730,7 @@ class KothEnv:
             t["getup_pose"] = torch.exp(-(dev**2).sum(1)) * standing
             t["getup_still"] = ((linv_w[:, :2] ** 2).sum(1) + (angv**2).sum(1) * 0.1) * standing
             t["getup_rise"] = linv_w[:, 2].clamp(0.0, 1.0) * (1 - standing)
-        t["plateau"] = (radius < 1.2).float()
+        t["plateau"] = (radius < PLATEAU_R - 0.3).float()
         t["off_rim"] = (radius - PLATEAU_R).clamp(min=0)
         if R.get("victory_hold", 0.0) != 0.0:
             vic = self.victory_active.repeat_interleave(self.A).float()

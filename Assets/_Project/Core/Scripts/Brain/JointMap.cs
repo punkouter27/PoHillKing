@@ -31,9 +31,15 @@ namespace PoKingHill
     [Serializable]
     public class ArenaSpec
     {
-        public double plateau_r = 1.5, slope_k = 1.0 / 9.0, out_radius = 1.7, fall_height = 0.3, fall_up = 0.3;
-        /// <summary>Height of the dome surface at radius r (flat plateau, then z = -k (r - R)²).</summary>
-        public double Ground(double r) => -slope_k * Math.Pow(Math.Max(r - plateau_r, 0), 2);
+        public double plateau_r = 2.5, slope_k = 1.0 / 9.0, bevel_w = 0.15, bevel_s = 0.5, out_radius = 2.8, fall_height = 0.3, fall_up = 0.3;
+        /// <summary>Height of the ground at radius r (koth/rules.py ground_z): the flat concrete platform, its rounded rim
+        /// (z = -(s / 2w) d², d = r - R up to w), then the hill (z = -s w / 2 - s e - k e², e = d - w).</summary>
+        public double Ground(double r)
+        {
+            double d = Math.Max(r - plateau_r, 0), e = Math.Max(d - bevel_w, 0), m = Math.Min(d, bevel_w);
+            double rim = bevel_w > 0 ? bevel_s / (2 * bevel_w) * m * m : 0;
+            return -rim - bevel_s * e - slope_k * e * e;
+        }
     }
 
     public unsafe class JointMap

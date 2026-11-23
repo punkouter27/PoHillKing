@@ -148,22 +148,31 @@ def apply_pd_gains(default: ET.Element) -> ET.Element:
 HF_DEPTH = 10.0  # dome depth below the plateau
 from koth.rules import (  # noqa: E402
     PLATEAU_R,
-    SLOPE_K,
+    BEVEL_W,
+    ground_z,
+    ground_slope,
     arena_json,
-)  # z = -k (r-1.5)^2 -> 45 deg at r = 6 (rules.py is the one source)
+)  # the platform, its rim and the hill (rules.py is the one source)
 
 
 def write_arena() -> str:
-    """Convex dome: flat disc of radius PLATEAU_R at z=0, then z = -SLOPE_K (r-1.5)^2 down to HF_DEPTH.
+    """Convex dome: the flat platform of radius PLATEAU_R at z=0, its rounded rim, then the hill (rules.ground_z) down
+    to HF_DEPTH.
     Written as binary STL (MuJoCo + the Unity plugin both load it; MuJoCo uses the convex hull, which equals the
     solid itself because the profile is concave). mujoco_warp gives full multi-contact for mesh pairs but
     only one contact per height-field pair, which is why this is a mesh and not an hfield."""
-    n_ang, n_rad = 48, 16
-    r_max = PLATEAU_R + np.sqrt(HF_DEPTH / SLOPE_K)  # where the slope reaches -HF_DEPTH
-    rs = PLATEAU_R + (np.linspace(0, 1, n_rad) ** 1.5) * (r_max - PLATEAU_R)
+    n_ang = 96  # the platform edge is 2.5 m out: 96 sides keep its chord sag under 1.4 mm
+    rim_r = PLATEAU_R + BEVEL_W
+    lo, hi = rim_r, rim_r + 20.0
+    for _ in range(60):  # where the hill reaches -HF_DEPTH
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if ground_z(mid) > -HF_DEPTH else (lo, mid)
+    r_max = hi
+    rim = PLATEAU_R + np.linspace(0, 1, 7) * BEVEL_W if BEVEL_W > 0 else np.array([PLATEAU_R])  # the rounded rim
+    rs = np.concatenate([rim, rim_r + (np.linspace(0, 1, 16)[1:] ** 1.5) * (r_max - rim_r)])
     verts = []
     for r in rs:
-        z = -SLOPE_K * (r - PLATEAU_R) ** 2
+        z = ground_z(r)
         for k in range(n_ang):
             a = 2 * np.pi * k / n_ang
             verts.append((r * np.cos(a), r * np.sin(a), z))
@@ -172,7 +181,7 @@ def write_arena() -> str:
         verts.append((r_max * np.cos(a), r_max * np.sin(a), -HF_DEPTH - 0.5))
     verts = np.array(verts, dtype=np.float64)
     faces = []
-    rings = n_rad + 1
+    rings = len(rs) + 1
     for i in range(rings - 1):
         for k in range(n_ang):
             a, b = i * n_ang + k, i * n_ang + (k + 1) % n_ang
@@ -390,7 +399,7 @@ def default_qpos(m: mujoco.MjModel, prefixes: list[str], poses: dict | None = No
         arena = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "arena")
         if arena >= 0:
             radius = np.hypot(d.qpos[root], d.qpos[root + 1])
-            d.qpos[root + 2] -= SLOPE_K * max(radius - PLATEAU_R, 0) ** 2
+            d.qpos[root + 2] += ground_z(radius)
     return d.qpos.copy()
 
 
@@ -592,11 +601,11 @@ def build_rocks(n_rocks: int = 24, seed: int = 0):
     wb = scene.find("worldbody")
     rng = np.random.default_rng(seed)
     for i in range(n_rocks):
-        r = rng.uniform(PLATEAU_R + 0.3, 3.6)
+        r = rng.uniform(PLATEAU_R + BEVEL_W + 0.3, PLATEAU_R + 2.1)
         ang = rng.uniform(0, 2 * np.pi)
         hx, hy, hz = rng.uniform(0.08, 0.22), rng.uniform(0.08, 0.22), rng.uniform(0.06, 0.14)
-        tilt = np.arctan(2 * SLOPE_K * (r - PLATEAU_R))  # lie along the local slope
-        z = -SLOPE_K * (r - PLATEAU_R) ** 2 + 0.35 * hz  # about two thirds buried
+        tilt = np.arctan(ground_slope(r))  # lie along the local slope
+        z = ground_z(r) + 0.35 * hz  # about two thirds buried
         yaw = ang + rng.uniform(-0.4, 0.4)  # quat = yaw about z, then the tilt about the rock's own y
         cz, sz, ct, st = np.cos(yaw / 2), np.sin(yaw / 2), np.cos(tilt / 2), np.sin(tilt / 2)
         ET.SubElement(

@@ -21,7 +21,7 @@ import numpy as np
 import mujoco
 from koth.obs import goal_command, OBS_DIM
 from koth.build_mjcf import ASSETS, UNITY_MODELS  # Models/ for G1, Models/<robot>/ otherwise
-from koth.rules import PLATEAU_R, SLOPE_K
+from koth.rules import ground_slope, ground_z
 from koth import cpu_sim
 
 
@@ -54,8 +54,8 @@ def record(onnx_path, scene, prefixes, cmd, seconds, goal="none", spawns=None, s
         if spawns and p in spawns:  # same placement rule as KothEnv.reset_idx
             r, bearing, yaw = spawns[p]
             rq = R[p]["rq"]
-            slope = 2 * SLOPE_K * max(r - PLATEAU_R, 0.0)
-            h = -SLOPE_K * max(r - PLATEAU_R, 0.0) ** 2
+            slope = ground_slope(r)
+            h = ground_z(r)
             d.qpos[rq : rq + 3] = [
                 r * np.cos(bearing),
                 r * np.sin(bearing),

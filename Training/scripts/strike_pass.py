@@ -9,7 +9,10 @@ CMU clips with boxing and punches) for each body pass A did not promote.
 A candidate replaces the body's best when it hits more without losing more:
   strike_touch (eval.py, three-way) >= best's + STRIKE_GAIN, share >= best's - SHARE_SLACK and <= CAP,
   each duel >= min(DUEL_FLOOR, best's - DUEL_SLACK), jitter <= JITTER_RATIO x the shipped fighter's, no NaN gradient.
-Evals share balance_game's cache. Nothing is exported unless --export is given (then as balance_game does).
+Or, with --or-share, when it wins more without hitting less: share >= best's + bg.GAIN, the same duel and jitter bars,
+strike >= best's - SHARE_SLACK (the platform retrain, where adapting to the ground counts as much as hitting).
+Evals are cached in --cache (default balance_game's; a new ground needs its own, every cached number is on the old one).
+Run names are <body>_<tag><YYMMDD>_<a|amp>. Nothing is exported unless --export is given (then as balance_game does).
 
   .venv/Scripts/python.exe scripts/strike_pass.py [--hours 9] [--iters 300] [--strike 4] [--amp-weight 0.5]
       [--start trump=runs/trump_hill4/trump_b261123_04/model_final.pt] [--export]
@@ -18,6 +21,7 @@ Log: runs/overnight/strike_<YYMMDD>.out (stdout), runs/overnight/progress_balanc
 
 import argparse
 import datetime
+import json
 import os
 import shutil
 import sys
@@ -30,6 +34,7 @@ import queue_hill4 as h
 import overnight_game as g
 
 STRIKE_GAIN, SHARE_SLACK = 0.05, 0.03
+OR_SHARE = False  # --or-share
 SUMMARY = os.path.join(q.LOG_DIR, "strike_summary.json")
 
 
@@ -55,10 +60,13 @@ def judge(me, ckpt, best, ship_jitter):
     m = bg.measure(me, ckpt, best)
     m["strike"] = strike(me, ckpt, best)
     why = []
-    if m["strike"] < cur["strike"] + STRIKE_GAIN:
-        why.append(f"strike {m['strike']:.3f} < {cur['strike'] + STRIKE_GAIN:.3f}")
-    if m["three"] < cur["three"] - SHARE_SLACK:
-        why.append(f"share {m['three']:.3f} < {cur['three'] - SHARE_SLACK:.3f}")
+    hits = m["strike"] >= cur["strike"] + STRIKE_GAIN and m["three"] >= cur["three"] - SHARE_SLACK
+    wins = OR_SHARE and m["three"] >= cur["three"] + bg.GAIN and m["strike"] >= cur["strike"] - SHARE_SLACK
+    if not (hits or wins):
+        why.append(
+            f"strike {m['strike']:.3f} (needs {cur['strike'] + STRIKE_GAIN:.3f}), share {m['three']:.3f} (needs >= {cur['three'] - SHARE_SLACK:.3f}"
+            + (f", or {cur['three'] + bg.GAIN:.3f} without the strike gain)" if OR_SHARE else ")")
+        )
     if m["three"] > bg.CAP:
         why.append(f"share {m['three']:.3f} > cap {bg.CAP}")
     if m["jitter"] > bg.JITTER_RATIO * ship_jitter:
@@ -86,7 +94,17 @@ def main():
         "--start", nargs="*", default=[], help="body=ckpt: start brains (default: the Models/<body> fighters)"
     )
     ap.add_argument("--export", action="store_true")
+    ap.add_argument(
+        "--or-share", action="store_true", help="also promote a candidate that wins more (see the docstring)"
+    )
+    ap.add_argument("--cache", default=None, help="eval cache file in runs/overnight (default: balance_game's)")
+    ap.add_argument("--tag", default="s", help="run name tag: <body>_<tag><YYMMDD>_a")
     a = ap.parse_args()
+    global OR_SHARE
+    OR_SHARE = a.or_share
+    if a.cache:
+        bg.CACHE = os.path.join(q.LOG_DIR, a.cache)
+        bg.cache = json.load(open(bg.CACHE)) if os.path.exists(bg.CACHE) else {}
     t0 = time.time()
     deadline = t0 + a.hours * 3600
     left = lambda: (deadline - time.time()) / 60
@@ -129,7 +147,7 @@ def main():
             q.note(f"{left():.0f} min left: no time for {me}{' + amp' if amp else ''}")
             break
         others = [b for b in q.HUMANS if b != me]
-        name = f"{me}_s{day}_{'amp' if amp else 'a'}"
+        name = f"{me}_{a.tag}{day}_{'amp' if amp else 'a'}"
         rung = f"{me}_hill4"
         run_dir = os.path.join(q.ROOT, "runs", rung, name)
         ckpt = f"runs/{rung}/{name}/model_final.pt"

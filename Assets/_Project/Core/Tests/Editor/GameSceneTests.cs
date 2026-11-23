@@ -104,14 +104,18 @@ namespace PoKingHill.Tests
         public void ArenaRuleMatchesTheTrainingConstants()
         {
             var a = new ArenaSpec();
-            Assert.AreEqual(1.5, a.plateau_r); Assert.AreEqual(1.0 / 9.0, a.slope_k); Assert.AreEqual(0.3, a.fall_height); Assert.AreEqual(0.3, a.fall_up);
-            Assert.AreEqual(0.0, a.Ground(1.2)); Assert.AreEqual(-(1.0 / 9.0) * 4.0, a.Ground(3.5), 1e-15);
+            Assert.AreEqual(2.5, a.plateau_r); Assert.AreEqual(1.0 / 9.0, a.slope_k); Assert.AreEqual(0.3, a.fall_height); Assert.AreEqual(0.3, a.fall_up);
+            Assert.AreEqual(0.15, a.bevel_w); Assert.AreEqual(0.5, a.bevel_s); Assert.AreEqual(2.8, a.out_radius);
+            Assert.AreEqual(0.0, a.Ground(2.4), "the platform is flat");
+            Assert.AreEqual(-0.5 / 0.3 * 0.1 * 0.1, a.Ground(2.6), 1e-12, "on the rounded rim");
+            double e = 1.0; Assert.AreEqual(-0.5 * 0.15 / 2 - 0.5 * e - (1.0 / 9.0) * e * e, a.Ground(2.5 + 0.15 + e), 1e-12, "on the hill");
             // when build_mjcf.py has written the arena block, it must equal the C# defaults bit for bit
             string jm = "Assets/_Project/RL_Models/joint_map.json";
             var spec = JsonUtility.FromJson<JointMapSpec>(File.ReadAllText(jm));
             if (spec.arena != null && spec.arena.plateau_r != 0)
             {
                 Assert.AreEqual(a.plateau_r, spec.arena.plateau_r); Assert.AreEqual(a.slope_k, spec.arena.slope_k);
+                Assert.AreEqual(a.bevel_w, spec.arena.bevel_w); Assert.AreEqual(a.bevel_s, spec.arena.bevel_s); Assert.AreEqual(a.out_radius, spec.arena.out_radius);
                 Assert.AreEqual(a.fall_height, spec.arena.fall_height); Assert.AreEqual(a.fall_up, spec.arena.fall_up);
             }
         }
