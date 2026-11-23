@@ -8,9 +8,11 @@ Headless: blender -b --factory-startup --python scripts/make_mountain_map.py (th
 Builds these meshes and their textures and exports them to Assets/_Project/Environments/Maps/Mountain (mountain.fbx):
   Mountain   the hill itself, radius 10.5 m, in three levels of detail (Mountain_LOD0-2 under one parent; Unity
              makes them a LODGroup, QualityTier's Low preset forces LOD1). Physics is untouched: the collision shape
-             stays the dome from koth/build_mjcf.py (flat disc r < 1.5 m at z = 0, then z = -(r - 1.5)^2 / 9). The
-             visible surface equals that dome exactly for r < 1.9 m in every level, and departs from it by a rock
+             stays the ground of koth/rules.py ground_z (the flat 2.5 m platform, its rounded rim, then the hill). The
+             visible surface equals that ground exactly for r < EXACT_R (3.05 m) in every level, and departs from it by a rock
              relief that grows with radius.
+  Platform   the concrete platform on the summit (2026-11-23): a smooth slab over the flat 5 m top and its rounded rim
+             (koth/rules.py), drawn 3 mm above the collision ground, with saw-cut joints; PlatformConcrete.mat in Unity.
   Rocks      loose boulders on the slopes, 3.2 m and further from the centre. Render only, like everything here:
              a robot that has already been thrown off can pass through one.
   Crags      jagged rock spires 3.6-6.5 m out, none on the broadcast camera's side of the summit.
@@ -30,13 +32,19 @@ Blender axes are the MuJoCo axes (z up, metres). The dome is symmetric about z, 
 """
 
 import os
+import sys
 import bpy
 import numpy as np
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(globals().get("__file__", bpy.data.filepath or "."))))
 OUT = globals().get("OUT") or os.path.join(REPO, "Assets", "_Project", "Environments", "Maps", "Mountain")
-PLATEAU_R, SLOPE_K = 1.5, 1.0 / 9.0  # must equal koth/build_mjcf.py
-EXACT_R = 1.9  # visible surface = collision dome inside this radius
+sys.path.insert(0, os.path.join(REPO, "Training"))
+from koth.rules import PLATEAU_R, BEVEL_W, ground_z  # noqa: E402  the collision ground: one source (koth/rules.py)
+
+RIM_R = PLATEAU_R + BEVEL_W  # where the concrete platform's rounded rim meets the hill
+EXACT_R = RIM_R + 0.4  # visible surface = collision ground inside this radius
+PLATFORM_LIFT = 0.003  # the concrete is drawn 3 mm above the collision surface (no z-fighting with the hill)
+PLATFORM_TEX = 2048
 R_MAX = 10.5  # mountain mesh and texture half-extent; the sea starts 6 m down (r = 8.85)
 TEX = 2048
 BACK_HALF, BACK_TEX = 300.0, 1024
@@ -65,7 +73,7 @@ def photo(asset, kind):
         import urllib.request
 
         get = lambda u: urllib.request.urlopen(
-            urllib.request.Request(u, headers={"User-Agent": "PoKingHill"}), timeout=180
+            urllib.request.Request(u, headers={"User-Agent": "asset-fetch/1.0"}), timeout=180
         ).read()
         url = json.loads(get(f"https://api.polyhaven.com/files/{asset}"))[kind][PHOTO_RES[asset]]["jpg"]["url"]
         os.makedirs(PHOTOS, exist_ok=True)
@@ -129,13 +137,13 @@ def ss(a, b, x):
 
 
 def dome(r):
-    return np.where(r < PLATEAU_R, 0.0, -SLOPE_K * (r - PLATEAU_R) ** 2)
+    return ground_z(r)
 
 
 def relief(x, y):
     """Rock relief carried by the mesh (wavelengths of 0.4 m and longer). Zero inside EXACT_R."""
     r = np.hypot(x, y)
-    amp = 0.10 * ss(EXACT_R, 3.2, r) + 0.5 * ss(3.0, 6.0, r) + 1.1 * ss(5.0, 9.0, r)
+    amp = 0.10 * ss(EXACT_R, EXACT_R + 1.3, r) + 0.5 * ss(EXACT_R, 6.0, r) + 1.1 * ss(5.0, 9.0, r)
     # Mostly carved into the dome (gullies between buttresses) so the rock rarely stands above the collision
     # surface: a robot sliding down may hang over a gully, it should not sink into a ridge.
     ridges = fbm(x * 0.28, y * 0.28, 5, seed=3, ridged=True)
@@ -148,7 +156,7 @@ def detail(x, y):
     r = np.hypot(x, y)
     cracks = ss(0.035, 0.0, np.abs(fbm(x * 0.8, y * 0.8, 4, seed=6) - 0.5))  # thin fracture lines
     d = 0.03 * fbm(x * 2.2, y * 2.2, 6, seed=5) + 0.008 * fbm(x * 21, y * 21, 3, seed=8) - 0.02 * cracks + 0.02
-    return d * (0.3 + 0.7 * ss(PLATEAU_R, 2.6, r))
+    return d * (0.3 + 0.7 * ss(RIM_R, RIM_R + 1.1, r))
 
 
 def colours(x, y, z, slope, det, pu, pv):
@@ -163,7 +171,7 @@ def colours(x, y, z, slope, det, pu, pv):
     lum = scan @ LUMA
     rock = 0.6 * scan + 0.4 * lum[..., None] * np.array([0.98, 1.0, 1.05])  # mute the moss, cool the stone
     ang = np.arctan2(y, x)
-    streaks = ss(0.56, 0.7, fbm(ang * 30, r * 0.25, 3, seed=29)) * ss(2.2, 3.5, r)
+    streaks = ss(0.56, 0.7, fbm(ang * 30, r * 0.25, 3, seed=29)) * ss(RIM_R, RIM_R + 1.3, r)
     rock = rock * (1.0 - 0.22 * streaks)[..., None]  # water runs downhill
     # Tilted, wobbling strata instead of level rings (level bands on a dome read as contour lines).
     strata = 0.5 + 0.5 * np.sin((z + 0.22 * x - 0.13 * y) * 9 + 9 * n1 + 3 * n2)
@@ -173,7 +181,7 @@ def colours(x, y, z, slope, det, pu, pv):
     rock = rock + (dark - rock) * ss(-4.8, -6.4, z)[..., None]  # wet band
     drifts = ss(0.54, 0.62, fbm(x * 0.7, y * 0.7, 4, seed=27))  # coherent patches, not speckle
     snow_fit = ss(1.25, 0.7, slope) * ss(-5.6, -3.6, z + 1.5 * (n1 - 0.5)) * drifts * ss(-0.3, -1.0, z)
-    snow_fit = snow_fit * (0.10 + 0.9 * ss(PLATEAU_R + 0.2, 3.2, r))  # mostly bare rock where the fight happens
+    snow_fit = snow_fit * (0.10 + 0.9 * ss(RIM_R + 0.2, RIM_R + 1.7, r))  # mostly bare rock where the fight happens
     snow = np.array([0.90, 0.93, 0.97]) * (0.93 + 0.07 * n2)[..., None]
     snow_fit = np.clip(snow_fit, 0, 1)
     wet = ss(-4.8, -6.4, z)
@@ -276,16 +284,21 @@ def polar_grid(radii, n_ang):
 
 
 def mountain_lod(level, uvs_of):
-    """Level 0: rings dense where the camera looks (plateau rim to about 6 m). Levels 1 and 2 keep every ring
-    inside 2.5 m (the summit stays the collision dome) and drop every second / fourth ring and angle beyond."""
+    """Level 0: rings dense where the camera looks (platform rim to about 6 m). Levels 1 and 2 keep every ring
+    inside EXACT_R (the summit stays the collision ground) and drop every second / fourth ring and angle beyond."""
     radii = np.unique(
         np.concatenate(
-            [np.linspace(0.15, PLATEAU_R, 10), np.linspace(PLATEAU_R, 6.0, 110), np.linspace(6.0, R_MAX, 60)]
+            [
+                np.linspace(0.15, PLATEAU_R, 14),
+                np.linspace(PLATEAU_R, RIM_R, 7),
+                np.linspace(RIM_R, 6.0, 110),
+                np.linspace(6.0, R_MAX, 60),
+            ]
         )
     )
     if level:
-        near = radii[radii <= 2.5]
-        far = radii[radii > 2.5][:: 2**level]
+        near = radii[radii <= EXACT_R]
+        far = radii[radii > EXACT_R][:: 2**level]
         radii = np.unique(np.concatenate([near, far, [R_MAX]]))
     x, y, faces = polar_grid(radii, 288 // 2**level)
     z = dome(np.hypot(x, y)) + relief(x, y)
@@ -679,6 +692,42 @@ def build_banners():
     return finish(poles, "BannerPoles", metal), finish(cloth, "Banners", cloth_mat)
 
 
+def build_platform():
+    """The concrete platform (2026-11-23): one smooth slab over the flat summit and its rounded rim, PLATFORM_LIFT
+    above the collision ground, its edge tucked 3 cm into the rock just past the rim. Clean poured concrete: soft
+    mottling, fine aggregate and pores, faint trowel marks, saw-cut joints in a cross, a slightly darker rim. The
+    textures (platform_albedo / _normal / _mask, the Unity mask layout) are a top-down projection of the slab."""
+    half = RIM_R + 0.06
+    radii = np.unique(
+        np.concatenate([np.linspace(0.1, PLATEAU_R, 26), np.linspace(PLATEAU_R, RIM_R, 9), [RIM_R + 0.05]])
+    )
+    x, y, faces = polar_grid(radii, 192)
+    r = np.hypot(x, y)
+    z = ground_z(r) + PLATFORM_LIFT
+    z[r > RIM_R + 1e-6] = ground_z(RIM_R + 0.05) - 0.03  # the skirt: the slab's edge goes into the rock
+    uvs = np.stack([x / (2 * half) + 0.5, y / (2 * half) + 0.5], axis=1).astype(np.float32)
+    c = (np.arange(PLATFORM_TEX) + 0.5) / PLATFORM_TEX * 2 * half - half
+    gx, gy = np.meshgrid(c, c)  # row 0 = -y, as Blender stores pixels (bottom-up), so v = 0 is row 0
+    gr = np.hypot(gx, gy)
+    mott = fbm(gx * 0.9, gy * 0.9, 4, seed=41) - 0.5  # soft cloudiness of a pour
+    fine = fbm(gx * 18, gy * 18, 3, seed=42) - 0.5  # fine aggregate
+    sweep = np.sin(40 * (0.6 * gx + 0.8 * gy) + 6 * fbm(gx * 0.5, gy * 0.5, 3, seed=43))  # trowel marks
+    pores = ss(0.80, 0.86, vnoise(gx * 90, gy * 90, seed=44))
+    joint = ss(0.006, 0.002, np.minimum(np.abs(gx), np.abs(gy))) * (gr < PLATEAU_R - 0.05)  # saw cuts
+    rim = ss(PLATEAU_R - 0.02, RIM_R, gr)
+    shade = 1 + 0.10 * mott + 0.05 * fine + 0.012 * sweep - 0.15 * pores - 0.35 * joint - 0.08 * rim
+    rgb = np.clip(np.array([0.62, 0.615, 0.60]) * shade[..., None], 0, 1)
+    albedo = save_png("platform_albedo", rgb, "sRGB")
+    height = 0.0004 * fine + 0.0002 * sweep - 0.004 * joint - 0.0003 * pores
+    normal = save_png("platform_normal", normal_map(height, 2 * half / PLATFORM_TEX), "Non-Color")
+    ao = np.clip(1 - 0.45 * joint - 0.06 * rim + 0.04 * mott, 0, 1)
+    smooth = np.clip(0.32 + 0.06 * mott - 0.10 * rim - 0.2 * joint, 0, 1)
+    save_png("platform_mask", np.dstack([np.zeros_like(ao), ao, np.zeros_like(ao), smooth]), "Non-Color")
+    obj = make_object("Platform", np.stack([x, y, z], axis=1), faces, uvs, material("PlatformConcrete", albedo, normal))
+    print(f"Platform: {len(x)} verts, radius {RIM_R:.2f} m")
+    return obj
+
+
 def bake_ao(mountain, occluders, hidden):
     """Cycles ambient occlusion of the hill (LOD0) with every prop as an occluder, in the hill's UV layout, folded
     into the mask's occlusion channel (green) and saved again. `hidden` (the other levels of detail, which lie on
@@ -788,8 +837,9 @@ rocks = build_rocks(boulder)
 crags = build_crags(boulder)
 ruins = build_ruins(ruin_material())
 poles, banners = build_banners()
-bake_ao(lods[0], [rocks, crags, ruins, poles], lods[1:])
-objs = [mountain, *lods, backdrop, rocks, crags, ruins, poles, banners]
+platform = build_platform()
+bake_ao(lods[0], [rocks, crags, ruins, poles], lods[1:] + [platform])
+objs = [mountain, *lods, platform, backdrop, rocks, crags, ruins, poles, banners]
 print(
     "exported",
     export(objs),
