@@ -902,3 +902,29 @@ when every share >= 0.28. Progress: `runs/overnight/progress_balance.txt`; repor
     `FeaturePlayModeTests`, `HudLayoutTests`, `MatchFlowTests`, and `StateFlowSoakTests`.
   - Python (`training/`): `test_amp.py` **5/5 ok**, `test_train_budget.py` **2/2 OK**, `collision_audit.py` exit **0**
     (`brawler` zero/rest/tpose enabled overlaps: 0), `env.py` `victory`/`brawler` config check ok.
+
+## 2026-11-23 - balance_game 9 h pass (1 promotion, nothing exported)
+
+- Fix first: `koth.env.HUMANS` had gained `brawler` (feature #20), so every `<body>_hill` / `_hill4` rung asked for a
+  scene with the brawler that was never built; the first launch failed on its evals. `ROSTER` (kim, trump, grandpa) now
+  builds those rings (`bfbd88c`). The failed launch's cache of `null` evals was deleted before the relaunch.
+- `scripts/balance_game.py --hours 9 --no-export` (23:55 -> 07:51, 7.9 h; stopped with 65 min left, too little for a
+  run). 300 iterations x 1024 worlds per run, judged against the other bodies' current best brains.
+- Start (shipped brains against each other): three-way Kim 0.381, Trump 0.266, Grandpa 0.506; duels Kim v Trump 0.851,
+  Kim v Grandpa 0.068, Trump v Grandpa 0.057, Grandpa v Kim 0.918, Grandpa v Trump 0.942.
+
+| run | three-way (best before) | jitter | verdict |
+|---|---|---|---|
+| trump_b261123_01 | 0.241 (0.266) | 0.0230 | fail (needs 0.296) |
+| trump_b261123_02 | 0.268 (0.266) | 0.0215 | fail |
+| trump_b261123_03 | 0.275 (0.266) | 0.0269 | fail |
+| trump_b261123_04 | 0.299 (0.266) | 0.0231 | PROMOTED: vs Kim 0.478 (shipped 0.115), vs Grandpa 0.072 |
+| kim_b261123_01 | 0.158 (0.159) | 0.0374 | fail (needs 0.189) |
+| kim_b261123_02 | 0.181 (0.159) | 0.0485 | fail |
+
+- End (current best brains against each other): Kim 0.159 (shipped), Trump 0.299 (trump_b261123_04), Grandpa 0.419
+  (shipped). Every Trump candidate is about 4x smoother than the shipped Trump (jitter 0.02 vs 0.087).
+- Grandpa still wins >= 92 % of his duels against both; training only the bodies below a third does not reach him.
+  Next: train Kim and Trump on duels against the shipped Grandpa (`<body>_vs_grandpa`), or retune Grandpa down.
+- `--no-export`: `Models/` untouched. trump_b261123_04 needs the Unity gates (RefreshBrains, RunHumanFfaStats,
+  RunGetupDuelStats hill) before it ships. Report: `SCREENSHOTS/training-261123-balance/index.html`.
