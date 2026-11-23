@@ -18,24 +18,42 @@ namespace PoKingHill
         void BuildPlay()
         {
             Text("King of the hill", "h1", _sheetBody);
-            Text("Quick match: 8 fighters at once. Tournament: all 16 in a knockout of one-on-one duels. Only the sea or a push off the mountain ends a fighter.", "body", _sheetBody);
-            Text("Players · the bracket pairs 01 v 02, 03 v 04 ... Shuffle, or tap a slot to cycle its character.", "hint", _sheetBody);
-            var slots = El("player-slots", _sheetBody);
-            for (int i = 0; i < MatchDirector.PlayersPerMatch; i++)
+            Text("Push them off the platform. Two ways to play:", "body", _sheetBody);
+
+            // mode 1: everyone at once
+            var ffa = El("mode-card", _sheetBody);
+            Text("FREE-FOR-ALL", "mode-tag", ffa);
+            Text($"{MatchDirector.FfaPlayers} fighters at once", "mode-title", ffa);
+            Text("One round, everyone against everyone. The last fighter left on the platform wins.", "mode-desc", ffa);
+            Btn($"Start free-for-all · {MatchDirector.FfaPlayers} fighters", "primary", () => director.QuickMatch(), ffa);
+
+            // mode 2: the knockout, its first-round pairings shown as they will be played
+            var cup = El("mode-card", _sheetBody);
+            Text("TOURNAMENT", "mode-tag", cup);
+            Text($"{MatchDirector.PlayersPerMatch} fighters · 1 v 1 knockout", "mode-title", cup);
+            Text("15 duels: round of 16, quarter-finals, semi-finals, final. Each duel's winner goes through.", "mode-desc", cup);
+            Text("Round of 16 · tap a fighter to change it", "hint", cup);
+            var pairs = El("bracket-pairs", cup);
+            for (int p = 0; p < MatchDirector.PlayersPerMatch / 2; p++)
             {
-                int slot = i;
-                int agent = i < director.playerSlots.Length ? director.playerSlots[i] : -1;
-                string badge = agent >= 0 && agent < director.roster.Length ? director.BadgeOf(agent) : "Empty";
-                Btn($"{i + 1:00}  {badge}", "player-slot", () => { director.CyclePlayerSlot(slot); RebuildSheet(); }, slots);
+                var pair = El("bracket-pair", pairs);
+                for (int s = 0; s < 2; s++)
+                {
+                    int slot = 2 * p + s;
+                    int agent = slot < director.playerSlots.Length ? director.playerSlots[slot] : -1;
+                    string badge = agent >= 0 && agent < director.roster.Length ? director.BadgeOf(agent) : "Empty";
+                    if (s == 1) Text("v", "bracket-vs", pair);
+                    Btn($"{slot + 1:00} {badge}", "player-slot", () => { director.CyclePlayerSlot(slot); RebuildSheet(); }, pair);
+                }
             }
-            Text("BYE · reserved slot for the next player you add.", "bye-slot", _sheetBody);
-            var row = El("row", _sheetBody);
-            Btn("Shuffle 16", "secondary", () => { director.RandomizePlayerSlots(true); RebuildSheet(); }, row);
-            Btn($"Quick match · {MatchDirector.FfaPlayers} fighters", "primary", () => director.QuickMatch(), _sheetBody);
-            var actions = El("row", _sheetBody);
+            var cupRow = El("row", cup);
+            Btn("Shuffle", "secondary", () => { director.RandomizePlayerSlots(true); RebuildSheet(); }, cupRow);
+            Btn("Start bracket", "primary next", () => director.StartTournament(), cupRow);
+
+            Text("More modes", "hint", _sheetBody);
+            var more = El("row", _sheetBody); more.name = "more-modes";   // AppendPlayFeatures adds Heats and Daily seed here
             int ticked = director.TickedCount;
-            Btn(ticked == 0 ? "Custom (pick in Agents)" : $"Custom · {ticked} agents", "secondary", () => director.Launch(), actions).SetEnabled(ticked > 0);
-            Btn("16-player bracket", "secondary", () => director.StartTournament(), actions);
+            Btn(ticked == 0 ? "Custom (tick in Agents)" : $"Custom · {ticked} agents", "secondary compact", () => director.Launch(), more).SetEnabled(ticked > 0);
             if (director.Status.Length > 0) Text(director.Status, "body", _sheetBody);
         }
 

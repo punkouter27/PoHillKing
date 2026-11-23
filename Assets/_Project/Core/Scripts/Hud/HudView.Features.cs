@@ -193,7 +193,7 @@ namespace PoKingHill
 
         void AppendPlayFeatures()
         {
-            var row2 = El("row spaced", _sheetBody);
+            var row2 = _sheetBody.Q("more-modes") ?? El("row spaced", _sheetBody);
             Btn("4x4 Heats", "secondary compact", () => director.StartHeatsTournament(), row2);
             Btn("Daily seed", "secondary compact", () => director.StartDailyMatch(), row2);
 

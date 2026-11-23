@@ -169,11 +169,11 @@ namespace PoKingHill.Tests
 
                 // 1. MENU -> PLAY TAB EXPLORATION
                 yield return CaptureComposite("01_menu_play.png", doc);
-                var shuffleBtn = FindButton(root, "Shuffle 16");
+                var shuffleBtn = FindButton(root, "Shuffle");
                 int beforeSlot0 = d.playerSlots[0];
                 ClickButton(shuffleBtn);
                 yield return null;
-                Debug.Log($"[EXPLORE] Shuffle 16 clicked: slot0 {beforeSlot0} -> {d.playerSlots[0]}");
+                Debug.Log($"[EXPLORE] Shuffle clicked: slot0 {beforeSlot0} -> {d.playerSlots[0]}");
 
                 var pickBtn = FindButton(root, "Cycle pick");
                 ClickButton(pickBtn);
@@ -245,7 +245,7 @@ namespace PoKingHill.Tests
 
                 ClickButton(FindButton(root, "Play"));
                 yield return null;
-                ClickButton(FindButton(root, "Quick match · 8 fighters"));
+                ClickButton(FindButton(root, "Start free-for-all · 8 fighters"));
                 yield return Until(() => d.State == MatchState.Intro, 10f, "intro state");
                 yield return new WaitForSecondsRealtime(0.4f);
                 yield return CaptureComposite("06_intro.png", doc);

@@ -175,6 +175,18 @@ Button { font-size: var(--fs-m); }
 .player-slot { width: 24%; height: 52px; min-height: 52px; margin: 2px 0; padding: 0 6px; border-radius: 14px; background-color: rgba(255, 255, 255, 0.08); border-width: 1px; border-color: var(--line); color: var(--ink); font-size: var(--fs-xs); }
 .player-slot:hover { border-color: var(--accent); }
 .bye-slot { font-size: var(--fs-xs); color: var(--ink-dim); white-space: normal; margin: 4px 0 8px 4px; }
+/* Play tab: one card per mode (HudView.BuildPlay) */
+.mode-card { background-color: var(--fill); border-radius: var(--radius); border-width: 2px; border-color: var(--line); padding: 16px 20px 10px 20px; margin: 10px 0; }
+.mode-tag { font-size: var(--fs-xs); color: var(--accent); -unity-font-style: bold; letter-spacing: 2px; }
+.mode-title { font-size: var(--fs-xl); -unity-font-style: bold; color: var(--ink); white-space: normal; margin-top: 2px; }
+.mode-desc { font-size: var(--fs-s); color: var(--ink-dim); white-space: normal; margin: 4px 0 4px 0; }
+.mode-card .primary { height: var(--h-xl); margin: 10px 0 6px 0; }
+.mode-card .row > .primary.next { margin: 8px 7px; }
+.mode-card .hint { margin: 8px 0 4px 2px; }
+.bracket-pairs { flex-direction: row; flex-wrap: wrap; justify-content: space-between; margin: 2px 0 2px 0; }
+.bracket-pair { width: 49.5%; flex-direction: row; align-items: center; margin: 3px 0; padding: 0 4px; border-radius: 16px; background-color: rgba(0, 0, 0, 0.22); }
+.bracket-pair > .player-slot { width: auto; flex-grow: 1; flex-basis: 0; margin: 4px 0; }
+.bracket-vs { font-size: var(--fs-xxs); color: var(--ink-dim); margin: 0 6px; -unity-font-style: bold; }
 
 /* results: one table, the replay strip under the winner, one button */
 .winner-stripe { height: 12px; border-radius: 6px; margin: 12px 0 18px 0; }
