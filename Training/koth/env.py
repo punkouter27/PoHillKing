@@ -142,6 +142,7 @@ def default_cfg(rung: str = "r0") -> dict:
             mirror_standoff=0.0,
             belly_push=0.0,
             arm_contact=0.0,
+            strike_push=0.0,
             getup_height=0.0,
             getup_upright=0.0,
             getup_pose=0.0,
@@ -983,6 +984,11 @@ class KothEnv:
             flag[torch.where(other & (k1 == k), w * self.A + o1, self.M)] = True
             flag[torch.where(other & (k2 == k), w * self.A + o2, self.M)] = True
         self._trunk_touch, self._arm_touch = trunk[: self.M], arm[: self.M]
+        # my feet (2, 3) on another robot: kicks and stamps; read by strike_push with the arms
+        kick = torch.zeros_like(trunk)
+        kick[torch.where(other & f1, w * self.A + o1, self.M)] = True
+        kick[torch.where(other & f2, w * self.A + o2, self.M)] = True
+        self._strike_touch = arm[: self.M] | kick[: self.M]
         return feet[:M2].view(self.M, 2), leg[: self.M]
 
     # ------------------------------------------------------------------ commands
@@ -1553,6 +1559,8 @@ class KothEnv:
         self.extras["cause"] = torch.stack([tipped, low, leg], 1)  # why a row counted as fallen (besides ring-out)
         if A >= 2:
             self.extras["sep"] = self._sep
+            # (M,) a hand, arm or foot on another robot (eval.py strike_touch)
+            self.extras["strike"] = self._strike_touch
         self.extras["jitter"] = self._jitter
         if A > 2:
             self.extras["out"] = self.out.clone()
@@ -1677,6 +1685,9 @@ class KothEnv:
             ) * near  # its outward speed while I am on it
             t["belly_push"] = t["push_out"] * self._trunk_touch.float()  # ... while my trunk touches someone
             t["arm_contact"] = self._arm_touch.float()  # my arms touch someone
+            # strike_push (2026-11-23): push_out while a hand, arm or foot of mine touches someone, i.e. a shove, punch or
+            # kick that moves them outward. Pays for hits that work, not for reaching out (hand_push's posing, shover1/2).
+            t["strike_push"] = t["push_out"] * self._strike_touch.float()
             # Arms: how far each hand reaches from my pelvis toward the opponent (0 with the arms hanging, about 0.35 m
             # with shoulders pitched forward), averaged over both hands, once the opponent is within 1.3 m.
             # ponytail: a pose-shaping term, not a contact force; kept small (0.5/s at most) so that standing in a clinch

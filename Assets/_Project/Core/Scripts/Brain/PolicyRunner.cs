@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Mujoco;
 using Unity.InferenceEngine;
 using UnityEngine;
@@ -59,6 +60,43 @@ namespace PoKingHill
 
         public void SetPostRound(PostRound mode) { if (mode != _after) { _after = mode; _afterBlend = 0f; _afterTicks = 0; } }
 
+        /// <summary>A scripted arm strike laid over the brain's joint targets (the game only: MatchDirector.Shoves starts
+        /// them, never in a statistics gate or in training). Shove = both arms, Jab = one. The arm is cocked (elbow bent,
+        /// shoulder back), thrust straight forward, held for a moment and returned to the brain's own targets. Only the
+        /// shoulder pitch and elbow of the striking arm(s) are touched, and only in what is written to mjData.ctrl: the
+        /// brain's held targets (Ctrl) are unchanged, so its next tick carries on from its own plan.</summary>
+        public enum StrikeKind { None, Shove, LeftJab, RightJab }
+        public const float StrikeWindup = 0.10f, StrikeThrust = 0.12f, StrikeHold = 0.10f, StrikeRecover = 0.22f;
+        public const float StrikeLength = StrikeWindup + StrikeThrust + StrikeHold + StrikeRecover;
+        // joint targets (rad) for the cocked and the extended arm: shoulder pitch < 0 lifts the arm forward, elbow > 0 bends it
+        public const float CockPitch = 0.25f, CockElbow = 1.6f, ReachPitch = -1.45f, ReachElbow = 0.1f;
+        public StrikeKind Strike => _strike;
+        /// <summary>Seconds into the current strike (0 with none).</summary>
+        public float StrikeTime => _strikeT;
+        /// <summary>The fist is going out or held out: the window in which a strike can land (MatchDirector.Shoves).</summary>
+        public bool StrikeLive => _strike != StrikeKind.None && _strikeT >= StrikeWindup && _strikeT < StrikeWindup + StrikeThrust + StrikeHold;
+        StrikeKind _strike; float _strikeT; int[] _armJ;   // _armJ: left pitch, left elbow, right pitch, right elbow
+
+        /// <summary>Start a strike; false while one is still running, while the get-up brain drives, after the round.</summary>
+        public bool BeginStrike(StrikeKind kind)
+        {
+            if (kind == StrikeKind.None || _strike != StrikeKind.None || _getup || _after != PostRound.None || Map == null || _armJ == null) return false;
+            _strike = kind; _strikeT = 0f;
+            return true;
+        }
+
+        /// <summary>How far the striking arm is laid over the brain (0..1) and the pitch/elbow target at time t of a strike.</summary>
+        public static float StrikePose(float t, out float pitch, out float elbow)
+        {
+            static float S(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
+            float t1 = StrikeWindup, t2 = t1 + StrikeThrust, t3 = t2 + StrikeHold;
+            if (t < t1) { pitch = CockPitch; elbow = CockElbow; return S(t / t1); }
+            float k = S((t - t1) / StrikeThrust);
+            pitch = Mathf.Lerp(CockPitch, ReachPitch, k); elbow = Mathf.Lerp(CockElbow, ReachElbow, k);
+            if (t < t3) return 1f;
+            return 1f - S((t - t3) / StrikeRecover);
+        }
+
         public JointMap Map { get; private set; }
         public JointMapSpec Spec => _spec;
         /// <summary>The pelvis body's GameObject transform (moved by the MuJoCo plugin): what cameras and effects follow.</summary>
@@ -115,6 +153,9 @@ namespace PoKingHill
             _actF = new float[_spec.joints.Length]; _shoveOffset = new float[_spec.joints.Length];
             _actS = new float[_spec.joints.Length]; _fatigue = new float[_spec.joints.Length];
             _waistPitch = System.Array.FindIndex(_spec.joints, j => j.Contains("waist_pitch"));
+            _armJ = new[] { "left_shoulder_pitch", "left_elbow", "right_shoulder_pitch", "right_elbow" }
+                .Select(n => System.Array.FindIndex(_spec.joints, j => j.Contains(n))).ToArray();
+            if (System.Array.IndexOf(_armJ, -1) >= 0) _armJ = null;   // a body without these joints cannot strike
             SetStyleOffsets();
             LoadBrain();
             MjScene.Instance.postInitEvent += OnSceneInit;
@@ -158,6 +199,17 @@ namespace PoKingHill
             // MjActuator.OnSyncState writes its own Control field (0) into mjData.ctrl after every mj_step, so the
             // held targets must be rewritten before every physics step, not only on policy ticks.
             for (int i = 0; i < Map.N; i++) d->ctrl[Map.ActId[i]] = Ctrl[i];
+            if (_strike == StrikeKind.None) return;
+            if (_getup || _after != PostRound.None || _strikeT >= StrikeLength) { _strike = StrikeKind.None; _strikeT = 0f; return; }
+            float w = StrikePose(_strikeT, out float pitch, out float elbow);
+            for (int side = 0; side < 2; side++)
+            {
+                if (_strike == (side == 0 ? StrikeKind.RightJab : StrikeKind.LeftJab)) continue;
+                int p = _armJ[2 * side], e = _armJ[2 * side + 1];
+                d->ctrl[Map.ActId[p]] = System.Math.Clamp(Ctrl[p] + w * (pitch - Ctrl[p]), Map.CtrlMin[p], Map.CtrlMax[p]);
+                d->ctrl[Map.ActId[e]] = System.Math.Clamp(Ctrl[e] + w * (elbow - Ctrl[e]), Map.CtrlMin[e], Map.CtrlMax[e]);
+            }
+            _strikeT += _spec.sim_dt;
         }
 
         internal bool PrepareBatchedTick(MujocoLib.mjData_* d, out ModelAsset asset, out float[] obsVec, out int obsDim, out bool isGetup)
@@ -387,6 +439,7 @@ namespace PoKingHill
         void ResetClock()
         {
             _substep = 0; _phase = 0; _ticks = 0; _ringFill = true; _fatigueFresh = true; _after = PostRound.None; _afterBlend = 0f;
+            _strike = StrikeKind.None; _strikeT = 0f;
             System.Array.Clear(LastAction, 0, LastAction.Length); System.Array.Clear(_actF, 0, _actF.Length);
             System.Array.Clear(_actS, 0, _actS.Length); System.Array.Clear(_fatigue, 0, _fatigue.Length);
             RestoreForceRange();

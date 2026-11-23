@@ -188,12 +188,14 @@ def eval_duel(env, policy, steps, league=False):
     touch = torch.zeros((), device=env.device)
     open_t = torch.zeros((), device=env.device)
     jit = torch.zeros((), device=env.device)
+    strike = torch.zeros((), device=env.device)
     for t in range(steps):
         with torch.no_grad():
             act = policy(obs)
         obs, _, done, extras = env.step(act)
         sep = extras["sep"].view(N, 2)[:, 0]
         touch += ((sep < 0.7) & open_).sum()
+        strike += (extras["strike"].view(N, 2)[:, 0] & open_).sum()
         open_t += open_.sum()
         jit += (extras["jitter"].view(N, -1)[:, 0] * open_).sum()
         out = (extras["radius"] > OUT_RADIUS) | extras["fallen"]
@@ -214,6 +216,7 @@ def eval_duel(env, policy, steps, league=False):
         undecided=round(1 - w - l, 4),
         median_time_s=round(float(t_win[win].median()) if win.any() else -1.0, 2),
         contact_share=round(contact, 4),
+        strike_touch=round(float(strike / open_t.clamp(min=1)), 4),
         jitter_rad=round(float(jit / open_t.clamp(min=1)), 5),
         flags=hack_flags(1 - w - l, contact, w, l, standing_opponent=not league),
         **{"pass": w >= 0.7 if not league else (w / max(w + l, 1e-9) > 0.55 and 1 - w - l < 0.15)},
@@ -242,11 +245,13 @@ def eval_ffa(env, policy, steps):
     t_win = torch.full((N,), float("nan"), device=env.device)
     jit = torch.zeros((), device=env.device)
     open_t = torch.zeros((), device=env.device)
+    strike = torch.zeros((), device=env.device)
     for t in range(steps):
         with torch.no_grad():
             act = policy(obs)
         obs, _, done, extras = env.step(act)
         jit += (extras["jitter"].view(N, -1)[:, 0] * open_).sum()
+        strike += (extras["strike"].view(N, -1)[:, 0] & open_).sum()
         open_t += open_.sum()
         w_ = extras["world_won"] & open_
         l_ = extras["world_lost"] & open_
@@ -263,6 +268,7 @@ def eval_ffa(env, policy, steps):
         undecided=round(1 - w - l, 4),
         median_time_s=round(float(t_win[win].median()) if win.any() else -1.0, 2),
         jitter_rad=round(float(jit / open_t.clamp(min=1)), 5),
+        strike_touch=round(float(strike / open_t.clamp(min=1)), 4),
         flags=hack_flags(1 - w - l, None, w, l),
         **{"pass": w >= 0.4},
     )
@@ -356,6 +362,7 @@ SHARES = (
     "slope_return",
     "met_within_6s",
     "contact_share",
+    "strike_touch",
     "jitter_rad",
 )
 

@@ -168,6 +168,19 @@ namespace PoKingHill.Tests
         }
 
         [Test]
+        public void StrikePoseCocksThrustsAndHandsBack()
+        {
+            Assert.AreEqual(0f, PolicyRunner.StrikePose(0f, out _, out _), 1e-5f, "starts on the brain's own targets");
+            float reach = PolicyRunner.StrikeWindup + PolicyRunner.StrikeThrust;
+            Assert.AreEqual(1f, PolicyRunner.StrikePose(reach, out float pitch, out float elbow), 1e-5f);
+            Assert.AreEqual(PolicyRunner.ReachPitch, pitch, 1e-4f, "arm out in front at the end of the thrust");
+            Assert.AreEqual(PolicyRunner.ReachElbow, elbow, 1e-4f);
+            PolicyRunner.StrikePose(PolicyRunner.StrikeWindup * 0.99f, out pitch, out elbow);
+            Assert.AreEqual(PolicyRunner.CockPitch, pitch, 1e-4f, "cocked during the wind-up");
+            Assert.AreEqual(0f, PolicyRunner.StrikePose(PolicyRunner.StrikeLength, out _, out _), 1e-5f, "back to the brain at the end");
+        }
+
+        [Test]
         public void BuildBracketIsASixteenPlayerKnockout()
         {
             var b = MatchDirector.BuildBracket(16);

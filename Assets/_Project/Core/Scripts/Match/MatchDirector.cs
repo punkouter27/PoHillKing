@@ -229,6 +229,7 @@ namespace PoKingHill
             {
                 for (int i = _playing; i < bodies.Length; i++) Park(i);
                 Retarget();
+                TickStrikes();
             }
             _sw.Restart();
         }
@@ -562,6 +563,7 @@ namespace PoKingHill
             OnNewRoundFeatures();
             _roundStart = MjScene.Instance.Data->time; _resultUntil = 0;
             if (sea != null) { sea.pace = statsRounds > 0 ? 1f : GameSettings.SeaPace; sea.Restart(); }
+            ResetStrikes();
             SetState(MatchState.Fight);
             MatchEvents.RaiseRoundStarted();
         }

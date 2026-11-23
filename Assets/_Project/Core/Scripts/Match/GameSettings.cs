@@ -64,6 +64,9 @@ namespace PoKingHill
         /// <summary>Optional Azure Function endpoint for Daily Challenge global leaderboard (#15).</summary>
         public static string DailyApiUrl { get => S("dailyApiUrl", ""); set => SetS("dailyApiUrl", value ?? ""); }
 
+        /// <summary>Fighters in reach throw shoves and jabs (MatchDirector.Shoves), not only walk into each other.</summary>
+        public static bool Strikes { get => B("strikes", true); set => Set("strikes", value); }
+
         // Advanced: extra rules, developer tools
         /// <summary>Who free-for-all brains go for (no effect with two fighters).</summary>
         public static Targeting Targeting { get => (Targeting)Mathf.Clamp(I("targeting", (int)Targeting.Opportunist), 0, 1); set => Set("targeting", (int)value); }
@@ -82,7 +85,7 @@ namespace PoKingHill
 
         static readonly string[] Keys = { "rounds", "seaPace", "intro", "replays", "targeting", "quality", "cinematic", "colorSafe",
                                           "volume", "sfxVolume", "ambVolume", "musVolume", "voice",
-                                          "haptics", "atmosphere", "liveWeather", "modifier", "dailyApiUrl",
+                                          "haptics", "atmosphere", "liveWeather", "modifier", "dailyApiUrl", "strikes",
                                           "devTools", "telemetryHud", "overlay", "intent", "winOdds", "commentary",
                                           // settings that were cut (2026-10-21): cleared by a reset too
                                           "camera", "effects", "slowmo", "cutaways", "hazards", "stamina", "tactician", "getup" };

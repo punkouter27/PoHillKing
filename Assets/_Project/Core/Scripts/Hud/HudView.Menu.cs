@@ -119,6 +119,7 @@ namespace PoKingHill
             // who free-for-all brains go for (brains were trained 1v1)
             Labeled("3+ fighters", new[] { "Nearest", "Weakest" }, (int)GameSettings.Targeting, i => GameSettings.Targeting = (Targeting)i);
             var grid = El("grid", _sheetBody);
+            Chip(grid, "Shoves and jabs", GameSettings.Strikes, v => GameSettings.Strikes = v);
             Chip(grid, "Developer tools", GameSettings.DevTools, v => GameSettings.DevTools = v);
             Btn("Reset all settings", "secondary compact", () => { GameSettings.ResetAll(); RebuildSheet(); }, _sheetBody);
         }
