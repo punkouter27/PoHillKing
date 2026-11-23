@@ -8,8 +8,8 @@ using UnityEngine;
 
 namespace PoKingHill
 {
-    /// <summary>Elo rating per agent name, kept in persistentDataPath/ladder.json. A decided round counts as a win of
-    /// the winner over every other seated agent; a tie as a draw between all of them. The tournament standard: a new
+    /// <summary>Elo rating per agent name, kept in persistentDataPath/ladder.json. Every completed hill round is rated by
+    /// finishing order (Record), demo and CPU-only matches included: all agents are brains. The tournament standard: a new
     /// agent starts at 1000, K = 32. Ratings already in ladder.json (written under the older 1500 / K 24) are kept as
     /// they are; only agents the file does not know yet start at 1000.</summary>
     public static class Ladder
@@ -44,29 +44,57 @@ namespace PoKingHill
         /// <summary>Knock-outs and assists one agent was credited with in a round (saved with the next Record).</summary>
         public static void AddCredits(string name, int kos, int assists) { if (kos == 0 && assists == 0) return; var e = Get(name); e.kos += kos; e.assists += assists; Save(); }
 
-        /// <summary>Pairs are bodies, not agents, so a mirror match (the same agent on two bodies) counts correctly: the
-        /// winning body beats every other body; pairs of the same agent and pairs that both lost to a third are skipped.</summary>
-        public static void Record(in RoundResult r, Agent[] roster)
+        /// <summary>Finishing place per seated body (0 = best, equal = tied): the round's winner first; then whoever was
+        /// still in at the end (tied; with no winner they share first place); then the knocked-out, the later out the
+        /// better. koAt = knock-out time per body (s, negative = not out); null = nobody but the winner placed.</summary>
+        public static int[] Placements(int winner, int n, double[] koAt)
         {
-            int n = r.Agents.Length; var delta = new Dictionary<string, float>(); var seen = new HashSet<string>();
+            var key = new double[n];       // higher = better
             for (int i = 0; i < n; i++)
-                for (int j = i + 1; j < n; j++)
-                {
-                    int ai = r.Agents[i], aj = r.Agents[j];
-                    if (ai < 0 || aj < 0 || ai >= roster.Length || aj >= roster.Length || ai == aj) continue;
-                    float sa = r.Winner < 0 ? 0.5f : r.Winner == i ? 1f : r.Winner == j ? 0f : -1f;
-                    if (sa < 0) continue;
-                    string na = roster[ai].name, nb = roster[aj].name;
-                    float ea = 1f / (1f + Mathf.Pow(10f, (Rating(nb) - Rating(na)) / 400f));
-                    delta[na] = (delta.TryGetValue(na, out var da) ? da : 0) + K * (sa - ea);
-                    delta[nb] = (delta.TryGetValue(nb, out var db) ? db : 0) - K * (sa - ea);
-                }
-            for (int i = 0; i < n; i++) if (r.Agents[i] >= 0 && r.Agents[i] < roster.Length) seen.Add(roster[r.Agents[i]].name);
-            if (seen.Count < 2) return;
-            string winner = r.Winner >= 0 && r.Winner < n && r.Agents[r.Winner] >= 0 && r.Agents[r.Winner] < roster.Length ? roster[r.Agents[r.Winner]].name : null;
-            foreach (var name in seen)
             {
-                var e = Get(name); e.rating += delta.TryGetValue(name, out var d) ? d : 0; e.rounds++;
+                double ko = koAt != null && i < koAt.Length ? koAt[i] : -1;
+                key[i] = i == winner ? double.MaxValue : ko < 0 ? double.MaxValue / 2 : ko;
+            }
+            var rank = new int[n];
+            for (int i = 0; i < n; i++) { int better = 0; for (int j = 0; j < n; j++) if (key[j] > key[i]) better++; rank[i] = better; }
+            return rank;
+        }
+
+        /// <summary>One completed round, rated by finishing order (the tournament standard's demo / multi-player rule,
+        /// the same for every hill match: quick match, FFA 8, heats, daily seed, demo mode, bracket bouts). An agent
+        /// seated on several bodies counts once, at its BEST place, and never plays itself. Every pair of distinct agents
+        /// is one Elo game (ahead = win, same place = draw) with K scaled by 1/(N-1), N = distinct agents, so a 1v1
+        /// bout is plain Elo and a 16-body match moves a rating about as much as one bout. Mirror-only rounds change
+        /// nothing. Ratings update simultaneously from the pre-round values and are saved at once.</summary>
+        public static void Record(in RoundResult r, Agent[] roster, double[] koAt = null)
+        {
+            int n = r.Agents.Length;
+            var place = Placements(r.Winner, n, koAt);
+            var best = new Dictionary<string, int>();
+            for (int i = 0; i < n; i++)
+            {
+                int a = r.Agents[i];
+                if (a < 0 || a >= roster.Length) continue;
+                string name = roster[a].name;
+                best[name] = best.TryGetValue(name, out int b) ? Math.Min(b, place[i]) : place[i];
+            }
+            if (best.Count < 2) return;
+            var names = new List<string>(best.Keys);
+            float k = K / (names.Count - 1);
+            var delta = new Dictionary<string, float>();
+            foreach (var name in names) delta[name] = 0f;
+            for (int i = 0; i < names.Count; i++)
+                for (int j = i + 1; j < names.Count; j++)
+                {
+                    string na = names[i], nb = names[j];
+                    float sa = best[na] < best[nb] ? 1f : best[na] > best[nb] ? 0f : 0.5f;
+                    float ea = 1f / (1f + Mathf.Pow(10f, (Rating(nb) - Rating(na)) / 400f));
+                    delta[na] += k * (sa - ea); delta[nb] -= k * (sa - ea);
+                }
+            string winner = r.Winner >= 0 && r.Winner < n && r.Agents[r.Winner] >= 0 && r.Agents[r.Winner] < roster.Length ? roster[r.Agents[r.Winner]].name : null;
+            foreach (var name in names)
+            {
+                var e = Get(name); e.rating += delta[name]; e.rounds++;
                 if (winner != null) { if (name == winner) e.wins++; else e.losses++; }
             }
             Save();
@@ -77,6 +105,15 @@ namespace PoKingHill
             try { var f = new File(); f.agents.AddRange(All().Values); System.IO.File.WriteAllText(PathOf, JsonUtility.ToJson(f, true)); }
             catch (Exception ex) { Debug.LogWarning("[Ladder] could not write " + PathOf + ": " + ex.Message); }
         }
+    }
+
+    /// <summary>Counts a round at most once, and only when it was started and not abandoned (pure, EditMode-tested).</summary>
+    public sealed class RoundGate
+    {
+        bool _armed;
+        public void Arm() => _armed = true;
+        public void Abort() => _armed = false;
+        public bool TryConsume() { bool ok = _armed; _armed = false; return ok; }
     }
 
     /// <summary>
@@ -106,17 +143,24 @@ namespace PoKingHill
 
         void OnEnable()
         {
-            MatchEvents.RoundStarted += OnStart; MatchEvents.RoundEnded += OnEnd; MatchEvents.Knockout += OnKo;
+            MatchEvents.RoundStarted += OnStart; MatchEvents.RoundEnded += OnEnd; MatchEvents.Knockout += OnKo; MatchEvents.StateChanged += OnState;
             if (MjScene.InstanceExists) MjScene.Instance.postUpdateEvent += Post;
         }
         void OnDisable()
         {
-            MatchEvents.RoundStarted -= OnStart; MatchEvents.RoundEnded -= OnEnd; MatchEvents.Knockout -= OnKo;
+            MatchEvents.RoundStarted -= OnStart; MatchEvents.RoundEnded -= OnEnd; MatchEvents.Knockout -= OnKo; MatchEvents.StateChanged -= OnState;
             if (MjScene.InstanceExists) MjScene.Instance.postUpdateEvent -= Post;
         }
 
+        /// <summary>Only a round that started and ended is rated, once: armed by RoundStarted, spent by RoundEnded,
+        /// disarmed when the menu comes back mid-round (a demo left by input, a match abandoned).</summary>
+        public readonly RoundGate gate = new();
+
+        void OnState(MatchState s) { if (s == MatchState.Menu || s == MatchState.Intro) gate.Abort(); }
+
         void OnStart()
         {
+            gate.Arm();
             _samples = 0; _tick = 0; _effortTicks = 0;
             for (int i = 0; i < MaxBodies; i++) { _path[i] = _topSpeed[i] = _effort[i] = 0; _koAt[i] = -1; _lastX[i] = double.NaN; }
         }
@@ -142,10 +186,10 @@ namespace PoKingHill
         void OnEnd(RoundResult r)
         {
             if (director == null || director.statsRounds > 0) return;
-            if (director.IsRankedMatch)
+            if (director.IsRankedMatch && gate.TryConsume())
             {
                 for (int i = 0; i < r.Agents.Length && i < MaxBodies; i++) _ratingDelta[i] = -Ladder.Rating(director.NameOf(r.Agents[i], "Robot"));
-                Ladder.Record(r, director.roster);
+                Ladder.Record(r, director.roster, _koAt);
                 for (int i = 0; i < r.Agents.Length && i < MaxBodies; i++) _ratingDelta[i] += Ladder.Rating(director.NameOf(r.Agents[i], "Robot"));
                 if (ledger != null)
                     for (int i = 0; i < r.Agents.Length && i < director.bodies.Length; i++)

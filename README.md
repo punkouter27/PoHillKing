@@ -35,6 +35,13 @@ Every agent is a brain; there is no human player.
 written before this change (start 1500, K 24) are not rescaled: ratings already in `ladder.json` stay as they are; only
 agents the file does not know yet start at 1000. Delete `ladder.json` to restart everyone at 1000.
 
+Every completed hill round is rated, demo mode and CPU-only matches included (every agent is a brain): quick match, FFA 8,
+heats, daily seed and bracket bouts all use one rule. Places come from the knock-out order (winner first, those still in
+next, the later out the better); every pair of distinct agents is one Elo game (ahead = win, same place = 0.5) with K
+scaled by 1/(N-1), so a 1v1 bout is plain Elo. An agent seated on several bodies counts once, at its best place, and never
+plays itself. A round abandoned for the menu (a demo interrupted by input) records nothing, and no round counts twice.
+The results sheet shows each fighter's Elo and change; demo mode hides that sheet.
+
 **Voices** (`Presentation/SoundPool.cs`, `VoiceManifest.cs`, `VoiceSynth.cs`): every roster character has a 5 x 5
 matrix, emotions `angry`, `happy`, `hurt`, `insult`, `celebrate` at levels 1 to 5 (`SoundPool.Play(agent, emotion, level, ...)`).
 
