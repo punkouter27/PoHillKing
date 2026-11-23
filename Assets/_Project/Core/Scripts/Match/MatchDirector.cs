@@ -70,6 +70,7 @@ namespace PoKingHill
         public float confirmSeconds = 1.5f;
         [Tooltip("Rounds per launch before returning to the menu. 0 = keep fighting. GameSettings overrides it at launch.")] public int roundsPerMatch = 1;
         [Tooltip("Skip the menu and start fighting immediately.")] public bool autoLaunch;
+        [Tooltip("Fighters a Custom or automatic launch seats (FfaPlayers; PerfProbe sets 16, the worst case it measures)")] public int launchPlayers = FfaPlayers;
         [Tooltip("Statistical parity gate: play this many rounds fast, write duel_stats_unity.json, then stop. 0 = off.")]
         public int statsRounds = 0;
         [Tooltip("File name the statistics gate writes (empty = duel_stats_unity.json / ffa_stats_unity.json, the parity references); diagnostics runs set their own")]
@@ -340,7 +341,12 @@ namespace PoKingHill
             {
                 if (statsRounds > 0 && FfaStats) agents = FfaDraw();
                 else if (statsRounds > 0) { agents.Add(Mathf.Clamp(selectedA, 0, roster.Length - 1)); agents.Add(Mathf.Clamp(selectedB, 0, roster.Length - 1)); }
-                else { if (!RandomizePlayerSlots()) return; agents.AddRange(playerSlots); }
+                else
+                {
+                    if (!RandomizePlayerSlots()) return;
+                    var pool = InGame(); if (pool.Count == 0) pool = Available();
+                    agents = PickFfaSeats(pool, launchPlayers);
+                }
             }
             _bracket.Clear();
             StartMatch(agents);
@@ -355,7 +361,43 @@ namespace PoKingHill
         {
             _bracket.Clear(); TournamentChampion = ""; selectedMap = 0;
             if (!RandomizePlayerSlots(true)) return;
-            StartMatch(new List<int>(playerSlots).GetRange(0, Mathf.Clamp(count, 2, playerSlots.Length)));
+            var seats = PickFfaSeats(Available(), Mathf.Clamp(count, 2, playerSlots.Length));
+            for (int i = 0; i < seats.Count; i++) playerSlots[i] = seats[i];      // the menu's seats 01.. show who fights
+            StartMatch(seats);
+        }
+
+        // Seats for a free-for-all from these agents: different agents first, repeats only once every one has a seat.
+        List<int> PickFfaSeats(List<int> pool, int count)
+        {
+            var capacity = new Dictionary<string, int>();
+            foreach (var b in bodies) capacity[b.body] = capacity.TryGetValue(b.body, out int n) ? n + 1 : 1;
+            pool = pool.FindAll(i => i >= 0 && i < roster.Length && roster[i].available && roster[i].policy != null);
+            return FfaSeats(pool, i => roster[i].body, capacity, count, new System.Random(UnityEngine.Random.Range(0, int.MaxValue)));
+        }
+
+        /// <summary><paramref name="count"/> seats for a free-for-all from <paramref name="pool"/> (agent indices): every
+        /// agent once, in random order, while there is room; then the same agents again in that order (so repeats are spread
+        /// evenly: 3 agents in 8 seats = 3, 3, 2), never more agents of one body kind than <paramref name="capacity"/> has
+        /// bodies of it. Fewer than count seats only when the bodies run out. Seat order is shuffled.</summary>
+        public static List<int> FfaSeats(IReadOnlyList<int> pool, Func<int, string> bodyOf, IReadOnlyDictionary<string, int> capacity, int count, System.Random rng)
+        {
+            var left = new Dictionary<string, int>(); foreach (var kv in capacity) left[kv.Key] = kv.Value;
+            var order = new List<int>(); foreach (int a in pool) if (!order.Contains(a)) order.Add(a);
+            for (int i = order.Count - 1; i > 0; i--) { int k = rng.Next(i + 1); (order[i], order[k]) = (order[k], order[i]); }
+            var seats = new List<int>();
+            bool placed = true;
+            while (seats.Count < count && placed)
+            {
+                placed = false;
+                foreach (int a in order)
+                {
+                    if (seats.Count >= count) break;
+                    if (!left.TryGetValue(bodyOf(a), out int n) || n <= 0) continue;
+                    seats.Add(a); left[bodyOf(a)] = n - 1; placed = true;
+                }
+            }
+            for (int i = seats.Count - 1; i > 0; i--) { int k = rng.Next(i + 1); (seats[i], seats[k]) = (seats[k], seats[i]); }
+            return seats;
         }
 
         /// <summary>Randomize all sixteen seats from the selected agents, falling back to every available agent if the

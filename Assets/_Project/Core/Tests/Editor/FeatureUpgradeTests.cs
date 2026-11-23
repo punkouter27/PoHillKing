@@ -181,6 +181,30 @@ namespace PoKingHill.Tests
         }
 
         [Test]
+        public void FfaSeatsUseEveryAgentBeforeRepeating()
+        {
+            string[] body = { "kim", "trump", "grandpa" };
+            var cap = new System.Collections.Generic.Dictionary<string, int> { ["kim"] = 6, ["trump"] = 5, ["grandpa"] = 5 };
+            for (int seed = 0; seed < 20; seed++)
+            {
+                var seats = MatchDirector.FfaSeats(new[] { 0, 1, 2 }, a => body[a], cap, MatchDirector.FfaPlayers, new System.Random(seed));
+                Assert.AreEqual(MatchDirector.FfaPlayers, seats.Count, "three agents still fill eight seats");
+                for (int a = 0; a < 3; a++)
+                {
+                    int n = seats.FindAll(s => s == a).Count;
+                    Assert.That(n, Is.InRange(2, 3), "repeats are spread evenly: 3, 3, 2");
+                }
+            }
+            // ten different agents: eight different fighters, no repeat
+            var many = new int[10]; for (int i = 0; i < 10; i++) many[i] = i;
+            var ten = MatchDirector.FfaSeats(many, a => "kim", new System.Collections.Generic.Dictionary<string, int> { ["kim"] = 16 }, 8, new System.Random(1));
+            Assert.AreEqual(8, new System.Collections.Generic.HashSet<int>(ten).Count);
+            // a body kind with too few bodies: its agent is seated at most that often
+            var capped = MatchDirector.FfaSeats(new[] { 0 }, a => "trump", new System.Collections.Generic.Dictionary<string, int> { ["trump"] = 5 }, 8, new System.Random(2));
+            Assert.AreEqual(5, capped.Count);
+        }
+
+        [Test]
         public void BuildBracketIsASixteenPlayerKnockout()
         {
             var b = MatchDirector.BuildBracket(16);

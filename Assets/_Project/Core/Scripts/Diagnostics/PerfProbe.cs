@@ -38,7 +38,7 @@ namespace PoKingHill
             if (!float.TryParse(Cli.Arg("-kothPerf"), NumberStyles.Float, CultureInfo.InvariantCulture, out _seconds)) { enabled = false; return; }
             int cap = (int)((_seconds + 1) / Time.fixedDeltaTime);
             _tick = new float[cap]; _mj = new float[cap]; _brain = new float[cap]; _frame = new float[cap];
-            var dd = FindAnyObjectByType<MatchDirector>(); if (dd != null) { dd.autoLaunch = true; dd.roundsPerMatch = 0; dd.pauseBetweenRounds = 0f; }
+            var dd = FindAnyObjectByType<MatchDirector>(); if (dd != null) { dd.autoLaunch = true; dd.launchPlayers = MatchDirector.PlayersPerMatch; dd.roundsPerMatch = 0; dd.pauseBetweenRounds = 0f; }   // the worst case: all 16
             _runners = FindObjectsByType<PolicyRunner>(FindObjectsInactive.Exclude);
             foreach (var r in _runners) r.OnPolicyStep += OnBrain;
             _frameGc = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame");
