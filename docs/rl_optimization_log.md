@@ -953,3 +953,9 @@ when every share >= 0.28. Progress: `runs/overnight/progress_balance.txt`; repor
   (about 1.5 h a body at 300 iterations), then the Unity gates and new duel-stats references on the platform.
 - **Free-for-all** (`151c2a2`): Quick match and Custom seat 8 (`MatchDirector.FfaSeats`: every agent once before any
   repeat; three brains = 3 + 3 + 2). PerfProbe still seats 16.
+- **First platform run** (`strike_pass --bodies kim --iters 250 --tag p --cache platform_cache.json --or-share`, 12:41 ->
+  14:11, editor open for part of it). Grandpa's platform start: 0.255 (strike 0.454; duels v Kim 0.917, v Trump 0.968).
+  `kim_p261123_a` (warm from the shipped Kim, strike_push 4): three-way 0.225 (start 0.138), duel v Trump 0.986 (0.645),
+  v Grandpa 0.025 (0.066, bar 0.036), strike_touch 0.084 (0.236), jitter 0.0374 -> not promoted (Grandpa duel). She won
+  more by touching less: on the wider platform, keeping distance and letting the others go over pays more than
+  strike_push. Next: a higher strike_push or a strike floor in the judge, and Kim v Grandpa duels.
