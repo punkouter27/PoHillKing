@@ -5,7 +5,7 @@ using UnityEngine;
 namespace PoKingHill
 {
     /// <summary>
-    /// "Benchmark training speed" in the Tab overlay: how fast THIS device steps the game's MuJoCo world, as a stand-in
+    /// "Benchmark sim speed" in the Tab overlay: how fast THIS device steps the game's MuJoCo world, as a stand-in
     /// for training throughput. It copies the live mjData (all bodies, held joint targets) and steps the copy with
     /// mj_step for OverlaySettings.benchmarkSeconds of wall clock, a slice per frame so the page keeps drawing; the game's
     /// own simulation is untouched. Reported: physics steps/s, and samples/s = steps/s / decimation × fighters (one

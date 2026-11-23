@@ -31,7 +31,7 @@ namespace PoKingHill
             _rl = El("rl-panel", _column); _rl.style.display = DisplayStyle.None; _rl.pickingMode = PickingMode.Position;
             Text("RL overlay · Tab", "rl-head", _rl);
             _rlText = Text("", "rl-text", _rl);
-            _rlBench = Btn("Benchmark training speed", "secondary compact", BenchmarkTraining, _rl);
+            _rlBench = Btn("Benchmark sim speed", "secondary compact", BenchmarkTraining, _rl);
             _rlBtn = Btn("RL", "icon-btn rl-btn", ToggleOverlay, _menuBtn.parent); _rlBtn.tooltip = "RL overlay (Tab)";
             _rlBtn.RemoveFromHierarchy(); _menuBtn.parent.Insert(0, _rlBtn);          // left of the menu button
             _rlBtn.style.display = Touchscreen.current != null ? DisplayStyle.Flex : DisplayStyle.None;
