@@ -172,8 +172,8 @@ namespace PoKingHill.Tests
             Assert.AreEqual(MatchState.Fight, d.State);
         }
 
-        /// <summary>The 16-player bracket: seats 01 v 02 duel first (two bodies, the rest parked); the duel's winner (or, both over, the one who went over last) is
-        /// entered into quarter-final 1 and the next match is seats 03 v 04 (or the first duel again after a tie).</summary>
+        /// <summary>The 16-player bracket: seats 01 v 02 duel first (two bodies, the rest parked); the duel always names a winner,
+        /// who is entered into quarter-final 1, and the next match is seats 03 v 04.</summary>
         [UnityTest, Timeout(300000)]
         public IEnumerator SixteenPlayerBracketPlaysDuelsAndAdvancesWinners()
         {
@@ -197,23 +197,57 @@ namespace PoKingHill.Tests
                 yield return Until(() => d.State == MatchState.Result, 240, "the first duel to end");
                 Time.timeScale = 1f;
                 var first = d.Bracket[0];
-                if (first.winner >= 0)
-                {
-                    if (d.LastResult.Winner >= 0) Assert.AreEqual(d.LastResult.Winner, first.winner, "body 0 is seat 01, body 1 seat 02");
-                    else Assert.AreEqual(0, d.Alive.Count, "a tied duel is only settled at once when both went over");
-                    Assert.AreEqual(first.winner, d.Bracket[8].a, "the winner goes on to quarter-final 1");
-                }
+                Assert.GreaterOrEqual(d.LastResult.Winner, 0, "a bracket duel always has a winner on the result screen");
+                Assert.AreEqual(d.LastResult.Winner, first.winner, "body 0 is seat 01, body 1 seat 02");
+                Assert.AreEqual(first.winner, d.Bracket[8].a, "the winner goes on to quarter-final 1");
                 Assert.AreEqual("", d.TournamentChampion);
                 d.Continue();
                 yield return Until(() => d.State == MatchState.Fight, 20, "the next bracket match");
                 Assert.AreEqual(2, d.Playing);
-                int at = first.winner >= 0 ? 1 : 0;
-                Assert.AreEqual(at, d.BracketIndex);
-                Assert.AreEqual(seats[2 * at], d.AgentOf(0)); Assert.AreEqual(seats[2 * at + 1], d.AgentOf(1));
+                Assert.AreEqual(1, d.BracketIndex, "no replays: the second duel is next");
+                Assert.AreEqual(seats[2], d.AgentOf(0)); Assert.AreEqual(seats[3], d.AgentOf(1));
                 d.EnterMenu();
                 Assert.IsFalse(d.InTournament);
             }
             finally { GameSettings.Intro = intro; Time.timeScale = 1f; }
+        }
+
+        /// <summary>A whole 16-player bracket at 4x speed (a duel nobody wins by a push ends when the sea arrives, or at a 1.5 s
+        /// full time without a sea, and goes to whoever is nearest the centre): all 15 duels name a winner and the tournament
+        /// ends with one champion.</summary>
+        [UnityTest, Timeout(600000)]
+        public IEnumerator SixteenPlayerBracketAlwaysEndsWithOneChampion()
+        {
+            SceneManager.LoadScene("Game");
+            yield return Until(() => MatchDirector.Instance != null && MatchDirector.Instance.State == MatchState.Menu, 60, "the menu");
+            var d = MatchDirector.Instance;
+            bool intro = GameSettings.Intro; float secs = d.roundSeconds;
+            try
+            {
+                GameSettings.Intro = false;
+                var replay = Object.FindAnyObjectByType<ReplaySystem>(); if (replay != null) replay.autoDelay = 999f;
+                d.roundSeconds = 1.5f; d.pauseBetweenRounds = 600f; Time.timeScale = 4f;   // each result waits for Continue
+                d.StartTournament();
+                int decided = 0, seen = -1; string champion = "";
+                float end = Time.realtimeSinceStartup + 540f;
+                while (!(decided == 15 && d.State == MatchState.Menu))
+                {
+                    if (Time.realtimeSinceStartup > end) Assert.Fail($"stuck after {decided} duels: state {d.State}, bracket {d.BracketIndex}, status '{d.Status}'");
+                    if (d.State == MatchState.Result && d.InTournament && d.BracketIndex != seen)
+                    {
+                        seen = d.BracketIndex; decided++;
+                        Assert.GreaterOrEqual(d.LastResult.Winner, 0, $"duel {seen + 1} has a winner");
+                        Assert.GreaterOrEqual(d.Bracket[seen].winner, 0);
+                        champion = d.TournamentChampion;
+                        d.Continue();
+                    }
+                    yield return null;
+                }
+                Assert.AreEqual(15, decided);
+                Assert.IsNotEmpty(champion, "one champion after the final");
+                Debug.Log("bracket champion: " + champion);
+            }
+            finally { GameSettings.Intro = intro; d.roundSeconds = secs; Time.timeScale = 1f; }
         }
 
         /// <summary>The tale of the tape plays when it is on: Intro with every fighter standing and no round clock, then the

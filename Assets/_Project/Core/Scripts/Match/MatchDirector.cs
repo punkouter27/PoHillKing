@@ -741,6 +741,36 @@ namespace PoKingHill
                 how = $"nearest the centre when the sea arrived ({Math.Sqrt(best):0.0} m, {alive} still standing)";
                 _status = $"{(char)('A' + winner)} ({BadgeOf(_agentAt[winner])}) holds the summit as the sea arrives";
             }
+            else if (_bracket.Count > 0)
+            {
+                // A knockout duel always has a winner: nearest the centre at full time, else whoever went over last,
+                // else the higher Elo (a coin toss between two copies of one agent).
+                end = alive > 1 ? RoundEnd.FullTime : RoundEnd.NobodyLeft;
+                if (alive > 1)
+                {
+                    double best = double.MaxValue;
+                    for (int i = 0; i < _playing; i++)
+                    {
+                        if (_out[i]) continue;
+                        double* q = d->qpos + bodies[i].Map.RootQposAdr; double r2 = q[0] * q[0] + q[1] * q[1];
+                        if (r2 < best) { best = r2; winner = i; }
+                    }
+                    how = $"nearest the centre at full time ({Math.Sqrt(best):0.0} m)";
+                }
+                else
+                {
+                    for (int k = _fallen.Count - 1; k >= 0 && winner < 0; k--) { int i = Array.IndexOf(bodies, _fallen[k]); if (i >= 0 && i < _playing) winner = i; }
+                    how = "both went over: this one lasted longer";
+                }
+                if (winner < 0)
+                {
+                    var m = _bracket[_bracketAt];
+                    float ra = Ladder.Rating(NameOf(_entrants[m.a], "?")), rb = Ladder.Rating(NameOf(_entrants[m.b], "?"));
+                    winner = ra > rb ? 0 : rb > ra ? 1 : UnityEngine.Random.value < 0.5f ? 0 : 1;   // a on body 0, b on body 1
+                    how = "a dead heat: decided on rating";
+                }
+                _status = $"{(char)('A' + winner)} ({BadgeOf(_agentAt[winner])}) goes through: {how}";
+            }
             else
             {
                 end = alive > 1 ? RoundEnd.FullTime : RoundEnd.NobodyLeft;
@@ -769,22 +799,9 @@ namespace PoKingHill
 
         void RecordBracket(int winnerBody)
         {
+            // EndRound always names a bracket duel's winner (nearest the centre, the last to go over, or the higher Elo)
             var m = _bracket[_bracketAt];
-            // both went over (the last one in fell inside confirmSeconds, most tied duels): whoever went over last goes through
-            if (winnerBody < 0 && _fallen.Count == 2 && _alive.Count == 0)
-            {
-                winnerBody = Array.IndexOf(bodies, _fallen[1]);
-                _status = $"{m.label}: both went over, {EntrantName(winnerBody == 0 ? m.a : m.b)} lasted longer";
-            }
-            if (winnerBody < 0 && m.tries++ == 0) { _status = m.label + ": tie, replayed once"; return; }
-            int w;
-            if (winnerBody >= 0) w = winnerBody == 0 ? m.a : m.b;          // PlayBracketMatch seats a on body 0, b on body 1
-            else
-            {
-                // a second tie: the higher Elo goes through (a coin toss between two copies of one agent)
-                float ra = Ladder.Rating(NameOf(_entrants[m.a], "?")), rb = Ladder.Rating(NameOf(_entrants[m.b], "?"));
-                w = ra > rb ? m.a : rb > ra ? m.b : UnityEngine.Random.value < 0.5f ? m.a : m.b;
-            }
+            int w = winnerBody == 1 ? m.b : m.a;          // PlayBracketMatch seats a on body 0, b on body 1
             m.winner = w;
             if (m.next >= 0)
             {
