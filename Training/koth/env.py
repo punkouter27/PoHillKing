@@ -384,7 +384,7 @@ def default_cfg(rung: str = "r0") -> dict:
         # own body. Four bodies, a_ = this body, b_ = a frozen copy of it (slot1), c_ and d_ = the other two humans
         # (slot2, slot3); half the worlds are duels against one of the three, so a sixth of them are mirror duels.
         me = rung[:-6]
-        bodies = [me, me] + [h for h in HUMANS if h != me]
+        bodies = [me, me] + [h for h in ROSTER if h != me]
         cfg.update(default_cfg(f"{me}_hill"))
         cfg.update(scene=mix_scene(bodies), robots=["a_", "b_", "c_", "d_"])
         cfg["stalemate_rule"] = dict(
@@ -402,7 +402,7 @@ def default_cfg(rung: str = "r0") -> dict:
         # one opponent benched, parked 50 m up as Unity does). (kim_hffa1, a 121-input three-way-only brain, won more
         # three-ways but lost its duels against the fighter it started from: 7.6 % of the decided duels.)
         me = rung[:-5]
-        bodies = [me] + [h for h in HUMANS if h != me]
+        bodies = [me] + [h for h in ROSTER if h != me]
         cfg.update(default_cfg("r5ffa"))
         cfg.update(scene=mix_scene(bodies), robots=["a_", "b_", "c_"], combat2=False, duel_share=0.5)
         cfg["action"] = dict(cfg.get("action") or {}, smooth=0.6)
@@ -441,6 +441,7 @@ def default_cfg(rung: str = "r0") -> dict:
 
 
 HUMANS = ("kim", "trump", "grandpa", "brawler")  # human bodies (koth/build_<body>.py) with the G1's 29 joints
+ROSTER = ("kim", "trump", "grandpa")  # the game's fighters: the _hill / _hill4 rings (brawler stays off until trained)
 # Gait clock per body (train.py --body-gait -> action_map gait_hz, carried in the brain's _action.json): a light body
 # steps quicker, a heavy or older one slower. 1.5 Hz = obs.GAIT_FREQ_HZ, every brain up to 2026-10-29.
 BODY_GAIT_HZ = {"g1": 1.5, "kim": 1.6, "trump": 1.3, "grandpa": 1.2, "brawler": 1.4}
