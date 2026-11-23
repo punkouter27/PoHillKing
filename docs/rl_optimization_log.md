@@ -928,3 +928,28 @@ when every share >= 0.28. Progress: `runs/overnight/progress_balance.txt`; repor
   Next: train Kim and Trump on duels against the shipped Grandpa (`<body>_vs_grandpa`), or retune Grandpa down.
 - `--no-export`: `Models/` untouched. trump_b261123_04 needs the Unity gates (RefreshBrains, RunHumanFfaStats,
   RunGetupDuelStats hill) before it ships. Report: `SCREENSHOTS/training-261123-balance/index.html`.
+
+## 2026-11-23 - shoves and jabs, the concrete platform, 8-fighter free-for-all (no brain retrained)
+
+- **Strikes, game side** (`748bc2b`, `MatchDirector.Shoves.cs`, `GameSettings.Strikes`, on by default): a fighter
+  within 0.85 m of its target and facing it throws a scripted shove (both arms) or jab (one) every 0.9-1.8 s, laid over
+  the brain's arm targets in `PolicyRunner.WriteCtrl`; a fist on the torso gives an impulse of 42 N s / the target's
+  mass. Never in a statistics gate. PlayMode: 11 thrown / 6 landed in 10 s of an 8-fighter match on the old summit, 19 /
+  13 on the platform.
+- **Strikes, training side**: env reward `strike_push` (push_out while a hand, arm or foot touches someone; feet count, so
+  kicks may emerge), `eval.py` `strike_touch`, `scripts/strike_pass.py`. A first 9 h pass on the old summit measured the
+  start (strike_touch: Kim 0.226, Trump 0.298, Grandpa 0.465, the most and the strongest) and was stopped in Kim's first
+  run when the arena changed.
+- **Concrete platform** (`5f0069b`, `e51fd07`): `koth/rules.py` PLATEAU_R 1.5 -> 2.5, a rounded rim (BEVEL_W 0.15 m,
+  slope to BEVEL_S 0.5, 3.75 cm down), then the hill; OUT_RADIUS 1.7 -> 2.8. The profile stays concave (the arena mesh's
+  convex hull is exact; STL vs formula <= 1.2 mm inside 2.8 m). Every MJCF scene, dump and joint map regenerated; every
+  Unity testbed and the game's bodies re-imported; the Blender map follows the ground and adds the `Platform` slab.
+  Brains are NOT retrained for it: every shipped brain and every reference trajectory / duel-stats reference predates it.
+- First numbers on the platform (`strike_pass --tag p`, cache `platform_cache.json`, three-way last-one-in vs the
+  other bodies' best; the run was stopped after these, before any training): shipped vs shipped Kim 0.397, Trump 0.228,
+  Grandpa 0.408; against trump_b261123_04: Kim 0.138 (strike 0.236; duels v Trump 0.645, v Grandpa 0.066), and
+  trump_b261123_04 itself 0.466 (strike 0.241; duels v Kim 0.425, v Grandpa 0.033). Grandpa's not measured.
+- Next: `strike_pass.py --tag p --cache platform_cache.json --or-share --start trump=runs/trump_hill4/trump_b261123_04/model_final.pt`
+  (about 1.5 h a body at 300 iterations), then the Unity gates and new duel-stats references on the platform.
+- **Free-for-all** (`151c2a2`): Quick match and Custom seat 8 (`MatchDirector.FfaSeats`: every agent once before any
+  repeat; three brains = 3 + 3 + 2). PerfProbe still seats 16.
