@@ -35,15 +35,24 @@ Every agent is a brain; there is no human player.
 written before this change (start 1500, K 24) are not rescaled: ratings already in `ladder.json` stay as they are; only
 agents the file does not know yet start at 1000. Delete `ladder.json` to restart everyone at 1000.
 
-**Voices** (`Presentation/SoundPool.cs`): every agent has a 5 x 5 matrix, emotions `angry`, `happy`, `hurt`, `insult`,
-`celebrate` at levels 1 to 5 (`SoundPool.Play(agent, emotion, level, ...)`). Drop WAV files into
-`Assets/_Project/Data/Resources/Voices/<agent>/<emotion>-<level>.wav`, all lower case, `<agent>` being the agent's badge
-(`kim`, `trump`, `grandpa`), e.g. `Voices/trump/celebrate-5.wav`; a folder named after the body kind is the second
-choice. A cell without a WAV is synthesized from the existing character voice (angry = Strain, hurt = Pain,
-celebrate = Triumph, happy = a lighter Triumph, insult = Fear's wobble as a two-syllable taunt), higher, longer, breathier
-and louder with the level. Match events drive it: a hit = hurt or angry (level from its strength), a knock-out credit =
-insult for the pusher and happy for the assist, getting back up = angry 3, the round's winner = celebrate 5 (4 when the
-sea decided it). The fear voice (teetering on the rim, going over) keeps its own clips.
+**Voices** (`Presentation/SoundPool.cs`, `VoiceManifest.cs`, `VoiceSynth.cs`): every roster character has a 5 x 5
+matrix, emotions `angry`, `happy`, `hurt`, `insult`, `celebrate` at levels 1 to 5 (`SoundPool.Play(agent, emotion, level, ...)`).
+
+- `Assets/_Project/Data/Resources/Voices/voices.json` (schema `po-voice-manifest/1`) lists every character (Kim, Trump,
+  Grandpa: one per roster agent, never BYE) x 5 emotions x 5 levels: the WAV each cell uses, relative to that folder,
+  `<id>/<emotion>-<level>.wav` (e.g. `trump/celebrate-5.wav`), whether it `exists`, and the character's procedural
+  `voice` profile (pitch, formant scale, breath, rasp, vibrato, tempo, timbre).
+- To add a recording: drop the WAV at that path, then run **PoKingHill > Voices > Rebuild voices.json** (dropping or
+  deleting a WAV under `Voices/` also refreshes the `exists` flags on import). The generator keeps the profiles already in
+  the file, adds new roster agents, and logs "N of M clips recorded; missing: ...". Never edit `exists` by hand.
+- What plays: the WAV when `exists` is true; otherwise a procedural imitation by that character (`VoiceSynth`: glottal
+  pulses with jitter, shimmer and rasp, four gliding formants, 1 to 4 syllables with consonants: "rraah-hup!",
+  "ha-ha-ha", a gasp then "oof", "nyah-nyah", "woo-hoo!"), louder, longer and wider in pitch with the level,
+  deterministic per character, emotion, level and take, and cached. A missing or invalid `voices.json` makes every voice
+  procedural (one warning).
+- Match events drive it: a hit = hurt or angry (level from its strength), a knock-out credit = insult for the pusher and
+  happy for the assist, getting back up = angry 3, the round's winner = celebrate 5 (4 when the sea decided it). The fear
+  voice (teetering on the rim, going over) keeps its older clips.
 
 ## Commands
 
