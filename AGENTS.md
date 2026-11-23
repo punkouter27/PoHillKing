@@ -210,6 +210,7 @@ uv run python -m koth.build_mjcf [4p|5p|6p|7p]       # regenerate MJCF scenes, m
 uv run python -m koth.build_mjcf game                # the game's 16 bodies in koth_game, then ParityBatch.ImportOne -kothScene koth_game + GameScene.RefreshBodies
 uv run python -m koth.env                            # env smoke test
 uv run python scripts/prune_runs.py [--apply]        # intermediate checkpoints, short / abandoned runs, stale logs under runs/ (dry run by default)
+.venv/Scripts/python.exe ../benchmark/runs.py         # training runs grid runs/runs.html (git-ignored); train.py rebuilds it, with run_meta.json, whenever a run ends
 uv run python scripts/fetch_mocap.py                 # CMU motion capture -> assets/mocap/cmu_style_<body>.npz, one per human (clips and .npz git-ignored: run once per machine)
 uv run python scripts/train.py --rung kim_r1b --amp [--amp-weight 1.0]   # motion prior (koth/amp.py): style reward for moving like the capture; off unless given
 uv run python scripts/test_amp.py                    # retargeting vs MuJoCo kinematics, feature layout, reward range, no pair across a reset

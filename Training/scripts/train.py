@@ -8,6 +8,8 @@ buffer) and NaN/inf gradients in any update. --graduate-reward R exports the fin
 <name>_policy.onnx) only if that mean is >= R at the end and no update had a NaN gradient. --tensorboard starts
 `tensorboard --logdir runs` (port 6006) unless one is already listening. Every finished run also writes
 graduation.json beside model_final.pt (the bars); export_policy.py refuses a checkpoint whose run failed them.
+When the process ends (finished, Ctrl+C or crash) it calls benchmark/runs.py --record, which writes run_meta.json
+(machine, how it ended) and rebuilds the training runs grid runs/runs.html; that step never changes how training ends.
 
 Action path (koth/action_map.py): --action-map tanh, --action-scale <scale json from scripts/action_scale.py>,
 --torque-window, --action-smooth k, --action-slew s (rate limit), --obs-delay n (reaction time in policy steps), --breath a
@@ -42,6 +44,7 @@ from rsl_rl.runners import OnPolicyRunner
 from koth.env import BODY_GAIT_HZ, ROBOT, KothEnv, default_cfg, obs_dims
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RUN_DIR = None  # runs/<rung>/<name> once main() has made it; read by record_run (benchmark/runs.py's grid)
 
 
 class TrainingTimeLimit(Exception):
@@ -500,6 +503,8 @@ def main():
     run = a.name or time.strftime("%Y%m%d-%H%M%S")
     log_dir = os.path.join(ROOT, "runs", a.rung, run)
     os.makedirs(log_dir, exist_ok=True)
+    global RUN_DIR
+    RUN_DIR = log_dir
     training = train_cfg(save_interval=a.save_interval)
     conf = {
         "env": cfg,
@@ -672,5 +677,43 @@ def main():
     print("saved", log_dir)
 
 
+def record_run(ended: str) -> None:
+    """benchmark/runs.py: note this machine and how the run ended, and rebuild runs/runs.html. Never fatal."""
+    if RUN_DIR is None or os.path.basename(RUN_DIR) == "_benchmark":  # no run folder yet, or the Benchmark's own run
+        return
+    try:
+        out = subprocess.run(
+            [
+                sys.executable,
+                os.path.join(os.path.dirname(ROOT), "benchmark", "runs.py"),
+                "--record",
+                os.path.relpath(RUN_DIR, os.path.join(ROOT, "runs")).replace(os.sep, "/"),
+                "--ended",
+                ended,
+                "--launcher",
+                "Training/scripts/train.py",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        print((out.stdout or out.stderr).strip() or f"runs grid exited {out.returncode}")
+    except BaseException as e:  # noqa: BLE001 - the grid must never change how training ends
+        print(f"runs grid not rebuilt: {e!r}")
+
+
 if __name__ == "__main__":
-    main()
+    ended = "finished"
+    try:
+        main()
+    except KeyboardInterrupt:
+        ended = "interrupted (Ctrl+C)"
+        raise
+    except SystemExit as e:
+        ended = "finished" if e.code in (0, None) else f"exited {e.code}"
+        raise
+    except BaseException as e:
+        ended = f"crashed: {type(e).__name__}: {e}"[:300]
+        raise
+    finally:
+        record_run(ended)
