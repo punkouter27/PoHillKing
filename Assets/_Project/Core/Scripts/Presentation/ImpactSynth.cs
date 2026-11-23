@@ -67,10 +67,12 @@ namespace PoKingHill
             src.Play();
             MjScene.Instance.postInitEvent += OnInit; MjScene.Instance.postUpdateEvent += Post;
             MatchEvents.Knockout += OnKo; MatchEvents.RoundEnded += OnEnd; MatchEvents.RoundStarted += OnRound;
+            MatchEvents.KnockoutCredited += OnCredited; MatchEvents.Recovered += OnRecovered;
         }
         void OnDisable()
         {
             MatchEvents.Knockout -= OnKo; MatchEvents.RoundEnded -= OnEnd; MatchEvents.RoundStarted -= OnRound;
+            MatchEvents.KnockoutCredited -= OnCredited; MatchEvents.Recovered -= OnRecovered;
             if (!MjScene.InstanceExists) return;
             MjScene.Instance.postInitEvent -= OnInit; MjScene.Instance.postUpdateEvent -= Post;
         }
@@ -90,7 +92,21 @@ namespace PoKingHill
             if (result.Winner < 0 || director == null || result.Winner >= director.Playing) return;
             _swell = Mathf.Max(_swell, 0.9f);
             var winner = director.bodies[result.Winner];
-            if (winner.body != "g1") Voice(winner, SoundPool.Emotion.Triumph, winner.transform.position + Vector3.up * 0.6f, 0.8f);
+            // Celebrate: level 5 for a knock-out win, 4 when the sea decided it
+            if (winner.body != "g1") Voice(winner, SoundPool.Emotion.Triumph, winner.transform.position + Vector3.up * 0.6f, result.End == RoundEnd.Knockout ? 1f : 0.8f);
+        }
+        // The voice matrix's other cells: the pusher taunts (Insult), the assist cheers (Happy), a fighter back on its
+        // feet is angry (Angry).
+        void OnCredited(PolicyRunner victim, PolicyRunner by, PolicyRunner assist)
+        {
+            if (Gate) return;
+            if (by != null && by.body != "g1") Voice(by, SoundPool.VoiceEmotion.Insult, 4, by.transform.position + Vector3.up * 0.6f, 0.8f);
+            if (assist != null && assist.body != "g1") Voice(assist, SoundPool.VoiceEmotion.Happy, 2, assist.transform.position + Vector3.up * 0.6f, 0.6f);
+        }
+        void OnRecovered(PolicyRunner r)
+        {
+            if (Gate || r == null || r.body == "g1") return;
+            Voice(r, SoundPool.VoiceEmotion.Angry, 3, r.transform.position + Vector3.up * 0.6f, 0.6f);
         }
         void OnRound()
         {
@@ -286,10 +302,30 @@ namespace PoKingHill
             else { pool.Play(SoundPool.Kind.Clank, p, strength * g * 0.4f, pitch * 0.9f); Clanks++; }    // a human shoving a G1: duller metal
         }
 
+        /// <summary>One cell of the voice matrix; without a pool nothing (the stereo fallback has no emotions).</summary>
+        void Voice(PolicyRunner body, SoundPool.VoiceEmotion emotion, int level, Vector3 position, float strength)
+        {
+            if (pool == null) return;
+            pool.Play(AgentKey(body), emotion, level, position, Mathf.Clamp01(strength) * volume * _sfxGain, body.body);
+            Voices++;
+        }
+
+        // The agent seated on a body (its badge, e.g. Kim), for Resources/Voices/<agent>/; the body kind without a director.
+        string AgentKey(PolicyRunner body)
+        {
+            if (director == null) return body.body;
+            int agent = director.AgentOf(System.Array.IndexOf(director.bodies, body));
+            return agent >= 0 && agent < director.roster.Length ? director.roster[agent].Badge : body.body;
+        }
+
         void Voice(PolicyRunner body, SoundPool.Emotion emotion, Vector3 position, float strength)
         {
             float gain = Mathf.Clamp01(strength) * volume * _sfxGain;
-            if (pool != null) pool.PlayVoice(body.body, emotion, position, gain);
+            // through the standard's voice matrix (Pain -> Hurt, Strain -> Angry, Triumph -> Celebrate, level from the
+            // strength); Fear (rim teeter, knock-out) keeps its own character clips
+            if (pool != null && emotion != SoundPool.Emotion.Fear)
+                pool.Play(AgentKey(body), SoundPool.StandardOf(emotion), SoundPool.LevelOf(strength), position, gain, body.body);
+            else if (pool != null) pool.PlayVoice(body.body, emotion, position, gain);
             else
             {
                 Place(position, out float pan, out float distanceGain);

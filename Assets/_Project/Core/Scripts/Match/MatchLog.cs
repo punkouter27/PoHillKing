@@ -9,10 +9,12 @@ using UnityEngine;
 namespace PoKingHill
 {
     /// <summary>Elo rating per agent name, kept in persistentDataPath/ladder.json. A decided round counts as a win of
-    /// the winner over every other seated agent; a tie as a draw between all of them.</summary>
+    /// the winner over every other seated agent; a tie as a draw between all of them. The tournament standard: a new
+    /// agent starts at 1000, K = 32. Ratings already in ladder.json (written under the older 1500 / K 24) are kept as
+    /// they are; only agents the file does not know yet start at 1000.</summary>
     public static class Ladder
     {
-        public const float Start = 1500f; const float K = 24f;
+        public const float Start = 1000f; public const float K = 32f;
         // wins/losses (decided rounds against another agent), knock-outs and assists (ContactLedger) came later: files
         // written before them read as 0.
         [Serializable] class Entry { public string name; public float rating; public int rounds, wins, losses, kos, assists; }

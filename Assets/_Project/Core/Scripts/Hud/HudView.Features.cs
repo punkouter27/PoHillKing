@@ -194,6 +194,7 @@ namespace PoKingHill
         void AppendPlayFeatures()
         {
             var row2 = El("row spaced", _sheetBody);
+            Btn("FFA 8", "secondary compact", () => director.StartFfa(), row2);
             Btn("4x4 Heats", "secondary compact", () => director.StartHeatsTournament(), row2);
             Btn("Daily seed", "secondary compact", () => director.StartDailyMatch(), row2);
 

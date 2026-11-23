@@ -150,6 +150,20 @@ namespace PoKingHill.Tests
                 Assert.IsTrue(d.InHeatsTournament);
                 Assert.AreEqual(4, d.Playing);
 
+                // the tournament standard: FFA with exactly 8, and the 16-slot bracket (1v1 bouts, saved to a scratch file)
+                d.EnterMenu();
+                yield return Until(() => d.State == MatchState.Menu, 10, "menu before FFA 8");
+                Assert.IsTrue(d.StartFfa());
+                Assert.AreEqual(MatchDirector.FfaPlayers, d.Playing);
+                d.EnterMenu();
+                yield return Until(() => d.State == MatchState.Menu, 10, "menu before the bracket");
+                EliminationBracket.PathOverride = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "koth_bracket_playmode.json");
+                d.StartTournament();
+                Assert.IsTrue(d.InTournament);
+                Assert.AreEqual(MatchState.Fight, d.State);
+                Assert.AreEqual(2, d.Playing);
+                Assert.AreNotEqual(d.AgentOf(0), d.AgentOf(1), "a bout is two different agents");
+
                 d.EnterMenu();
                 yield return Until(() => d.State == MatchState.Menu, 10, "menu before daily");
                 Assert.IsTrue(d.StartDailyMatch());
@@ -164,6 +178,8 @@ namespace PoKingHill.Tests
                 GameSettings.Atmosphere = prevAtmo;
                 GameSettings.Modifier = prevMod;
                 GameSettings.Intro = prevIntro;
+                EliminationBracket.DeleteSave();
+                EliminationBracket.PathOverride = null;
             }
         }
     }

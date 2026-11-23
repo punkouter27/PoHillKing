@@ -208,6 +208,13 @@ namespace PoKingHill.Tests
             pool.PlayVoice("unlisted", SoundPool.Emotion.Fear, Vector3.zero, 0.5f);
             Assert.AreEqual(played + 2, pool.Played);
             Assert.AreEqual(fallbacks + 1, pool.VoiceFallbacks);
+            // the standard's 5 x 5 matrix: no WAVs yet, so every cell is synthesized once and cached
+            int synth = pool.VoiceSynthesized;
+            pool.Play("Kim", SoundPool.VoiceEmotion.Hurt, 3, Vector3.zero, 0.5f, "kim");
+            pool.Play("Kim", SoundPool.VoiceEmotion.Hurt, 3, Vector3.zero, 0.5f, "kim");
+            Assert.AreEqual(played + 4, pool.Played);
+            Assert.LessOrEqual(pool.VoiceSynthesized, synth + 1, "a cell is synthesized at most once");
+            Assert.AreSame(pool.VoiceClip("Kim", SoundPool.VoiceEmotion.Hurt, 3, "kim"), pool.VoiceClip("kim", SoundPool.VoiceEmotion.Hurt, 3));
         }
     }
 }

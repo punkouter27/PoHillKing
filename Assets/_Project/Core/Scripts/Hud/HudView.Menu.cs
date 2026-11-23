@@ -20,22 +20,31 @@ namespace PoKingHill
             Text("King of the hill", "h1", _sheetBody);
             Text("16 fighters at once. Fallen fighters get back up: only the sea or a push off the mountain ends them.", "body", _sheetBody);
             Text("Players · shuffle the seats, or tap a slot to cycle its character.", "hint", _sheetBody);
+            // the 4x4 seat grid (four 24 % tiles per row, Hud.uss .player-slot): the seated agent, or BYE for a seat nobody fills
             var slots = El("player-slots", _sheetBody);
             for (int i = 0; i < MatchDirector.PlayersPerMatch; i++)
             {
                 int slot = i;
                 int agent = i < director.playerSlots.Length ? director.playerSlots[i] : -1;
-                string badge = agent >= 0 && agent < director.roster.Length ? director.BadgeOf(agent) : "Empty";
-                Btn($"{i + 1:00}  {badge}", "player-slot", () => { director.CyclePlayerSlot(slot); RebuildSheet(); }, slots);
+                bool bye = agent < 0 || agent >= director.roster.Length;
+                string badge = bye ? EliminationBracket.ByeLabel : director.BadgeOf(agent);
+                Btn($"{i + 1:00}  {badge}", bye ? "player-slot bye" : "player-slot", () => { director.CyclePlayerSlot(slot); RebuildSheet(); }, slots);
             }
-            Text("BYE · reserved slot for the next player you add.", "bye-slot", _sheetBody);
+            Text("BYE · an empty seat: nobody fights there, and in the bracket a BYE's opponent goes through unfought.", "bye-slot", _sheetBody);
             var row = El("row", _sheetBody);
             Btn("Shuffle 16", "secondary", () => { director.RandomizePlayerSlots(true); RebuildSheet(); }, row);
             Btn("Quick match", "primary", () => director.QuickMatch(), _sheetBody);
             var actions = El("row", _sheetBody);
             int ticked = director.TickedCount;
             Btn(ticked == 0 ? "Custom (pick in Agents)" : $"Custom · {ticked} agents", "secondary", () => director.Launch(), actions).SetEnabled(ticked > 0);
-            Btn("16-player tournament", "secondary", () => director.StartTournament(), actions);
+            // the 16-slot elimination bracket (seeded by Elo); a saved, unfinished one resumes
+            if (director.SavedBracket != null)
+            {
+                var next = director.SavedBracket.Next();
+                Btn(next != null ? "Resume bracket · " + EliminationBracket.Label(next) : "Resume bracket", "secondary", () => director.ResumeTournament(), actions);
+                Btn("New bracket", "secondary", () => director.StartTournament(), actions);
+            }
+            else Btn("Bracket · 16 seeds", "secondary", () => director.StartTournament(), actions);
             if (director.Status.Length > 0) Text(director.Status, "body", _sheetBody);
         }
 
@@ -152,7 +161,7 @@ namespace PoKingHill
         void BuildResult()
         {
             var r = director.LastResult; if (r.Agents == null) return;
-            if (director.TournamentChampion.Length > 0 && !director.InTournament)
+            if (director.TournamentChampion.Length > 0 && (!director.InTournament || director.Elimination.Finished))
                 Text("Tournament champion: " + director.TournamentChampion, "h1", _sheetBody);
             Text(r.Winner >= 0 ? "Winner: " + r.WinnerName : "No winner", "h1", _sheetBody);
             var stripe = El("winner-stripe", _sheetBody);
@@ -199,18 +208,41 @@ namespace PoKingHill
             }
             if (director.InTournament)
             {
+                // the round of the bout just played: every pairing with a real entrant in it (BYE vs BYE is left out),
+                // then what comes next
+                var e = director.Elimination; var bout = director.CurrentBout;
                 var b = El("bracket", _sheetBody);
-                foreach (var m in director.Bracket)
-                    Text($"{m.label}: {(m.a >= 0 ? director.BadgeOf(m.a) : "?")} vs {(m.b >= 0 ? director.BadgeOf(m.b) : "?")}" + (m.winner >= 0 ? $": {director.BadgeOf(m.winner)} wins" : ""), "body", b);
+                if (bout != null)
+                {
+                    Text(EliminationBracket.RoundName(bout.round), "hint", b);
+                    foreach (var m in e.bouts)
+                    {
+                        if (m.round != bout.round || (e.IsBye(m.seedA) && e.IsBye(m.seedB))) continue;
+                        string line = $"#{m.seedA} {SeedBadge(e, m.seedA)} vs #{m.seedB} {SeedBadge(e, m.seedB)}";
+                        if (m.winner != 0) line += m.fought ? (m.draw ? $": draw, {SeedBadge(e, m.winner)} (higher seed)" : $": {SeedBadge(e, m.winner)}") : $": {SeedBadge(e, m.winner)} (bye)";
+                        Text(line, "body", b);
+                    }
+                }
+                var next = e.Finished ? null : e.Next();
+                if (next != null) Text($"Next · {EliminationBracket.Label(next)}: {SeedBadge(e, next.seedA)} vs {SeedBadge(e, next.seedB)}", "hint", b);
             }
             var row2 = El("row spaced", _sheetBody);
             _next = Btn("", "primary next", () => director.Continue(), row2);
             UpdateCountdown();
         }
 
+        // A seed's badge (the bracket keeps full agent names), or BYE.
+        string SeedBadge(EliminationBracket e, int seed)
+        {
+            if (e.IsBye(seed)) return EliminationBracket.ByeLabel;
+            string name = e.NameOf(seed);
+            int a = Array.FindIndex(director.roster, r => r.name == name);
+            return a >= 0 ? director.roster[a].Badge : name;
+        }
+
         void UpdateCountdown()
         {
-            bool nextMatch = director.InTournament || (director.InHeatsTournament && director.HeatIndex + 1 < director.HeatsBracket.Count);
+            bool nextMatch = (director.InTournament && !director.Elimination.Finished) || (director.InHeatsTournament && director.HeatIndex + 1 < director.HeatsBracket.Count);
             string what = nextMatch ? "Next match" : director.LastRoundOfMatch ? "Main menu" : "Next round";
             int left = Mathf.CeilToInt(director.ResultSecondsLeft);
             if (_next != null) _next.text = $"{what} ({left})";

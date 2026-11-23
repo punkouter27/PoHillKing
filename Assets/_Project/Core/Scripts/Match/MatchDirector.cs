@@ -131,13 +131,10 @@ namespace PoKingHill
         public double StepMs => _stepMs;
         /// <summary>Plateau radius that counts as "still in" this round.</summary>
         public float OutRadiusNow { get; private set; }
-        public bool LastRoundOfMatch => _bracket.Count == 0 && roundsPerMatch > 0 && _roundsThisMatch >= roundsPerMatch;
-        public IReadOnlyList<BracketMatch> Bracket => _bracket;
-        public bool InTournament => _tournamentMatch || _bracket.Count > 0;
+        public bool LastRoundOfMatch => !InBracket && roundsPerMatch > 0 && _roundsThisMatch >= roundsPerMatch;
+        /// <summary>A 16-slot elimination bracket is running (MatchDirector.Tournament.cs).</summary>
+        public bool InTournament => InBracket;
         public string TournamentChampion { get; private set; } = "";
-
-        public class BracketMatch { public int a, b, winner = -1, tries; public string label; }
-        readonly List<BracketMatch> _bracket = new(); int _bracketAt;
 
         readonly List<PolicyRunner> _alive = new(), _fallen = new();
         int[] _agentAt = Array.Empty<int>(), _bodyWins = Array.Empty<int>(), _agentWins = Array.Empty<int>();   // roster index per body (-1 = parked); wins per body; wins per agent
@@ -147,7 +144,7 @@ namespace PoKingHill
         PolicyRunner[] _target = Array.Empty<PolicyRunner>();
         readonly List<double> _times = new();
         double _lastStandingAt = -1;          // round time when one fighter was left (confirmSeconds), -1 = not yet
-        int _draws, _roundsThisMatch; double _roundStart; float _resultUntil; string _status = ""; bool _pending, _knockout, _tournamentMatch;
+        int _draws, _roundsThisMatch; double _roundStart; float _resultUntil; string _status = ""; bool _pending, _knockout;
         readonly System.Diagnostics.Stopwatch _sw = new(); double _stepMs;
         string _shotDir; readonly HashSet<string> _shots = new(); float _menuShotAt = -1, _launchAt = -1;
         ArenaSpec _arena = new();
@@ -301,10 +298,10 @@ namespace PoKingHill
         public void EnterMenu()
         {
             ReplaySystem.StopActive();          // a replay restores its saved state when it ends: end it before placing anyone
-            _bracket.Clear();
+            _elim = null; _bout = null;
+            _savedBracket = EliminationBracket.LoadUnfinished();   // offered as "Resume bracket" on the Play tab
             _heats.Clear();
             _dailyMatchActive = false;
-            _tournamentMatch = false;
             _resultUntil = 0; _roundsThisMatch = 0;
             foreach (var f in bodies) f.SetBrain(null, ObsBuilder.ObsDim, GoalMode.None, 0.3f, 0.8f);      // passive stance while the menu is up
             Seat(2);
@@ -324,7 +321,6 @@ namespace PoKingHill
         /// ticked than bodies = that many are drawn). The statistics gate keeps the pair it was started with.</summary>
         public void Launch()
         {
-            _tournamentMatch = false;
             var agents = new List<int>();
             if (roster.Length > 0)
             {
@@ -332,14 +328,13 @@ namespace PoKingHill
                 else if (statsRounds > 0) { agents.Add(Mathf.Clamp(selectedA, 0, roster.Length - 1)); agents.Add(Mathf.Clamp(selectedB, 0, roster.Length - 1)); }
                 else { if (!RandomizePlayerSlots()) return; agents.AddRange(playerSlots); }
             }
-            _bracket.Clear();
             StartMatch(agents);
         }
 
         /// <summary>One tap from the menu: fill all sixteen seats from available agents, in random seats.</summary>
         public void QuickMatch()
         {
-            _bracket.Clear(); _tournamentMatch = false; TournamentChampion = ""; selectedMap = 0;
+            TournamentChampion = ""; selectedMap = 0;
             if (!RandomizePlayerSlots(true)) return;
             StartMatch(new List<int>(playerSlots));
         }
@@ -384,25 +379,6 @@ namespace PoKingHill
             return true;
         }
 
-        public void StartTournament()
-        {
-            if (!RandomizePlayerSlots(true)) return;
-            TournamentChampion = "";
-            _bracket.Clear();
-            _tournamentMatch = true;
-            StartMatch(new List<int>(playerSlots));
-        }
-
-        void PlayBracketMatch()
-        {
-            var m = _bracket[_bracketAt];
-            var slots = new List<int> { m.a, m.b };
-            foreach (int agent in playerSlots) if (slots.Count < PlayersPerMatch && agent != m.a && agent != m.b) slots.Add(agent);
-            while (slots.Count < PlayersPerMatch) slots.Add(playerSlots[slots.Count % playerSlots.Length]);
-            StartMatch(slots);
-            _status = m.label;
-        }
-
         void StartMatch(List<int> agents)
         {
             ReplaySystem.StopActive();
@@ -418,15 +394,16 @@ namespace PoKingHill
                     if (k < 0) continue;
                     (bodies[seats.Count], bodies[k]) = (bodies[k], bodies[seats.Count]); seats.Add(agent);
                 }
-                int required = statsRounds > 0 ? 2 : agents.Count >= PlayersPerMatch ? PlayersPerMatch : 2;
+                int required = statsRounds > 0 ? 2 : agents.Count >= PlayersPerMatch ? PlayersPerMatch : agents.Count == FfaPlayers ? FfaPlayers : 2;
                 if (seats.Count < required) { _status = $"Need {required} compatible fighter bodies to start this match"; return; }
                 selectedA = seats[0]; selectedB = seats[1];
                 Seat(seats.Count);
                 for (int i = 0; i < _playing; i++) _agentAt[i] = seats[i];
             }
             else Seat(2);
-            if (statsRounds == 0 && !autoLaunch) roundsPerMatch = _tournamentMatch || _bracket.Count > 0 || _heats.Count > 0 ? 1 : GameSettings.RoundsPerMatch;   // PerfProbe/auto runs keep theirs
+            if (statsRounds == 0 && !autoLaunch) roundsPerMatch = InBracket || _heats.Count > 0 ? 1 : GameSettings.RoundsPerMatch;   // PerfProbe/auto runs keep theirs
             if (!_heatsLaunching) _heats.Clear();
+            if (!_bracketLaunching) { _elim = null; _bout = null; }
             _dailyMatchActive = _dailyLaunching;
             _roundsThisMatch = 0;
             if (statsRounds == 0 && !autoLaunch && GameSettings.Intro && roster.Length > 0) { BeginIntro(); return; }
@@ -664,11 +641,6 @@ namespace PoKingHill
             }
             if (winner >= 0) Award(winner); else _draws++;
             _roundsThisMatch++;
-            if (_tournamentMatch)
-            {
-                TournamentChampion = winner >= 0 ? NameOf(_agentAt[winner], "Robot") : "";
-                _tournamentMatch = false;
-            }
             var agents = new int[_playing]; for (int i = 0; i < _playing; i++) agents[i] = _agentAt[i];
             LastResult = new RoundResult(winner, winner >= 0 ? BadgeOf(_agentAt[winner]) : "No winner", how, end, (float)t, agents);
             if (statsRounds > 0)
@@ -676,7 +648,7 @@ namespace PoKingHill
                 if (_bodyWins[0] + _bodyWins[1] + _draws >= statsRounds) WriteStats(); else NewRound();
                 return;
             }
-            if (_bracket.Count > 0) RecordBracket(winner);
+            if (InBracket) RecordBout(winner);
             // after the round (the game only; the gates returned above): the sea stops where it is (it would float the
             // winner off a rim it barely held), the winner celebrates, whoever else still stands gives up
             if (sea != null) sea.Hold();
@@ -685,20 +657,6 @@ namespace PoKingHill
             _resultUntil = Time.unscaledTime + pauseBetweenRounds;
             MatchEvents.RaiseRoundEnded(LastResult);       // first: the ladder and telemetry settle before the results sheet reads them
             SetState(MatchState.Result);
-        }
-
-        void RecordBracket(int winnerBody)
-        {
-            var m = _bracket[_bracketAt];
-            if (winnerBody < 0 && m.tries++ == 0) { _status = m.label + ": tie, replayed once"; return; }
-            int w = winnerBody >= 0 ? _agentAt[winnerBody] : Ladder.Rating(roster[m.a].name) >= Ladder.Rating(roster[m.b].name) ? m.a : m.b;
-            m.winner = w;
-            if (m.label != "Final")
-            {
-                var final = _bracket[^1];
-                if (final.a < 0) final.a = w; else final.b = w;
-            }
-            else TournamentChampion = roster[w].name;
         }
 
         /// <summary>Leave the winner panel now (its button).</summary>
@@ -711,14 +669,7 @@ namespace PoKingHill
         void Advance()
         {
             if (ShotsDone()) return;
-            if (_bracket.Count > 0)
-            {
-                var m = _bracket[_bracketAt];
-                if (m.winner < 0) { PlayBracketMatch(); return; }                  // replay a tied match
-                if (++_bracketAt < _bracket.Count) { PlayBracketMatch(); return; }
-                _status = "Tournament champion: " + TournamentChampion;
-                _bracket.Clear(); EnterMenu(); return;
-            }
+            if (AdvanceBracket()) return;
             if (LastRoundOfMatch && !(_shotDir != null && Cli.Exit)) EnterMenu(); else NewRound();
         }
 
