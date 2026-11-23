@@ -18,8 +18,8 @@ namespace PoKingHill
         void BuildPlay()
         {
             Text("King of the hill", "h1", _sheetBody);
-            Text("16 fighters at once. Fallen fighters get back up: only the sea or a push off the mountain ends them.", "body", _sheetBody);
-            Text("Players · shuffle the seats, or tap a slot to cycle its character.", "hint", _sheetBody);
+            Text("Quick match: 8 fighters at once. Tournament: all 16 in a knockout of one-on-one duels. Only the sea or a push off the mountain ends a fighter.", "body", _sheetBody);
+            Text("Players · the bracket pairs 01 v 02, 03 v 04 ... Shuffle, or tap a slot to cycle its character.", "hint", _sheetBody);
             var slots = El("player-slots", _sheetBody);
             for (int i = 0; i < MatchDirector.PlayersPerMatch; i++)
             {
@@ -31,11 +31,11 @@ namespace PoKingHill
             Text("BYE · reserved slot for the next player you add.", "bye-slot", _sheetBody);
             var row = El("row", _sheetBody);
             Btn("Shuffle 16", "secondary", () => { director.RandomizePlayerSlots(true); RebuildSheet(); }, row);
-            Btn("Quick match", "primary", () => director.QuickMatch(), _sheetBody);
+            Btn($"Quick match · {MatchDirector.FfaPlayers} fighters", "primary", () => director.QuickMatch(), _sheetBody);
             var actions = El("row", _sheetBody);
             int ticked = director.TickedCount;
             Btn(ticked == 0 ? "Custom (pick in Agents)" : $"Custom · {ticked} agents", "secondary", () => director.Launch(), actions).SetEnabled(ticked > 0);
-            Btn("16-player tournament", "secondary", () => director.StartTournament(), actions);
+            Btn("16-player bracket", "secondary", () => director.StartTournament(), actions);
             if (director.Status.Length > 0) Text(director.Status, "body", _sheetBody);
         }
 
@@ -152,7 +152,7 @@ namespace PoKingHill
         void BuildResult()
         {
             var r = director.LastResult; if (r.Agents == null) return;
-            if (director.TournamentChampion.Length > 0 && !director.InTournament)
+            if (director.TournamentChampion.Length > 0)
                 Text("Tournament champion: " + director.TournamentChampion, "h1", _sheetBody);
             Text(r.Winner >= 0 ? "Winner: " + r.WinnerName : "No winner", "h1", _sheetBody);
             var stripe = El("winner-stripe", _sheetBody);
@@ -199,9 +199,19 @@ namespace PoKingHill
             }
             if (director.InTournament)
             {
+                // the round just played (at most 8 lines), then the next match: the whole 15-match tree would not fit
                 var b = El("bracket", _sheetBody);
-                foreach (var m in director.Bracket)
-                    Text($"{m.label}: {(m.a >= 0 ? director.BadgeOf(m.a) : "?")} vs {(m.b >= 0 ? director.BadgeOf(m.b) : "?")}" + (m.winner >= 0 ? $": {director.BadgeOf(m.winner)} wins" : ""), "body", b);
+                var bracket = director.Bracket;
+                var now = bracket[Mathf.Clamp(director.BracketIndex, 0, bracket.Count - 1)];
+                foreach (var m in bracket)
+                    if (m.round == now.round)
+                        Text($"{m.label}: {director.EntrantName(m.a)} v {director.EntrantName(m.b)}" + (m.winner >= 0 ? $" · {director.EntrantName(m.winner)} wins" : ""), "body", b);
+                int nextAt = now.winner >= 0 ? director.BracketIndex + 1 : director.BracketIndex;
+                if (director.TournamentChampion.Length == 0 && nextAt < bracket.Count)
+                {
+                    var n = bracket[nextAt];
+                    Text($"Next · {n.label}: {director.EntrantName(n.a)} v {director.EntrantName(n.b)}", "body", b);
+                }
             }
             var row2 = El("row spaced", _sheetBody);
             _next = Btn("", "primary next", () => director.Continue(), row2);
@@ -210,7 +220,7 @@ namespace PoKingHill
 
         void UpdateCountdown()
         {
-            bool nextMatch = director.InTournament || (director.InHeatsTournament && director.HeatIndex + 1 < director.HeatsBracket.Count);
+            bool nextMatch = (director.InTournament && director.TournamentChampion.Length == 0) || (director.InHeatsTournament && director.HeatIndex + 1 < director.HeatsBracket.Count);
             string what = nextMatch ? "Next match" : director.LastRoundOfMatch ? "Main menu" : "Next round";
             int left = Mathf.CeilToInt(director.ResultSecondsLeft);
             if (_next != null) _next.text = $"{what} ({left})";

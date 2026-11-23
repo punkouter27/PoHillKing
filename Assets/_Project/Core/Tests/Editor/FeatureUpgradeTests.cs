@@ -168,6 +168,24 @@ namespace PoKingHill.Tests
         }
 
         [Test]
+        public void BuildBracketIsASixteenPlayerKnockout()
+        {
+            var b = MatchDirector.BuildBracket(16);
+            Assert.AreEqual(15, b.Count, "8 + 4 + 2 + 1 duels");
+            for (int i = 0; i < 8; i++)
+            {
+                Assert.AreEqual(2 * i, b[i].a); Assert.AreEqual(2 * i + 1, b[i].b);
+                Assert.AreEqual(0, b[i].round); Assert.AreEqual(8 + i / 2, b[i].next);
+            }
+            Assert.AreEqual("Round of 16 · 1", b[0].label);
+            Assert.AreEqual("Quarter-final 1", b[8].label); Assert.AreEqual(12, b[8].next); Assert.AreEqual(13, b[11].next);
+            Assert.AreEqual("Semi-final 2", b[13].label); Assert.AreEqual(14, b[13].next);
+            Assert.AreEqual("Final", b[14].label); Assert.AreEqual(-1, b[14].next); Assert.AreEqual(3, b[14].round);
+            for (int i = 8; i < 15; i++) { Assert.AreEqual(-1, b[i].a); Assert.AreEqual(-1, b[i].b); Assert.AreEqual(-1, b[i].winner); }
+            Assert.IsEmpty(MatchDirector.BuildBracket(12), "only a power-of-two field");
+        }
+
+        [Test]
         public void DailyChallengeIsDeterministicAndRanksBoard()
         {
             string tmp = Path.Combine(Path.GetTempPath(), "koth_daily_test.json");

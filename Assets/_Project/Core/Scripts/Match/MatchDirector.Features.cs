@@ -197,7 +197,6 @@ namespace PoKingHill
                 (slots[i], slots[k]) = (slots[k], slots[i]);
             }
             _heats.Clear();
-            _tournamentMatch = false;
             TournamentChampion = "";
             _dailyLaunching = true;
             try { StartMatch(slots); }

@@ -30,7 +30,7 @@ namespace PoKingHill.Tests
             var replay = Object.FindAnyObjectByType<ReplaySystem>(); if (replay != null) replay.autoDelay = 999f;
             d.QuickMatch(); d.SkipIntro();
             Assert.AreEqual(MatchState.Fight, d.State);
-            Assert.AreEqual(MatchDirector.PlayersPerMatch, d.Playing);
+            Assert.AreEqual(MatchDirector.FfaPlayers, d.Playing);
             BroadcastCamera.FollowSeat = 0;                             // a tapped badge: the camera follows seat 0
             yield return Until(() => d.State == MatchState.Result, 150, "the round to end");
             Assert.IsNotNull(d.LastResult.Agents); Assert.AreEqual(d.Playing, d.LastResult.Agents.Length);
@@ -46,7 +46,7 @@ namespace PoKingHill.Tests
             SceneManager.LoadScene("Game");
             yield return Until(() => MatchDirector.Instance != null && MatchDirector.Instance.State == MatchState.Menu, 60, "the menu");
             var d = MatchDirector.Instance;
-            d.QuickMatch(); d.SkipIntro();
+            d.StartFreeForAll(MatchDirector.PlayersPerMatch); d.SkipIntro();
             Assert.AreEqual(MatchState.Fight, d.State);
             Assert.AreEqual(MatchDirector.PlayersPerMatch, d.Playing);
 
@@ -106,7 +106,7 @@ namespace PoKingHill.Tests
                 {
                     Random.InitState(261113 + game);
                     downs = recoveries = 0; firstDown = -1;
-                    d.EnterMenu(); d.QuickMatch(); d.SkipIntro();
+                    d.EnterMenu(); d.StartFreeForAll(MatchDirector.PlayersPerMatch); d.SkipIntro();
                     d.pauseBetweenRounds = 999f;
                     Assert.AreEqual(MatchDirector.PlayersPerMatch, d.Playing);
                     var times = new[] { 0.5, 1.0, 2.0, 5.0 };
@@ -170,6 +170,50 @@ namespace PoKingHill.Tests
             Assert.AreEqual(MatchState.Fight, d.State);
             d.NewRound();                     // reset mid-round
             Assert.AreEqual(MatchState.Fight, d.State);
+        }
+
+        /// <summary>The 16-player bracket: seats 01 v 02 duel first (two bodies, the rest parked); the duel's winner (or, both over, the one who went over last) is
+        /// entered into quarter-final 1 and the next match is seats 03 v 04 (or the first duel again after a tie).</summary>
+        [UnityTest, Timeout(300000)]
+        public IEnumerator SixteenPlayerBracketPlaysDuelsAndAdvancesWinners()
+        {
+            SceneManager.LoadScene("Game");
+            yield return Until(() => MatchDirector.Instance != null && MatchDirector.Instance.State == MatchState.Menu, 60, "the menu");
+            var d = MatchDirector.Instance;
+            bool intro = GameSettings.Intro;
+            try
+            {
+                GameSettings.Intro = false;
+                var replay = Object.FindAnyObjectByType<ReplaySystem>(); if (replay != null) replay.autoDelay = 999f;
+                var seats = (int[])d.playerSlots.Clone();
+                d.StartTournament();
+                Assert.IsTrue(d.InTournament);
+                Assert.AreEqual(15, d.Bracket.Count);
+                Assert.AreEqual(MatchState.Fight, d.State);
+                Assert.AreEqual(2, d.Playing, "a bracket match is a duel");
+                Assert.AreEqual(seats[0], d.AgentOf(0)); Assert.AreEqual(seats[1], d.AgentOf(1));
+
+                d.pauseBetweenRounds = 600f; Time.timeScale = 6f;
+                yield return Until(() => d.State == MatchState.Result, 240, "the first duel to end");
+                Time.timeScale = 1f;
+                var first = d.Bracket[0];
+                if (first.winner >= 0)
+                {
+                    if (d.LastResult.Winner >= 0) Assert.AreEqual(d.LastResult.Winner, first.winner, "body 0 is seat 01, body 1 seat 02");
+                    else Assert.AreEqual(0, d.Alive.Count, "a tied duel is only settled at once when both went over");
+                    Assert.AreEqual(first.winner, d.Bracket[8].a, "the winner goes on to quarter-final 1");
+                }
+                Assert.AreEqual("", d.TournamentChampion);
+                d.Continue();
+                yield return Until(() => d.State == MatchState.Fight, 20, "the next bracket match");
+                Assert.AreEqual(2, d.Playing);
+                int at = first.winner >= 0 ? 1 : 0;
+                Assert.AreEqual(at, d.BracketIndex);
+                Assert.AreEqual(seats[2 * at], d.AgentOf(0)); Assert.AreEqual(seats[2 * at + 1], d.AgentOf(1));
+                d.EnterMenu();
+                Assert.IsFalse(d.InTournament);
+            }
+            finally { GameSettings.Intro = intro; Time.timeScale = 1f; }
         }
 
         /// <summary>The tale of the tape plays when it is on: Intro with every fighter standing and no round clock, then the

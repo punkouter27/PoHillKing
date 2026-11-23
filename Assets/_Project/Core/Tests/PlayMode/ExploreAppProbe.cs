@@ -245,7 +245,7 @@ namespace PoKingHill.Tests
 
                 ClickButton(FindButton(root, "Play"));
                 yield return null;
-                ClickButton(FindButton(root, "Quick match"));
+                ClickButton(FindButton(root, "Quick match · 8 fighters"));
                 yield return Until(() => d.State == MatchState.Intro, 10f, "intro state");
                 yield return new WaitForSecondsRealtime(0.4f);
                 yield return CaptureComposite("06_intro.png", doc);
