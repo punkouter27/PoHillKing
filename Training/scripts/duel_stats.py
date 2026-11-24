@@ -22,13 +22,14 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import numpy as np
 import mujoco
-from koth.obs import goal_command, STYLE_POSES, SHOVE_FAR, SHOVE_NEAR, SHOVE_SMOOTH
-from koth.build_mjcf import ASSETS, UNITY_MODELS
-from koth.rules import is_out, ground_z, OUT_RADIUS, PLATEAU_R, FALL_UP, FALL_HEIGHT
+import numpy as np
+
 from koth import cpu_sim
-from koth.action_map import NumpyMap, NumpyFatigue, read_sidecar
+from koth.action_map import NumpyFatigue, NumpyMap, read_sidecar
+from koth.build_mjcf import ASSETS, UNITY_MODELS
+from koth.obs import SHOVE_FAR, SHOVE_NEAR, SHOVE_SMOOTH, STYLE_POSES, goal_command
+from koth.rules import FALL_HEIGHT, FALL_UP, OUT_RADIUS, PLATEAU_R, ground_z, is_out
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--policy", default="attacker")

@@ -18,8 +18,9 @@ import numpy as np
 import onnx
 import torch
 from onnx import numpy_helper
+
 from koth import cpu_sim
-from koth.actor import Actor, NORM_EPS
+from koth.actor import NORM_EPS, Actor
 
 
 def convert(onnx_path: str, std: float = 0.3) -> dict:

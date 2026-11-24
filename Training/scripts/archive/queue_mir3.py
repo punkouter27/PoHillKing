@@ -17,10 +17,10 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import queue_hill as q
-import overnight_hill4 as w
-import queue_hill4 as h
 import judge_hill as j
+import overnight_hill4 as w
+import queue_hill as q
+import queue_hill4 as h
 
 q.PROGRESS = os.path.join(q.LOG_DIR, "progress_mir3.txt")  # judge_hill points it at its own log on import
 ROWS = os.path.join(q.LOG_DIR, "mirror_sweep.jsonl")

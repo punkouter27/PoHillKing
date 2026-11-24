@@ -84,3 +84,9 @@ Training/assets/mocap/*.npz
 
 # Generated Unity C# project files
 /*.csproj
+
+# Test Runner: the scene it creates when a PlayMode run is interrupted, and stale build stamps outside Data/Resources
+Assets/InitTestScene*.unity
+Assets/InitTestScene*.unity.meta
+/Assets/PoKingHill/
+/Assets/PoKingHill.meta

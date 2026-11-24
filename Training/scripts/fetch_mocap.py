@@ -20,7 +20,8 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import mujoco
-from koth.mocap import build_dataset, body_limbs
+
+from koth.mocap import body_limbs, build_dataset
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 URL = "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/{subject:03d}/{clip}.bvh"

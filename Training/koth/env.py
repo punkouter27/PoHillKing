@@ -14,33 +14,38 @@ retargets brains); cfg["combat2"] appends a second combat block for the second-n
 """
 
 from __future__ import annotations
+
 import json
 import math
 import os
+
+import mujoco
+import mujoco_warp as mjw
 import numpy as np
 import torch
-import mujoco
 import warp as wp
-import mujoco_warp as mjw
 from tensordict import TensorDict
+
+from koth.action_map import ckpt_spec as ckpt_action_spec
+from koth.action_map import is_default as action_is_default
+from koth.action_map import spec_of as action_spec
+from koth.actor import Actor
 from koth.obs import (
-    build_obs,
-    build_combat,
-    quat_rotate_inverse,
-    goal_command,
-    down_like,
-    tactic_goal,
-    OBS_DIM,
     COMBAT_DIM,
     GAIT_FREQ_HZ,
-    STYLE_POSES,
+    OBS_DIM,
     SHOVE_FAR,
     SHOVE_NEAR,
     SHOVE_SMOOTH,
+    STYLE_POSES,
+    build_combat,
+    build_obs,
+    down_like,
+    goal_command,
+    quat_rotate_inverse,
+    tactic_goal,
 )
-from koth.action_map import spec_of as action_spec, ckpt_spec as ckpt_action_spec, is_default as action_is_default
-from koth.actor import Actor
-from koth.rules import PLATEAU_R, SLOPE_K, BEVEL_W, BEVEL_S, OUT_RADIUS, FALL_HEIGHT, TRAIN_TIP_UP
+from koth.rules import BEVEL_S, BEVEL_W, FALL_HEIGHT, OUT_RADIUS, PLATEAU_R, SLOPE_K, TRAIN_TIP_UP
 
 ROBOT = os.environ.get("KOTH_ROBOT", "g1")
 ASSETS = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", ROBOT))
@@ -87,6 +92,12 @@ def obs_dims(cfg: dict) -> int:
     if (cfg.get("fatigue") or {}).get("enabled") and cfg["fatigue"].get("obs"):
         n += 29
     return n
+
+
+def reward_log(terms: dict, rows=slice(None)) -> dict:
+    """TensorBoard scalars of one step's reward terms: every term (each penalty included) under its own key
+    rew/<term>, the mean over the given rows (the learner rows when frozen opponents share the batch)."""
+    return {f"rew/{k}": v[rows].mean() for k, v in terms.items()}
 
 
 def default_cfg(rung: str = "r0") -> dict:
@@ -1555,7 +1566,7 @@ class KothEnv:
         lr = self.lrows if self.frozen is not None else slice(None)  # log the learner rows only
         self.extras = {
             "time_outs": time_outs,
-            "log": {f"rew/{k}": v[lr].mean() for k, v in self.reward_terms.items()},
+            "log": reward_log(self.reward_terms, lr),
             "fallen": fallen,
             "nan": nan,
             "radius": radius,
@@ -1817,8 +1828,8 @@ class KothEnv:
 
 
 if __name__ == "__main__":
-    import time
     import sys
+    import time
 
     rung = sys.argv[1] if len(sys.argv) > 1 else "r0"
     N = int(sys.argv[2]) if len(sys.argv) > 2 else 1024

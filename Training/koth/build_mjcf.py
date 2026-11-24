@@ -20,13 +20,15 @@ Collision bitmasks:  1=robot A  2=robot B  4=arena  8=box  16=foot/shin extra  3
 """
 
 from __future__ import annotations
+
 import copy
 import json
 import os
 import struct
 import xml.etree.ElementTree as ET
-import numpy as np
+
 import mujoco
+import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROBOT = os.environ.get("KOTH_ROBOT", "g1")  # which fighter's body to build: g1 (default), kim, trump or grandpa
@@ -147,11 +149,11 @@ def apply_pd_gains(default: ET.Element) -> ET.Element:
 # ---- arena ---------------------------------------------------------------------------------------
 HF_DEPTH = 10.0  # dome depth below the plateau
 from koth.rules import (  # noqa: E402
-    PLATEAU_R,
     BEVEL_W,
-    ground_z,
-    ground_slope,
+    PLATEAU_R,
     arena_json,
+    ground_slope,
+    ground_z,
 )  # the platform, its rim and the hill (rules.py is the one source)
 
 

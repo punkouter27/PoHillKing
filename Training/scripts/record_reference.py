@@ -17,12 +17,13 @@ import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import numpy as np
 import mujoco
-from koth.obs import goal_command, OBS_DIM
-from koth.build_mjcf import ASSETS, UNITY_MODELS  # Models/ for G1, Models/<robot>/ otherwise
-from koth.rules import ground_slope, ground_z
+import numpy as np
+
 from koth import cpu_sim
+from koth.build_mjcf import ASSETS, UNITY_MODELS  # Models/ for G1, Models/<robot>/ otherwise
+from koth.obs import OBS_DIM, goal_command
+from koth.rules import ground_slope, ground_z
 
 
 def export_onnx(ckpt: str, out_path: str) -> None:

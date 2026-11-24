@@ -16,12 +16,15 @@ Nothing here runs unless train.py is given --amp.
 """
 
 from __future__ import annotations
+
 import os
+
 import numpy as np
 import torch
+
 from koth.env import terrain_height
 from koth.mocap import FEAT, STYLE_IDX
-from koth.obs import quat_rotate_inverse, down_like
+from koth.obs import down_like, quat_rotate_inverse
 
 
 def env_features(env) -> torch.Tensor:

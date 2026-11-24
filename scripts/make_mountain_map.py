@@ -33,13 +33,14 @@ Blender axes are the MuJoCo axes (z up, metres). The dome is symmetric about z, 
 
 import os
 import sys
+
 import bpy
 import numpy as np
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(globals().get("__file__", bpy.data.filepath or "."))))
 OUT = globals().get("OUT") or os.path.join(REPO, "Assets", "_Project", "Environments", "Maps", "Mountain")
 sys.path.insert(0, os.path.join(REPO, "Training"))
-from koth.rules import PLATEAU_R, BEVEL_W, ground_z  # noqa: E402  the collision ground: one source (koth/rules.py)
+from koth.rules import BEVEL_W, PLATEAU_R, ground_z  # noqa: E402  the collision ground: one source (koth/rules.py)
 
 RIM_R = PLATEAU_R + BEVEL_W  # where the concrete platform's rounded rim meets the hill
 EXACT_R = RIM_R + 0.4  # visible surface = collision ground inside this radius

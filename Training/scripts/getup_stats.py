@@ -15,10 +15,11 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import numpy as np
 import mujoco
-from koth.build_mjcf import ASSETS, UNITY_MODELS
+import numpy as np
+
 from koth import cpu_sim
+from koth.build_mjcf import ASSETS, UNITY_MODELS
 
 DROP_Z, JOINT_NOISE, STAND_H, STAND_UP, HOLD_S = 0.85, 0.6, 0.85, 0.9, 0.4
 

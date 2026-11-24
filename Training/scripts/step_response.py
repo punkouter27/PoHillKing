@@ -19,8 +19,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import numpy as np
 import mujoco
+import numpy as np
+
 from koth import cpu_sim
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

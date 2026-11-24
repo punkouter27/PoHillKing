@@ -21,12 +21,13 @@ namespace PoKingHill
         /// ShowcasePlayTests turns it back on for its own test.</summary>
         public static bool Suppressed { get; set; }
         public bool Active { get; private set; }
-        /// <summary>Seconds on the menu without input (0 outside the menu).</summary>
-        public float IdleSeconds => _since < 0f ? 0f : Time.unscaledTime - _since;
+        /// <summary>Seconds on the menu without input (0 outside the menu), counted by an IdleClock: frames longer than
+        /// 0.25 s (a load, a background tab, a hitch) are not idle time.</summary>
+        public float IdleSeconds => _idle.Seconds;
         public int ShotIndex => _shot;
         public int ShotsShown { get; private set; }
 
-        float _since = -1f, _shotUntil; int _shot;      // _since: when the current idle stretch on the menu began (-1 = none)
+        IdleClock _idle, _dwell; int _shot;      // _idle: the current idle stretch on the menu; _dwell: the current shot
         BroadcastCamera.CameraMode _prevMode;
         bool _pressed; System.IDisposable _anyButton;
 
@@ -37,7 +38,7 @@ namespace PoKingHill
         void Update()
         {
             if (director == null || director.statsRounds > 0 || director.autoLaunch) return;
-            if (Suppressed) { _since = -1f; _pressed = false; if (Active) Stop(); return; }
+            if (Suppressed) { _idle.Reset(); _pressed = false; if (Active) Stop(); return; }
             if (settings == null) settings = DemoSettings.Current;
             bool input = _pressed || AnyInput(); _pressed = false;
             if (Active)
@@ -45,19 +46,38 @@ namespace PoKingHill
                 if (input) { Stop(); return; }
                 if (director.State == MatchState.Menu) { Launch(); return; }    // the demo match ended: another one
                 if (director.State == MatchState.Intro) director.SkipIntro();
-                if (Time.unscaledTime >= _shotUntil) NextShot();
+                if (AdvanceDwell(Time.unscaledDeltaTime)) NextShot();
                 return;
             }
-            if (director.State != MatchState.Menu || input) { _since = -1f; return; }
-            // timestamps, not summed frame times: a loading hitch before the menu appeared is not idle time
-            if (_since < 0f) _since = Time.unscaledTime;
-            if (Time.unscaledTime - _since >= settings.idleSeconds) Begin();
+            if (director.State != MatchState.Menu || input) { _idle.Reset(); return; }
+            // summed frame times without the long frames: a loading hitch or a tab in the background is not idle time
+            if (AdvanceIdle(Time.unscaledDeltaTime)) Begin();
         }
+
+        /// <summary>Adds one frame to the idle wait (skipped when longer than 0.25 s); true once it reaches
+        /// DemoSettings.idleSeconds.</summary>
+        public bool AdvanceIdle(float frameSeconds)
+        {
+            if (settings == null) settings = DemoSettings.Current;
+            return _idle.Advance(frameSeconds) >= settings.idleSeconds;
+        }
+
+        public void ResetIdle() => _idle.Reset();
+
+        /// <summary>Adds one frame to the current showcase shot (skipped when longer than 0.25 s); true once the shot has
+        /// been on screen for DemoSettings.dwellSeconds (at least 1 s).</summary>
+        public bool AdvanceDwell(float frameSeconds)
+        {
+            if (settings == null) settings = DemoSettings.Current;
+            return _dwell.Advance(frameSeconds) >= Mathf.Max(1f, settings.dwellSeconds);
+        }
+
+        public void ResetDwell() => _dwell.Reset();
 
         public void Begin()
         {
             if (Active || director == null) return;
-            Active = true; _since = -1f; ShotsShown = 0; _shot = -1;
+            Active = true; _idle.Reset(); ShotsShown = 0; _shot = -1;
             _prevMode = BroadcastCamera.Mode;
             hud?.SetDemo(true, settings != null ? settings.caption : "DEMO");
             Debug.Log($"[DemoMode] on after {settings.idleSeconds:0.0} s idle ({director.State})");
@@ -67,7 +87,7 @@ namespace PoKingHill
         public void Stop()
         {
             if (!Active) return;
-            Active = false; _since = -1f;
+            Active = false; _idle.Reset();
             BroadcastCamera.Mode = _prevMode; BroadcastCamera.FollowSeat = -1;
             hud?.SetDemo(false, null);
             if (director.State != MatchState.Menu) director.EnterMenu();
@@ -90,7 +110,7 @@ namespace PoKingHill
             int n = Mathf.Max(1, director.Playing), seat = (BroadcastCamera.FollowSeat + 1) % n;
             for (int k = 0; k < n && director.IsOut(seat); k++) seat = (seat + 1) % n;
             BroadcastCamera.FollowSeat = shots[_shot] == BroadcastCamera.CameraMode.Broadcast ? -1 : seat;
-            _shotUntil = Time.unscaledTime + Mathf.Max(1f, settings.dwellSeconds);
+            _dwell.Reset();
             ShotsShown++;
         }
 

@@ -30,8 +30,10 @@ Options (env cfg "action", all off by default):
 The style low-pass (shove, k 0.5) filters a the same way; with both, the larger k applies."""
 
 from __future__ import annotations
+
 import json
 import os
+
 import numpy as np
 
 DEFAULT = dict(

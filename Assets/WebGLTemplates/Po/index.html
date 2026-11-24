@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0b0f17">
     <meta name="po-version" content="{{{ PRODUCT_VERSION }}}">
     <link rel="icon" href="data:,">
@@ -21,6 +21,7 @@
       .po-bar { flex: 0 0 var(--bar); height: var(--bar); display: flex; align-items: center; gap: 8px;
                 padding: 0 max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
                 background: var(--surface); border-bottom: 1px solid var(--line); }
+      .po-title { margin: 0; font-size: 15px; line-height: 1; }
       .po-brand { color: var(--text); text-decoration: none; font-weight: 700; font-size: 15px; letter-spacing: 0.02em; }
       .po-spacer { flex: 1; }
       .po-btn { width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: 8px;
@@ -43,16 +44,16 @@
   </head>
   <body>
     <header class="po-bar">
-      <a class="po-brand" href="/">{{{ PRODUCT_NAME }}}</a>
+      <h1 class="po-title"><a class="po-brand" href="/">{{{ PRODUCT_NAME }}}</a></h1>
       <span class="po-spacer"></span>
       <button class="po-btn" id="fullscreen" type="button" aria-label="Fullscreen" title="Fullscreen">⛶</button>
       <a class="po-btn" href="/diag" aria-label="System status" title="System status (/diag)">⚙</a>
     </header>
-    <div id="frame">
+    <main id="frame">
       <canvas id="unity-canvas" tabindex="-1"></canvas>
       <div id="loading"><div>Loading…</div><div id="bar"><div id="fill"></div></div></div>
       <div id="error"></div>
-    </div>
+    </main>
     <footer class="po-foot"><span class="po-version">v{{{ PRODUCT_VERSION }}}</span></footer>
     <script>
       var canvas = document.getElementById("unity-canvas");

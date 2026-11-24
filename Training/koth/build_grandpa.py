@@ -12,6 +12,7 @@ scripts/make_grandpa.py): the numbers koth/build_human.py turns into assets/gran
 """
 
 from __future__ import annotations
+
 import os
 import sys
 

@@ -17,7 +17,7 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-from scripts.league_util import PY, run, evaluate
+from scripts.league_util import PY, evaluate, run
 
 LG = os.path.join(ROOT, "runs", "league")
 

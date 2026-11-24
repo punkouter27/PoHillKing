@@ -11,8 +11,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import mujoco
 import mujoco.viewer
 import numpy as np
-from koth.build_mjcf import ASSETS
+
 from koth import cpu_sim
+from koth.build_mjcf import ASSETS
 
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 scene = os.path.join(ASSETS, args[0] if args else "scene_koth_2p_train.xml")

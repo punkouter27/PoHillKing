@@ -16,8 +16,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torch
+
 from koth.env import KothEnv
-from scripts.eval import load_policy, eval_cfg
+from scripts.eval import eval_cfg, load_policy
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--ckpt", required=True)

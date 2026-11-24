@@ -11,9 +11,10 @@ import sys
 import types
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import mujoco
 import numpy as np
 import torch
-import mujoco
+
 from koth import mocap
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

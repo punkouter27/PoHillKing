@@ -33,7 +33,7 @@ namespace PoKingHill
         public float orbitDegPerSecond = 18f, cutAbove = 0.5f, cutUnder = 0.6f, cutSeconds = 3f;
 
         readonly HashSet<PolicyRunner> _shown = new();
-        PolicyRunner _cut; float _cutUntil; CinemachineCamera _live; int _introFor = -1;
+        PolicyRunner _cut; IdleClock _cutClock; CinemachineCamera _live; int _introFor = -1;
         Vector3 _summitOrig; bool _hasSummitOrig;
 
         public enum CameraMode { Broadcast, Follow, Orbit, Free }
@@ -78,6 +78,7 @@ namespace PoKingHill
         void LateUpdate()
         {
             if (director == null || !MjScene.InstanceExists || MjScene.Instance.Data == null) return;
+            _cutClock.Advance(Time.unscaledDeltaTime);       // the faller cut-away's dwell: frames over 0.25 s skipped
 
             var alive = director.Alive; var fallen = director.Fallen;
             // the summit group: everyone still in, the one nearest the centre counts double
@@ -148,11 +149,11 @@ namespace PoKingHill
             for (int i = 0; i < fallen.Count; i++)
             {
                 var t = Pelvis(fallen[i]);
-                if (t != null && !_shown.Contains(fallen[i]) && t.position.y < sea.Level + cutAbove) { _shown.Add(fallen[i]); _cut = fallen[i]; _cutUntil = Time.unscaledTime + cutSeconds; director.Shot("splash"); }
+                if (t != null && !_shown.Contains(fallen[i]) && t.position.y < sea.Level + cutAbove) { _shown.Add(fallen[i]); _cut = fallen[i]; _cutClock.Reset(); director.Shot("splash"); }
             }
             if (_cut == null) return false;
             var p = Pelvis(_cut);
-            if (p == null || Time.unscaledTime > _cutUntil || p.position.y < sea.Level - cutUnder) { _cut = null; return false; }
+            if (p == null || _cutClock.Seconds > cutSeconds || p.position.y < sea.Level - cutUnder) { _cut = null; return false; }
             Vector3 outward = new Vector3(p.position.x, 0, p.position.z).normalized;
             var follow = faller.GetComponent<CinemachineFollow>(); if (follow != null) follow.FollowOffset = outward * 3.2f + Vector3.up * 1.6f;
             Aim(faller, p);

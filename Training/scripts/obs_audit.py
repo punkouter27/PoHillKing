@@ -23,7 +23,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import torch
-from koth.obs import OBS_DIM, COMBAT_DIM
+
+from koth.obs import COMBAT_DIM, OBS_DIM
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 JOINTS = [
@@ -100,8 +101,8 @@ def ks_distance(a: np.ndarray, b: np.ndarray) -> np.ndarray:
 
 
 def warp_samples(ckpt, rung, opponent, steps, num_envs, noise) -> np.ndarray:
-    from koth.env import KothEnv
     from koth.actor import load
+    from koth.env import KothEnv
     from scripts.eval import eval_cfg
 
     cfg = eval_cfg(rung, opponent=opponent, noise=noise, leg_contact_rule="unity", ckpt=ckpt)

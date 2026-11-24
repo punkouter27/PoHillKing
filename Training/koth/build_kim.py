@@ -6,6 +6,7 @@ turns into assets/kim/kim_mjx.xml. Then `KOTH_ROBOT=kim python -m koth.build_mjc
 """
 
 from __future__ import annotations
+
 import os
 import sys
 

@@ -49,6 +49,9 @@ namespace PoKingHill.Tests
             RewardMeter meter = null;
             yield return Until(() => (meter = Object.FindAnyObjectByType<RewardMeter>()) != null && meter.Ready, 20, "the reward meter");
             var first = d.bodies[0];
+            // every brain in the match printed its one inference line (InferenceLog)
+            for (int i = 0; i < d.Playing; i++)
+                if (d.bodies[i].policy != null) CollectionAssert.Contains(InferenceLog.Brains, d.bodies[i].policy.name, "inference line of seat " + (i + 1));
             yield return Until(() => meter.Of(first) != null && meter.Of(first).Steps >= 150, 90, "150 policy steps of seat 1");
             var w = RewardWeights.Current;
             Assert.Less(w.jointTorque, 0f); Assert.Less(w.angVelXy, 0f); Assert.Less(w.actionRate, 0f); Assert.Less(w.feetSlip, 0f); Assert.Less(w.jointVel, 0f);
@@ -95,7 +98,11 @@ namespace PoKingHill.Tests
             StringAssert.Contains("FPS", text); StringAssert.Contains("Inference latency", text);
             StringAssert.Contains("Episode reward", text); StringAssert.Contains("Curriculum", text);
             StringAssert.DoesNotContain("Inference latency -", text);
-            double before = d.RoundTime;
+            // the game's own physics steps while the benchmark runs (RoundTime is no measure: the round may end and the
+            // next one start from 0 during the 3 s benchmark when the CPU is busy)
+            long gameSteps = 0;
+            System.EventHandler<Mujoco.MjStepArgs> count = (_, _) => gameSteps++;
+            Mujoco.MjScene.Instance.postUpdateEvent += count;
             hud.BenchmarkTraining();
             Assert.IsTrue(hud.Benchmark.Running);
             yield return Until(() => !hud.Benchmark.Running, 30, "the benchmark");
@@ -104,13 +111,17 @@ namespace PoKingHill.Tests
             yield return new WaitForSecondsRealtime(0.6f);
             StringAssert.Contains("physics steps/s", hud.OverlayText);
             StringAssert.Contains("not a training run", hud.OverlayText);
-            Assert.Greater(d.RoundTime, before + 1.0, "the game kept simulating during the benchmark");
+            Mujoco.MjScene.Instance.postUpdateEvent -= count;
+            Debug.Log($"game physics steps during the benchmark: {gameSteps}");
+            Assert.Greater(gameSteps, 100, "the game kept simulating during the benchmark");
+            StringAssert.Contains("Benchmark on this device: CPU ", hud.OverlayText);
+            StringAssert.Contains("Measured:", hud.OverlayText);
             hud.ToggleOverlay(); Assert.IsFalse(hud.OverlayShown);
             d.EnterMenu();
             guard.AssertClean("tab overlay");
         }
 
-        [UnityTest, Timeout(240000)]
+        [UnityTest, Timeout(900000)]
         public IEnumerator DemoModeStartsAfterThirtySecondsIdleAndInputEndsIt()
         {
             using var guard = new ConsoleGuard();
@@ -124,7 +135,17 @@ namespace PoKingHill.Tests
                 Assert.AreEqual(30f, DemoSettings.Current.idleSeconds, 1e-3);
                 float t0 = Time.realtimeSinceStartup;
                 DemoMode demo = null;
-                yield return Until(() => (demo = Object.FindAnyObjectByType<DemoMode>()) != null && demo.Active, 60, "the demo");
+                // 30 s of idle frames; frames over 0.25 s do not count (IdleClock), so a loaded machine needs longer: fail
+                // only when the idle clock stops advancing for 60 s (or after 600 s in all)
+                float lastIdle = -1f, lastMove = Time.realtimeSinceStartup;
+                while ((demo = Object.FindAnyObjectByType<DemoMode>()) == null || !demo.Active)
+                {
+                    float idle = demo != null ? demo.IdleSeconds : 0f;
+                    if (idle > lastIdle + 0.01f) { lastIdle = idle; lastMove = Time.realtimeSinceStartup; }
+                    if (Time.realtimeSinceStartup - lastMove > 60f) Assert.Fail($"the idle clock stopped at {lastIdle:0.0} s for 60 s");
+                    if (Time.realtimeSinceStartup - t0 > 600f) Assert.Fail($"no demo after 600 s (idle clock {lastIdle:0.0} s)");
+                    yield return null;
+                }
                 float waited = Time.realtimeSinceStartup - t0;
                 Debug.Log($"demo on after {waited:0.0} s idle");
                 Assert.GreaterOrEqual(waited, 29.5f);
@@ -132,7 +153,9 @@ namespace PoKingHill.Tests
                 Assert.IsTrue(hud.HudHiddenForDemo); Assert.IsTrue(hud.DemoChipShown);
                 for (int i = 0; i < d.Playing; i++) Assert.IsNotNull(d.bodies[i].policy, "every demo fighter is a trained brain");
                 int shots = demo.ShotsShown;
-                yield return Until(() => demo.ShotsShown > shots, DemoSettings.Current.dwellSeconds + 5, "the next showcase shot");
+                // the dwell counts frames up to 0.25 s only (IdleClock): on a loaded machine (16 bodies, other Unity jobs)
+                // many frames are longer, so the cap is generous; the dwell itself is pinned by ShowcaseClockTests
+                yield return Until(() => demo.ShotsShown > shots, DemoSettings.Current.dwellSeconds + 60, "the next showcase shot");
                 kb = InputSystem.AddDevice<Keyboard>();
                 yield return null;
                 InputSystem.QueueStateEvent(kb, new KeyboardState(Key.Escape));

@@ -14,6 +14,7 @@ Works in its own Blender scene ("Kim"). Steps:
 import json
 import math
 import os
+
 import bpy
 import numpy as np
 from mathutils import Matrix, Vector

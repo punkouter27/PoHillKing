@@ -7,12 +7,15 @@ observe() builds the observation with koth/obs.py in float64 from mjData; caller
 inputs they own (last action, command, phase, default pose) and their own rounding of the result."""
 
 from __future__ import annotations
+
 import json
 import os
+
+import mujoco
 import numpy as np
 import torch
-import mujoco
-from koth.obs import build_obs, build_combat, GAIT_FREQ_HZ
+
+from koth.obs import GAIT_FREQ_HZ, build_combat, build_obs
 
 J, ACT = mujoco.mjtObj.mjOBJ_JOINT, mujoco.mjtObj.mjOBJ_ACTUATOR
 

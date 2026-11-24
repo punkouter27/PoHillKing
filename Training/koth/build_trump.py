@@ -12,6 +12,7 @@ scripts/make_glb_fighter.py): the numbers koth/build_human.py turns into assets/
 """
 
 from __future__ import annotations
+
 import os
 import sys
 

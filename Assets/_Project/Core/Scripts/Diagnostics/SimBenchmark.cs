@@ -56,11 +56,26 @@ namespace PoKingHill
         {
             double s = _sw.Elapsed.TotalSeconds;
             StepsPerSecond = s > 0 ? Steps / s : 0; SamplesPerSecond = StepsPerSecond / _decimation * _fighters;
-            Result = $"Benchmark ({s:0.0} s, this device, 1 world, {_fighters} fighters, CPU): {StepsPerSecond:N0} physics steps/s = " +
-                     $"{SamplesPerSecond:N0} samples/s. Local simulation speed, not a training run.";
+            Result = Label(s, StepsPerSecond, SamplesPerSecond, _fighters, Hardware());
             Release(); Running = false;
             UnityEngine.Debug.Log("[SimBenchmark] " + Result);
         }
+
+        /// <summary>The device it ran on as the player sees it: "CPU &lt;name&gt; x&lt;threads&gt;, GPU &lt;name&gt;" (a browser
+        /// reports a generic CPU name and its WebGL renderer as the GPU).</summary>
+        public static string Hardware()
+        {
+            string cpu = SystemInfo.processorType, gpu = SystemInfo.graphicsDeviceName;
+            if (string.IsNullOrWhiteSpace(cpu)) cpu = "unknown";
+            if (string.IsNullOrWhiteSpace(gpu)) gpu = "unknown";
+            return $"this device: CPU {cpu.Trim()} x{SystemInfo.processorCount}, GPU {gpu.Trim()}";
+        }
+
+        /// <summary>The overlay's result line: the hardware, what was measured and how, and what it is not.</summary>
+        public static string Label(double seconds, double stepsPerSecond, double samplesPerSecond, int fighters, string hardware) =>
+            $"Benchmark on {hardware}. Measured: {seconds:0.0} s of MuJoCo mj_step on a copy of the live world, CPU main thread, " +
+            $"1 world, {fighters} fighters (simulation only: no rendering, no inference): {stepsPerSecond:N0} physics steps/s = " +
+            $"{samplesPerSecond:N0} policy samples/s. Local simulation speed, not a training run (training: 4096 worlds on a GPU).";
 
         void Release() { if (_copy != null) { MujocoLib.mj_deleteData(_copy); _copy = null; } }
         void OnDisable() { if (Running) { Running = false; Result = ""; } Release(); }

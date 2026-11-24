@@ -18,8 +18,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
-import torch
 import onnx
+import torch
+
 from koth import cpu_sim
 from koth.actor import Actor
 

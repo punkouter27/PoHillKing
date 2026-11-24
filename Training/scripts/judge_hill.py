@@ -20,9 +20,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import overnight_hill4 as w
 import queue_hill as q
 import queue_hill4 as h
-import overnight_hill4 as w
 
 q.PROGRESS = os.path.join(q.LOG_DIR, "progress_judge.txt")
 OUT = os.path.join(q.LOG_DIR, "judge_hill.json")

@@ -47,8 +47,12 @@ function Find-Unity {
 }
 
 function Invoke-Unity([string[]] $arguments, [string] $log) {
-    $p = Start-Process -FilePath $script:unity -PassThru -Wait -NoNewWindow -ArgumentList (@(
+    # Wait for Unity itself with WaitForExit(), never Start-Process -Wait: -Wait also waits for every child process,
+    # and Unity's licensing client (Unity.Licensing.Client.exe) outlives Unity, so -Wait can hang for ever.
+    $p = Start-Process -FilePath $script:unity -PassThru -NoNewWindow -ArgumentList (@(
         '-batchmode', '-projectPath', "`"$root`"", '-logFile', "`"$log`"") + $arguments)
+    $null = $p.Handle       # keep the handle now, or ExitCode reads back empty once the process is gone
+    $p.WaitForExit()
     return $p.ExitCode
 }
 

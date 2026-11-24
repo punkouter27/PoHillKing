@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import uuid
+
 import azure.functions as func
 from azure.data.tables import TableServiceClient
 

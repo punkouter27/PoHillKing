@@ -114,9 +114,10 @@ def main():
         )
     if a.ckpt:
         import torch
+        import warp as wp
+
         from koth.env import KothEnv
         from scripts.eval import eval_cfg, load_policy
-        import warp as wp
 
         opp = a.opponent or ([a.ckpt] if a.rung.startswith(("r4", "r5")) else None)
         env = KothEnv(eval_cfg(a.rung, opponent=opp, ckpt=a.ckpt), a.num_envs, seed=0)

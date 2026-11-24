@@ -33,7 +33,15 @@ namespace PoKingHill.Tests
             {
                 hud.SimulateScreen(p.x, p.y);
                 yield return Frames(4);
+                // During a fight labels change every frame (the clock, a "KO CAM" tag appearing): an element whose text or
+                // display changed this frame is measured against last frame's layout. A real misfit stays, so a problem
+                // must still be there after the next two layout passes, three looks in a row, to fail.
                 var problems = hud.LayoutProblems();
+                for (int look = 1; look < 3 && problems.Count > 0; look++)
+                {
+                    yield return Frames(2);
+                    problems = hud.LayoutProblems();
+                }
                 Assert.IsEmpty(problems, $"{what} at {p.x}x{p.y}:\n" + string.Join("\n", problems));
             }
         }

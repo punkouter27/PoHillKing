@@ -29,9 +29,9 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import balance_game as bg
+import overnight_game as g
 import queue_hill as q
 import queue_hill4 as h
-import overnight_game as g
 
 STRIKE_GAIN, SHARE_SLACK = 0.05, 0.03
 OR_SHARE = False  # --or-share

@@ -18,9 +18,11 @@ Default class names are the robot's name (`kim_hip`, `trump_hip`, ...) so severa
 """
 
 from __future__ import annotations
+
 import json
 import os
 import xml.etree.ElementTree as ET
+
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))

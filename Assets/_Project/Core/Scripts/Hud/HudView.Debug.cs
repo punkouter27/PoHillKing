@@ -96,9 +96,11 @@ namespace PoKingHill
             if (_peekRow.resolvedStyle.display == DisplayStyle.Flex && _peek.worldBound.yMax > _bottomBar.worldBound.yMin + 1) list.Add("peek pill covers the bottom corners");
             if (_badges.Count > 1)
             {
+                // rows by the badges' centres: a badge pulsing (its scale transition on a hit) grows around its centre, so
+                // its top edge moves while it still sits in the same row
                 var rows = new List<float>();
                 foreach (var b in _badges)
-                    if (!rows.Exists(y => Mathf.Abs(y - b.worldBound.yMin) <= 4f)) rows.Add(b.worldBound.yMin);
+                    if (!rows.Exists(y => Mathf.Abs(y - b.worldBound.center.y) <= 4f)) rows.Add(b.worldBound.center.y);
                 int expected = director.Playing >= 12 ? 2 : 1;
                 if (rows.Count != expected)
                     list.Add($"badges use {rows.Count} rows (expected {expected}): " +

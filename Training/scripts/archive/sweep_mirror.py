@@ -16,8 +16,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import queue_hill as q
 import overnight_hill4 as w
+import queue_hill as q
 import queue_hill4 as h
 
 q.PROGRESS = os.path.join(q.LOG_DIR, "progress_mirror.txt")

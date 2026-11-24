@@ -10,6 +10,7 @@ Writes:
 import json
 import os
 import struct
+
 import numpy as np
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

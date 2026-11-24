@@ -18,13 +18,19 @@ markers = [
 
 [tool.ruff]
 line-length = 120
+# First-party code is found only under these folders (not the repo root), so import sorting does not depend on the root
+# folder names or on a case-insensitive file system: Windows and the Linux CI runner sort the same way.
+src = ["Training", "Training/scripts"]
 target-version = "py311"
 extend-exclude = ["Training/runs", "Training/.venv", "Library", "Temp", "Packages", "Assets"]
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "W6"]
+select = ["E4", "E7", "E9", "F", "W6", "I"]
 # E731: the env code binds small lambdas (`T = lambda x: ...`) on purpose; E741: math names (l, I) follow the papers.
 ignore = ["E731", "E741"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["koth"]
 
 [tool.ruff.lint.per-file-ignores]
 # Blender scripts run inside Blender's own Python: `bpy` imports sit inside functions after sys.path set-up.

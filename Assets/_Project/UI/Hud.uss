@@ -91,7 +91,8 @@ Button { font-size: var(--fs-m); }
 .dot { width: 26px; height: 26px; border-radius: 13px; margin-right: 10px; flex-shrink: 0; }
 
 .round-info { flex-direction: row; align-items: center; justify-content: center; margin-top: 10px; flex-shrink: 0; }
-.clock { font-size: var(--fs-l); -unity-font-style: bold; margin-right: 16px; }
+/* min-width: room for "88.8 s", so the label does not grow (and the row re-centre) when the clock passes 10 s */
+.clock { font-size: var(--fs-l); -unity-font-style: bold; margin-right: 16px; min-width: 120px; -unity-text-align: middle-right; }
 .sea-bar { width: 320px; height: 16px; border-radius: 8px; background-color: rgba(255, 255, 255, 0.15); }
 .sea-fill { height: 100%; width: 0%; background-color: rgb(64, 156, 230); border-radius: 8px; }
 .ties { font-size: var(--fs-xs); margin-left: 14px; background-color: var(--glass); border-radius: 14px; padding: 2px 12px; }

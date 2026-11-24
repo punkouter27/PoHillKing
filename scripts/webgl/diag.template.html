@@ -26,6 +26,7 @@
   .row .name { font-weight: 600; } .row .detail { grid-column: 1 / -1; color: var(--muted); font-size: 12px; word-break: break-all; }
   .state { font-weight: 600; white-space: nowrap; } .state.ok { color: var(--ok); } .state.bad { color: var(--bad); }
   .state.warn { color: var(--warn); } .state.off { color: var(--muted); } .state.wait { color: var(--accent); }
+  .checked { color: var(--muted); font-size: 12px; margin: 16px 0 0; } .checked a { color: var(--text); }
   footer { position: fixed; right: 0; bottom: 0; left: 0; height: 20px; padding: 0 12px; display: flex; justify-content: flex-end;
            align-items: center; font-size: 11px; color: var(--muted); background: var(--bg); }
   /* On a phone the stamp follows the content instead of floating over the last rows. */
@@ -38,6 +39,7 @@
   <h1>System status</h1>
   <div id="banner" class="banner wait">Checking…</div>
   <div id="sections"></div>
+  <p id="checked" class="checked"></p>
 </main>
 <footer id="version">v__VERSION__</footer>
 <script>
@@ -69,6 +71,21 @@
   });
 
   function set(r, cls, text) { var s = r.el.querySelector(".state"); s.className = "state " + cls; s.textContent = text; r.state = cls; }
+
+  // Results are kept for MAX_AGE_S seconds per browser tab and build (sessionStorage), so reloading /diag does not probe
+  // every service again; /diag?fresh (the "Re-check now" link) always probes.
+  var MAX_AGE_S = 60;
+  var STORE_KEY = "pohillking.diag.v" + VERSION;
+  var FRESH = /[?&]fresh(=|&|$)/.test(location.search);
+  function cached() {
+    if (FRESH) return null;
+    try {
+      var c = JSON.parse(sessionStorage.getItem(STORE_KEY) || "null");
+      if (c && c.rows && c.rows.length === rows.length && Date.now() - c.at < MAX_AGE_S * 1000) return c;
+    } catch (e) { /* storage blocked or corrupt: probe */ }
+    return null;
+  }
+  var saved = cached();
   function timed(url, method, body) {
     var ctl = new AbortController(); var t0 = performance.now(); var timer = setTimeout(function () { ctl.abort(); }, 10000);
     return fetch(url, { method: method, cache: "no-store", signal: ctl.signal, mode: "cors" })
@@ -81,7 +98,7 @@
       .catch(function (e) { clearTimeout(timer); return { ok: false, status: e.name === "AbortError" ? "timeout" : "network error", ms: Math.round(performance.now() - t0) }; });
   }
 
-  var jobs = rows.map(function (r) {
+  var jobs = saved ? rows.map(function (r, i) { set(r, saved.rows[i][0], saved.rows[i][1]); return Promise.resolve(); }) : rows.map(function (r) {
     if (r.kind === "page") {
       return timed(r.url, "GET", true).then(function (x) {
         var mine = x.ok && x.text.indexOf("loader.js") >= 0 && x.text.indexOf('content="' + VERSION + '"') >= 0;
@@ -114,6 +131,15 @@
     b.className = "banner " + (bad ? "bad" : "ok");
     b.textContent = (bad ? "Degraded: " + bad + " of " + live.length + " live checks failing" : "All systems operational (" + live.length + " live checks)")
       + (off ? " · " + off + " off on purpose" : "");
+    var at = saved ? saved.at : Date.now();
+    if (!saved) {
+      try { sessionStorage.setItem(STORE_KEY, JSON.stringify({ at: at, rows: rows.map(function (r) { return [r.state, r.el.querySelector(".state").textContent]; }) })); }
+      catch (e) { /* no storage: nothing kept */ }
+    }
+    var note = document.getElementById("checked");
+    note.textContent = (saved ? "Probed " + Math.round((Date.now() - at) / 1000) + " s ago" : "Checked just now")
+      + " from this browser (" + new Date(at).toISOString().replace("T", " ").slice(0, 19) + " UTC); results are kept " + MAX_AGE_S + " s. ";
+    var again = document.createElement("a"); again.href = "?fresh"; again.textContent = "Re-check now"; note.appendChild(again);
   });
 })();
 </script>

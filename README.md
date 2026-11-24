@@ -16,6 +16,7 @@ Play it in a browser: https://white-bush-08dbace0f.4.azurestaticapps.net (status
 | `Training/` | Python training (uv project, Python 3.11): `koth/` env and model builders, `scripts/` train / eval / export, `config/` reward weights, `tests/` |
 | `scripts/` | publish and deploy the WebGL build, the daily-score Azure Function, asset generators |
 | `docs/` | build contract, training log, dated notes and reports |
+| `SCREENSHOTS/` | before/after reports of UI changes, one folder each (`ui-<YYMMDD>-<feature>/index.html` + `side-by-side.png`), made by `scripts/screenshots.py` |
 
 ## Modes
 
@@ -68,6 +69,9 @@ uv run --no-project --python Training/.venv/Scripts/python.exe --with pytest pyt
 
 # Publish the WebGL build (needs Unity 6000.6.9f1 with WebGL; close the editor on this project first)
 pwsh -File scripts/publish_webgl.ps1
+
+# Before/after screenshots of a UI change from the local build (SCREENSHOTS/ui-<YYMMDD>-<feature>/)
+uv run --no-project --python 3.11 --with playwright==1.49.0 --with pillow python scripts/screenshots.py --feature <name>
 ```
 
 Everything else (training, gates, Unity CLI): `AGENTS.md`.

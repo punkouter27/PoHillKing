@@ -106,6 +106,7 @@ def random_checkpoint(path: str, rung: str, out_scale: float = 1.0) -> None:
     with a non-trivial normalizer so (obs - mean) / (std + eps) is exercised. out_scale < 1 shrinks the actor's
     output layer (a near-zero action that mostly stands, so eval.py's tracking-error path runs too)."""
     from rsl_rl.runners import OnPolicyRunner
+
     from koth.env import KothEnv, default_cfg
     from scripts.train import train_cfg
 

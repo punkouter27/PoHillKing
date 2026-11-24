@@ -33,8 +33,10 @@ Model frame: x forward, y left, z up. BVH (CMU): x left, y up, z forward.
 """
 
 from __future__ import annotations
+
 import json
 import os
+
 import numpy as np
 
 JOINTS = (

@@ -20,6 +20,7 @@ Presets: ladder(k) for k opponents ordered weakest to strongest: stage i draws m
 all of them evenly (the full league)."""
 
 from __future__ import annotations
+
 import collections
 import json
 

@@ -5,6 +5,7 @@ MLPModel in eval mode: x = (obs - mean) / (std + 1e-2), then Linear/ELU layers, 
 Used by env.FrozenPolicy (GPU, float32), scripts/play.py (CPU, float64) and scripts/export_policy.py (ONNX)."""
 
 from __future__ import annotations
+
 import torch
 
 NORM_EPS = 1e-2  # rsl_rl EmpiricalNormalization eps

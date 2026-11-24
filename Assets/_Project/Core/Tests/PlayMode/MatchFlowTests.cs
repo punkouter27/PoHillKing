@@ -215,7 +215,7 @@ namespace PoKingHill.Tests
         /// <summary>A whole 16-player bracket at 4x speed (a duel nobody wins by a push ends when the sea arrives, or at a 1.5 s
         /// full time without a sea, and goes to whoever is nearest the centre): all 15 duels name a winner and the tournament
         /// ends with one champion.</summary>
-        [UnityTest, Timeout(600000)]
+        [UnityTest, Timeout(2400000)]
         public IEnumerator SixteenPlayerBracketAlwaysEndsWithOneChampion()
         {
             SceneManager.LoadScene("Game");
@@ -229,13 +229,17 @@ namespace PoKingHill.Tests
                 d.roundSeconds = 1.5f; d.pauseBetweenRounds = 600f; Time.timeScale = 4f;   // each result waits for Continue
                 d.StartTournament();
                 int decided = 0, seen = -1; string champion = "";
-                float end = Time.realtimeSinceStartup + 540f;
+                // stuck = no duel decided for 150 s of wall time (one 1.5 s duel at 4x takes seconds; a busy machine slows the
+                // whole bracket, not one duel), so the cap is per duel rather than one window for all 15
+                const float StallSeconds = 150f;
+                float lastProgress = Time.realtimeSinceStartup, t0 = lastProgress;
                 while (!(decided == 15 && d.State == MatchState.Menu))
                 {
-                    if (Time.realtimeSinceStartup > end) Assert.Fail($"stuck after {decided} duels: state {d.State}, bracket {d.BracketIndex}, status '{d.Status}'");
+                    if (Time.realtimeSinceStartup - lastProgress > StallSeconds)
+                        Assert.Fail($"stuck after {decided} duels ({StallSeconds:0} s without a result): state {d.State}, bracket {d.BracketIndex}, status '{d.Status}'");
                     if (d.State == MatchState.Result && d.InTournament && d.BracketIndex != seen)
                     {
-                        seen = d.BracketIndex; decided++;
+                        seen = d.BracketIndex; decided++; lastProgress = Time.realtimeSinceStartup;
                         Assert.GreaterOrEqual(d.LastResult.Winner, 0, $"duel {seen + 1} has a winner");
                         Assert.GreaterOrEqual(d.Bracket[seen].winner, 0);
                         champion = d.TournamentChampion;
@@ -245,7 +249,7 @@ namespace PoKingHill.Tests
                 }
                 Assert.AreEqual(15, decided);
                 Assert.IsNotEmpty(champion, "one champion after the final");
-                Debug.Log("bracket champion: " + champion);
+                Debug.Log($"bracket champion: {champion} ({Time.realtimeSinceStartup - t0:0} s wall time)");
             }
             finally { GameSettings.Intro = intro; d.roundSeconds = secs; Time.timeScale = 1f; }
         }

@@ -33,6 +33,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torch
 from rsl_rl.runners import OnPolicyRunner
+
 from koth.env import HUMANS, KothEnv, default_cfg
 from koth.rules import OUT_RADIUS, PLATEAU_R
 from scripts.train import train_cfg

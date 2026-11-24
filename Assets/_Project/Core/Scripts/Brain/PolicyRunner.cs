@@ -239,6 +239,7 @@ namespace PoKingHill
         internal void ApplyBatchedAction(MujocoLib.mjData_* d, System.ReadOnlySpan<float> act, bool isGetup, double elapsedMs)
         {
             LastInferenceMs = elapsedMs;
+            InferenceLog.Note(isGetup ? getupPolicy : policy, body, "CPU worker, batched");
             if (isGetup) ApplyGetUpAction(act);
             else ApplyFightAction(d, act);
         }
@@ -260,6 +261,7 @@ namespace PoKingHill
             output.CompleteAllPendingOperations();
             var act = output.AsReadOnlySpan();
             LastInferenceMs = _sw.Elapsed.TotalMilliseconds;
+            InferenceLog.Note(policy, body, "CPU worker");
             ApplyFightAction(d, act);
         }
 
@@ -386,6 +388,7 @@ namespace PoKingHill
             _getupInput.Upload(_getupObs); _getupWorker.Schedule(_getupInput);
             var output = _getupWorker.PeekOutput() as Tensor<float>; output.CompleteAllPendingOperations();
             var act = output.AsReadOnlySpan(); LastInferenceMs = _sw.Elapsed.TotalMilliseconds;
+            InferenceLog.Note(getupPolicy, body, "CPU worker");
             ApplyGetUpAction(act);
         }
 

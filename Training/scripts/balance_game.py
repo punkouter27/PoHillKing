@@ -28,9 +28,9 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import overnight_game as g
 import queue_hill as q
 import queue_hill4 as h
-import overnight_game as g
 
 q.PROGRESS = os.path.join(q.LOG_DIR, "progress_balance.txt")
 TELEMETRY = os.path.join(q.LOG_DIR, "balance_telemetry.jsonl")

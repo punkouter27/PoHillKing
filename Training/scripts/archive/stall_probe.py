@@ -12,6 +12,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import torch
+
 from koth.env import KothEnv
 from koth.rules import OUT_RADIUS
 from scripts.eval import eval_cfg, load_policy

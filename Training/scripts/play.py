@@ -15,14 +15,15 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import numpy as np
-import torch
 import mujoco
 import mujoco.viewer
-from koth.obs import goal_command, GAIT_FREQ_HZ, OBS_DIM
-from koth.build_mjcf import ASSETS
-from koth.rules import is_out
+import numpy as np
+import torch
+
 from koth import actor, cpu_sim
+from koth.build_mjcf import ASSETS
+from koth.obs import GAIT_FREQ_HZ, OBS_DIM, goal_command
+from koth.rules import is_out
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

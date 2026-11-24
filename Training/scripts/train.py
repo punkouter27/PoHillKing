@@ -41,6 +41,7 @@ sys.stdout.reconfigure(line_buffering=True)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torch
 from rsl_rl.runners import OnPolicyRunner
+
 from koth.env import BODY_GAIT_HZ, ROBOT, KothEnv, default_cfg, obs_dims
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -660,8 +661,8 @@ def main():
     if a.graduate_reward is not None:
         print("graduation:", json.dumps(grad.summary()))
         if grad.passed:
-            from scripts.export_policy import export
             from koth.build_mjcf import UNITY_MODELS
+            from scripts.export_policy import export
 
             path = os.path.join(a.export_dir or UNITY_MODELS, f"{a.export_name or run}_policy.onnx")
             export(os.path.join(log_dir, "model_final.pt"), path)
