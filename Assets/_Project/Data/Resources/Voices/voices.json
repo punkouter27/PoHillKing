@@ -1,0 +1,476 @@
+{
+    "schema": "po-voice-manifest/1",
+    "game": "PoHillKing",
+    "generated": "2026-11-22T00:00:00Z",
+    "root": "Assets/_Project/Data/Resources/Voices",
+    "emotions": [
+        "angry",
+        "happy",
+        "hurt",
+        "insult",
+        "celebrate"
+    ],
+    "levels": [
+        1,
+        2,
+        3,
+        4,
+        5
+    ],
+    "fallback": "procedural",
+    "characters": [
+        {
+            "id": "kim",
+            "name": "Kim",
+            "voice": {
+                "pitchHz": 235.0,
+                "formantScale": 1.15,
+                "breath": 0.3,
+                "rasp": 0.1,
+                "vibratoHz": 5.8,
+                "vibratoDepth": 0.025,
+                "tempo": 1.1,
+                "timbre": "adult-female"
+            },
+            "clips": {
+                "angry": [
+                    {
+                        "level": 1,
+                        "file": "kim/angry-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "kim/angry-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "kim/angry-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "kim/angry-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "kim/angry-5.wav",
+                        "exists": false
+                    }
+                ],
+                "happy": [
+                    {
+                        "level": 1,
+                        "file": "kim/happy-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "kim/happy-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "kim/happy-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "kim/happy-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "kim/happy-5.wav",
+                        "exists": false
+                    }
+                ],
+                "hurt": [
+                    {
+                        "level": 1,
+                        "file": "kim/hurt-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "kim/hurt-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "kim/hurt-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "kim/hurt-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "kim/hurt-5.wav",
+                        "exists": false
+                    }
+                ],
+                "insult": [
+                    {
+                        "level": 1,
+                        "file": "kim/insult-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "kim/insult-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "kim/insult-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "kim/insult-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "kim/insult-5.wav",
+                        "exists": false
+                    }
+                ],
+                "celebrate": [
+                    {
+                        "level": 1,
+                        "file": "kim/celebrate-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "kim/celebrate-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "kim/celebrate-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "kim/celebrate-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "kim/celebrate-5.wav",
+                        "exists": false
+                    }
+                ]
+            }
+        },
+        {
+            "id": "trump",
+            "name": "Trump",
+            "voice": {
+                "pitchHz": 118.0,
+                "formantScale": 0.9,
+                "breath": 0.2,
+                "rasp": 0.45,
+                "vibratoHz": 4.6,
+                "vibratoDepth": 0.015,
+                "tempo": 0.9,
+                "timbre": "adult-male-heavy"
+            },
+            "clips": {
+                "angry": [
+                    {
+                        "level": 1,
+                        "file": "trump/angry-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "trump/angry-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "trump/angry-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "trump/angry-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "trump/angry-5.wav",
+                        "exists": false
+                    }
+                ],
+                "happy": [
+                    {
+                        "level": 1,
+                        "file": "trump/happy-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "trump/happy-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "trump/happy-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "trump/happy-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "trump/happy-5.wav",
+                        "exists": false
+                    }
+                ],
+                "hurt": [
+                    {
+                        "level": 1,
+                        "file": "trump/hurt-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "trump/hurt-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "trump/hurt-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "trump/hurt-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "trump/hurt-5.wav",
+                        "exists": false
+                    }
+                ],
+                "insult": [
+                    {
+                        "level": 1,
+                        "file": "trump/insult-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "trump/insult-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "trump/insult-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "trump/insult-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "trump/insult-5.wav",
+                        "exists": false
+                    }
+                ],
+                "celebrate": [
+                    {
+                        "level": 1,
+                        "file": "trump/celebrate-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "trump/celebrate-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "trump/celebrate-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "trump/celebrate-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "trump/celebrate-5.wav",
+                        "exists": false
+                    }
+                ]
+            }
+        },
+        {
+            "id": "grandpa",
+            "name": "Grandpa",
+            "voice": {
+                "pitchHz": 148.0,
+                "formantScale": 0.97,
+                "breath": 0.45,
+                "rasp": 0.35,
+                "vibratoHz": 6.5,
+                "vibratoDepth": 0.045,
+                "tempo": 0.8,
+                "timbre": "elderly-male"
+            },
+            "clips": {
+                "angry": [
+                    {
+                        "level": 1,
+                        "file": "grandpa/angry-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "grandpa/angry-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "grandpa/angry-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "grandpa/angry-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "grandpa/angry-5.wav",
+                        "exists": false
+                    }
+                ],
+                "happy": [
+                    {
+                        "level": 1,
+                        "file": "grandpa/happy-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "grandpa/happy-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "grandpa/happy-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "grandpa/happy-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "grandpa/happy-5.wav",
+                        "exists": false
+                    }
+                ],
+                "hurt": [
+                    {
+                        "level": 1,
+                        "file": "grandpa/hurt-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "grandpa/hurt-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "grandpa/hurt-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "grandpa/hurt-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "grandpa/hurt-5.wav",
+                        "exists": false
+                    }
+                ],
+                "insult": [
+                    {
+                        "level": 1,
+                        "file": "grandpa/insult-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "grandpa/insult-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "grandpa/insult-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "grandpa/insult-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "grandpa/insult-5.wav",
+                        "exists": false
+                    }
+                ],
+                "celebrate": [
+                    {
+                        "level": 1,
+                        "file": "grandpa/celebrate-1.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 2,
+                        "file": "grandpa/celebrate-2.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 3,
+                        "file": "grandpa/celebrate-3.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 4,
+                        "file": "grandpa/celebrate-4.wav",
+                        "exists": false
+                    },
+                    {
+                        "level": 5,
+                        "file": "grandpa/celebrate-5.wav",
+                        "exists": false
+                    }
+                ]
+            }
+        }
+    ]
+}

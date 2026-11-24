@@ -12,6 +12,11 @@ namespace PoKingHill
     ///   character voices       a body-specific formant bank crossed with Strain, Pain, Fear and Triumph
     ///   Splash     filtered noise with bubbles
     ///   Thunder    a bright crack, then a long brown-noise rumble (MatchFx's lightning, delayed by distance)
+    /// Agent voice matrix (the tournament standard): Play(agent, VoiceEmotion, level, ...) plays one of 5 emotions
+    /// (Angry, Happy, Hurt, Insult, Celebrate) at 5 levels for any character. Resources/Voices/voices.json
+    /// (VoiceManifest) lists every character's 25 cells, the WAV each uses (&lt;id&gt;/&lt;emotion&gt;-&lt;level&gt;.wav) and
+    /// whether it exists; a WAV plays when it exists, otherwise VoiceSynth imitates the cell with the character's voice
+    /// profile (glottal pulses, formants, syllables, per-emotion prosody). Made or loaded on first use and cached.
     /// Every source has a low-pass that ImpactSynth closes while the camera is under water or time is slowed (TimeWarp).
     /// Play is allocation-free.
     /// </summary>
@@ -19,6 +24,9 @@ namespace PoKingHill
     {
         public enum Kind { Thud, Clank, Smack, GruntLow, GruntHigh, Splash, Thunder }
         public enum Emotion { Strain, Pain, Fear, Triumph }
+        /// <summary>The standard's five voice emotions; each has levels 1..5.</summary>
+        public enum VoiceEmotion { Angry, Happy, Hurt, Insult, Celebrate }
+        public const int VoiceLevels = 5;
         public int voices = 10;
         [Tooltip("Distance (m) inside which a voice plays at full volume")] public float minDistance = 4f;
         public float maxDistance = 120f;
@@ -84,6 +92,99 @@ namespace PoKingHill
             int e = (int)emotion;
             if (e < 0 || e >= _voiceClips[b].Length) { e = (int)Emotion.Strain; VoiceFallbacks++; }
             PlayClip(_voiceClips[b][e][_rngNext() % 3], world, gain, pitch, 0f);
+        }
+
+        // ------------------------------------------------------------------ agent voice matrix (5 emotions x 5 levels)
+        // voices.json (VoiceManifest) says which WAV each cell uses and whether it exists; a missing cell is imitated by
+        // VoiceSynth with the character's profile. Loaded once per app; clips cached per character and cell.
+        static VoiceManifest _manifest; static bool _manifestLoaded;
+        readonly System.Collections.Generic.Dictionary<string, AudioClip[]> _cellClips = new();
+        public int VoiceFilesLoaded { get; private set; }
+        public int VoiceSynthesized { get; private set; }
+
+        /// <summary>voices.json from Resources (null, with one warning, when it is missing or invalid: then every cell is procedural).</summary>
+        public static VoiceManifest Manifest
+        {
+            get
+            {
+                if (_manifestLoaded) return _manifest;
+                _manifestLoaded = true;
+                var text = Resources.Load<TextAsset>(VoiceManifest.ResourcePath);
+                _manifest = text != null ? VoiceManifest.Parse(text.text) : null;
+                if (_manifest == null) Debug.LogWarning("[SoundPool] Resources/" + VoiceManifest.ResourcePath + ".json missing or invalid: every voice is procedural");
+                return _manifest;
+            }
+        }
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetManifest() { _manifest = null; _manifestLoaded = false; }
+
+        /// <summary>The Resources path (no extension) of one cell: Voices/&lt;agent&gt;/&lt;emotion&gt;-&lt;level&gt;.</summary>
+        public static string VoicePath(string agent, VoiceEmotion emotion, int level) =>
+            "Voices/" + VoiceManifest.FileOf(agent, emotion, level).Replace(".wav", "");
+
+        /// <summary>Character id of an agent: lower case, letters, digits, '-' and '_' up to the first space or bracket
+        /// ("Trump (Bulldozer ...)" -> "trump").</summary>
+        public static string VoiceKey(string agent)
+        {
+            if (string.IsNullOrEmpty(agent)) return "unknown";
+            var sb = new System.Text.StringBuilder(agent.Length);
+            foreach (char c in agent) { if (c == ' ' || c == '(' || c == '[') break; if (char.IsLetterOrDigit(c) || c == '-' || c == '_') sb.Append(char.ToLowerInvariant(c)); }
+            return sb.Length > 0 ? sb.ToString() : "unknown";
+        }
+
+        /// <summary>The voice layer's entry point: an agent's emotion at a level (1..5) at a world position. body is the
+        /// agent's body kind (kim, trump, grandpa, g1), the character used when the agent itself is not in voices.json.</summary>
+        public void Play(string agent, VoiceEmotion emotion, int level, Vector3 world, float gain, string body = null)
+        {
+            if (_src == null || _src.Length == 0 || gain <= 0.002f) return;
+            var clip = VoiceClip(agent, emotion, level, body);
+            if (clip != null) PlayClip(clip, world, gain, 1f, 0f);
+        }
+
+        /// <summary>The clip one cell resolves to: the WAV voices.json marks as existing, else the procedural imitation
+        /// with the character's profile (from the manifest, else VoiceManifest.DefaultProfile).</summary>
+        public AudioClip VoiceClip(string agent, VoiceEmotion emotion, int level, string body = null)
+        {
+            level = Mathf.Clamp(level, 1, VoiceLevels);
+            var m = Manifest;
+            var ch = m?.Find(agent) ?? (body != null ? m?.Find(body) : null);
+            string id = ch != null ? ch.id : VoiceKey(body ?? agent);
+            if (ch == null) VoiceFallbacks++;
+            if (!_cellClips.TryGetValue(id, out var cells)) _cellClips[id] = cells = new AudioClip[5 * VoiceLevels];
+            int cell = (int)emotion * VoiceLevels + level - 1;
+            if (cells[cell] != null) return cells[cell];
+
+            var entry = ch?.Clip(emotion, level);
+            if (entry != null && entry.exists && !string.IsNullOrEmpty(entry.file))
+            {
+                var wav = Resources.Load<AudioClip>("Voices/" + System.IO.Path.ChangeExtension(entry.file, null).Replace('\\', '/'));
+                if (wav != null) { VoiceFilesLoaded++; return cells[cell] = wav; }
+                Debug.LogWarning($"[SoundPool] voices.json lists {entry.file} but it does not load: procedural instead (run PoKingHill/Voices/Rebuild voices.json)");
+            }
+            float[] x = SynthVoice(ch?.voice ?? VoiceManifest.DefaultProfile(id), id, emotion, level);
+            var clip = AudioClip.Create($"{id} {emotion} {level}", x.Length, 1, VoiceSynth.Rate, false); clip.SetData(x, 0);
+            VoiceSynthesized++;
+            return cells[cell] = clip;
+        }
+
+        /// <summary>The standard emotion an existing trigger maps onto (Fear has no cell of its own: Hurt).</summary>
+        public static VoiceEmotion StandardOf(Emotion e) => e switch
+        {
+            Emotion.Strain => VoiceEmotion.Angry, Emotion.Triumph => VoiceEmotion.Celebrate, _ => VoiceEmotion.Hurt
+        };
+
+        /// <summary>A strength 0..1 as a level 1..5.</summary>
+        public static int LevelOf(float strength) => Mathf.Clamp(1 + Mathf.RoundToInt(Mathf.Clamp01(strength) * (VoiceLevels - 1)), 1, VoiceLevels);
+
+        /// <summary>The procedural imitation of one cell (VoiceSynth), deterministic per character, emotion, level and take.</summary>
+        public static float[] SynthVoice(VoiceProfile profile, string id, VoiceEmotion emotion, int level, int take = 0) =>
+            VoiceSynth.Render(profile, id, emotion, level, take);
+
+        /// <summary>The same for one of the body kinds (kim, trump, grandpa, g1) with its default profile.</summary>
+        public static float[] SynthVoice(int body, VoiceEmotion emotion, int level)
+        {
+            string id = VoiceBodies[Mathf.Clamp(body, 0, VoiceBodies.Length - 1)];
+            return VoiceSynth.Render(VoiceManifest.DefaultProfile(id), id, emotion, level);
         }
 
         uint _rngNext()
