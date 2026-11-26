@@ -30,11 +30,11 @@ namespace PoKingHill
             // mode 2: the knockout, its first-round pairings shown as they will be played
             var cup = El("mode-card", _sheetBody);
             Text("TOURNAMENT", "mode-tag", cup);
-            Text($"{MatchDirector.PlayersPerMatch} fighters · 1 v 1 knockout", "mode-title", cup);
-            Text("15 duels: round of 16, quarter-finals, semi-finals, final. Each duel's winner goes through.", "mode-desc", cup);
-            Text("Round of 16 · tap a fighter to change it", "hint", cup);
+            Text($"{MatchDirector.TournamentPlayers} fighters · 1 v 1 knockout", "mode-title", cup);
+            Text("7 duels: quarter-finals, semi-finals, final. Each duel's winner goes through.", "mode-desc", cup);
+            Text("Quarter-finals · tap a fighter to change it", "hint", cup);
             var pairs = El("bracket-pairs", cup);
-            for (int p = 0; p < MatchDirector.PlayersPerMatch / 2; p++)
+            for (int p = 0; p < MatchDirector.TournamentPlayers / 2; p++)
             {
                 var pair = El("bracket-pair", pairs);
                 for (int s = 0; s < 2; s++)
