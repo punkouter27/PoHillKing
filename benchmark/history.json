@@ -73,6 +73,133 @@
     "mujoco_warp": "3.15.0"
    },
    "workload_changes": []
+  },
+  {
+   "when": "2026-11-25T19:39:20-05:00",
+   "ok": true,
+   "error": null,
+   "machine": {
+    "hostname": "C4T4V44",
+    "cpu": "13th Gen Intel(R) Core(TM) i7-13850HX (28 threads)",
+    "gpu": "NVIDIA RTX 2000 Ada Generation Laptop GPU",
+    "vram_gb": 8.0,
+    "ram_gb": 63.8,
+    "gpu_driver": "581.95",
+    "os": "Windows 11 (10.0.26100)"
+   },
+   "load_before": {
+    "cpu_pct": 10,
+    "cpu_max_core_pct": 38,
+    "trainer_cpu_cores": 0.0,
+    "trainer_thread_pct": 0,
+    "ram_used_gb": 23.3,
+    "gpu_pct": 0.0,
+    "gpu_mem_pct": 0.0,
+    "vram_used_gb": 2.4,
+    "gpu_temp_c": 63.0,
+    "sm_clock_mhz": 2115.0,
+    "sm_clock_max_mhz": 3105.0,
+    "power_w": 21.01,
+    "power_limit_w": 56.89,
+    "pstate": "P3",
+    "clock_reasons": [
+     "power cap",
+     "thermal (sw)"
+    ],
+    "display_active": true,
+    "pcie": "gen 4 x8",
+    "on_battery": false,
+    "gpu_processes": [
+     "Code.exe",
+     "Creative Cloud UI Helper.exe",
+     "CrossDeviceResume.exe",
+     "Docker Desktop.exe",
+     "PhoneExperienceHost.exe",
+     "SearchHost.exe",
+     "ShellExperienceHost.exe",
+     "ShellHost.exe",
+     "StartMenuExperienceHost.exe",
+     "TeamViewer.exe",
+     "TextInputHost.exe",
+     "ZSATray.exe",
+     "[Insufficient Permissions]",
+     "explorer.exe",
+     "ms-teams.exe",
+     "msedge.exe",
+     "msedgewebview2.exe"
+    ]
+   },
+   "load_during": {
+    "cpu_pct": 14.0,
+    "cpu_max_core_pct": 27777874.0,
+    "trainer_cpu_cores": 1.0,
+    "trainer_thread_pct": 95.6,
+    "ram_used_gb": 23.7,
+    "gpu_pct": 89.8,
+    "gpu_mem_pct": 41.3,
+    "vram_used_gb": 3.0,
+    "gpu_temp_c": 74.0,
+    "sm_clock_mhz": 1961.7,
+    "sm_clock_max_mhz": 3105.0,
+    "clock_pct_of_max": 63,
+    "power_w": 54.3,
+    "power_limit_w": 55.0,
+    "pstate": "P1",
+    "clock_reasons": {
+     "power cap": 1.0
+    },
+    "display_active": true,
+    "pcie": "gen 4 x8",
+    "on_battery": false,
+    "samples": 9
+   },
+   "busy": false,
+   "workload_id": "5343e6",
+   "workload": {
+    "repo": "PoHillKing",
+    "trainer": "rsl_rl 5.5.1",
+    "script": "training/scripts/train.py",
+    "args": "--rung kim_r0b --name _benchmark --num-envs 4096 --iters 100000 --save-interval 100000",
+    "num_envs": 4096,
+    "horizon": 24,
+    "net": [
+     512,
+     256,
+     128
+    ],
+    "config_hash": "3275cc"
+   },
+   "result": {
+    "step_time_ms": 102.546,
+    "sim_ms": 86.096,
+    "learn_ms": 16.45,
+    "env_steps_per_s": 39943,
+    "steps_measured": 120,
+    "measured_s": 12.31,
+    "startup_s": 110.5,
+    "step_p50_ms": 102.677,
+    "step_p95_ms": 103.302,
+    "sim_drift_pct": 0.4,
+    "blocks_measured": 5
+   },
+   "git_commit": "ef636e5",
+   "versions": {
+    "python": "3.11.18",
+    "torch": "2.9.1+cu128",
+    "mujoco_warp": "3.15.0"
+   },
+   "context": {
+    "power_plan": "Balanced",
+    "power_mode": null,
+    "gpu_scheduling": null
+   },
+   "verdict": [
+    "low clock",
+    "at power limit"
+   ],
+   "workload_changes": [
+    "config_hash: '72f1b0' -> '3275cc'"
+   ]
   }
  ]
 }
