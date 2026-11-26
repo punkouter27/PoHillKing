@@ -25,7 +25,7 @@ The Play tab has one card per mode. Every agent is a brain; there is no human pl
 | Mode | What happens |
 |---|---|
 | **Free-for-all** | one round with 8 fighters at once (`MatchDirector.FfaPlayers`). Every available agent is seated once before any repeats, so with three brains it is 3 + 3 + 2. The last fighter left on the platform wins. |
-| **Tournament** | 16-player single elimination of one-round 1v1 duels over the menu's seats as shown: 01 v 02, 03 v 04 ..., then quarter-finals, semi-finals and the final (15 duels). Tap a seat to change it, or Shuffle. Every duel names a winner on the spot (the last one in, else nearest the centre when time is up, else whoever went over last, else the higher Elo), so 15 duels always end with one champion. |
+| **Tournament** | 8-player single elimination of one-round 1v1 duels over the menu's seats as shown: 01 v 02, 03 v 04 ..., then semi-finals and the final (7 duels). Tap a seat to change it, or Shuffle. Every duel names a winner on the spot (the last one in, else nearest the centre when time is up, else whoever went over last, else the higher Elo), so 7 duels always end with one champion. |
 | Custom | the agents ticked on the Agents tab |
 | 4x4 Heats | up to four heats of four, then a final of the heat winners |
 | Daily seed | one deterministic 16-fighter match per UTC day |

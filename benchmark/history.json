@@ -75,6 +75,121 @@
    "workload_changes": []
   },
   {
+   "when": "2026-11-25T14:26:17-05:00",
+   "ok": true,
+   "error": null,
+   "machine": {
+    "hostname": "WIN-C2ANEVBHN6Q",
+    "cpu": "Intel(R) Core(TM) Ultra 9 275HX (24 threads)",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+    "vram_gb": 11.9,
+    "ram_gb": 31.4,
+    "gpu_driver": "621.24",
+    "os": "Windows 11 (10.0.26300)"
+   },
+   "load_before": {
+    "cpu_pct": 21,
+    "cpu_max_core_pct": 83,
+    "trainer_cpu_cores": 0.0,
+    "trainer_thread_pct": 0,
+    "ram_used_gb": 29.1,
+    "gpu_pct": 17.0,
+    "gpu_mem_pct": 3.0,
+    "vram_used_gb": 2.6,
+    "gpu_temp_c": 86.53,
+    "sm_clock_mhz": 675.0,
+    "sm_clock_max_mhz": 3090.0,
+    "power_w": 22.39,
+    "power_limit_w": 110.0,
+    "pstate": "P4",
+    "clock_reasons": [
+     "thermal (sw)"
+    ],
+    "display_active": true,
+    "pcie": "gen 5 x8",
+    "on_battery": false,
+    "gpu_processes": [
+     "DCv2.exe",
+     "EOSOverlayRenderer-Win64-Shipping.exe",
+     "EpicGamesLauncher.exe",
+     "explorer.exe",
+     "msedge.exe",
+     "qemu-system-x86_64.exe"
+    ]
+   },
+   "load_during": {
+    "cpu_pct": 30.3,
+    "cpu_max_core_pct": 90.4,
+    "trainer_cpu_cores": 0.9,
+    "trainer_thread_pct": 88.4,
+    "ram_used_gb": 27.1,
+    "gpu_pct": 73.4,
+    "gpu_mem_pct": 36.0,
+    "vram_used_gb": 3.0,
+    "gpu_temp_c": 68.88,
+    "sm_clock_mhz": 2698.1,
+    "sm_clock_max_mhz": 3090.0,
+    "clock_pct_of_max": 87,
+    "power_w": 102.3,
+    "power_limit_w": 100.8,
+    "pstate": "P2",
+    "clock_reasons": {
+     "power cap": 0.56
+    },
+    "display_active": true,
+    "pcie": "gen 5 x8",
+    "on_battery": false,
+    "samples": 9
+   },
+   "busy": false,
+   "workload_id": "5343e6",
+   "workload": {
+    "repo": "PoHillKing",
+    "trainer": "rsl_rl 5.5.1",
+    "script": "training/scripts/train.py",
+    "args": "--rung kim_r0b --name _benchmark --num-envs 4096 --iters 100000 --save-interval 100000",
+    "num_envs": 4096,
+    "horizon": 24,
+    "net": [
+     512,
+     256,
+     128
+    ],
+    "config_hash": "3275cc"
+   },
+   "result": {
+    "step_time_ms": 62.993,
+    "sim_ms": 52.845,
+    "learn_ms": 10.147,
+    "env_steps_per_s": 65024,
+    "steps_measured": 168,
+    "measured_s": 10.58,
+    "startup_s": 899.4,
+    "step_p50_ms": 63.221,
+    "step_p95_ms": 66.689,
+    "sim_drift_pct": 5.1,
+    "blocks_measured": 7
+   },
+   "git_commit": "ef636e57",
+   "versions": {
+    "python": "3.11.9",
+    "torch": "2.9.1+cu128",
+    "mujoco_warp": "3.15.0"
+   },
+   "context": {
+    "power_plan": "Balanced",
+    "power_mode": "balanced",
+    "gpu_scheduling": null
+   },
+   "verdict": [
+    "CPU-bound",
+    "at power limit"
+   ],
+   "workload_changes": [
+    "config_hash: '72f1b0' -> '3275cc'"
+   ]
+  },
+  {
    "when": "2026-11-25T19:39:20-05:00",
    "ok": true,
    "error": null,

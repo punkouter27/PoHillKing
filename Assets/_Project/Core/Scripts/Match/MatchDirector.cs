@@ -55,6 +55,7 @@ namespace PoKingHill
         public const int PlayersPerMatch = 16;
         /// <summary>Fighters in a quick match: seats 01-08 of a fresh shuffle, all at once.</summary>
         public const int FfaPlayers = 8;
+        public const int TournamentPlayers = 8;
         public int selectedA, selectedB;
         public string[] maps = { "Summit (baseline)" };
         [Tooltip("Render-only scenery per map, same order as maps. Physics is the same dome for every map.")]
@@ -141,7 +142,7 @@ namespace PoKingHill
         public int BracketIndex => _bracketAt;
         public string TournamentChampion { get; private set; } = "";
 
-        /// <summary>One duel of the knockout bracket. a, b and winner are entrant numbers (0-15, the menu's seats 01-16;
+        /// <summary>One duel of the knockout bracket. a, b and winner are entrant numbers (0-7, the menu's seats 01-08;
         /// -1 = not known yet); the winner moves on to match <c>next</c> (-1 = the final).</summary>
         public class BracketMatch { public int a = -1, b = -1, winner = -1, tries, round, next = -1; public string label; }
         readonly List<BracketMatch> _bracket = new(); int _bracketAt;
@@ -440,12 +441,13 @@ namespace PoKingHill
             return true;
         }
 
-        /// <summary>The 16-player knockout: the menu's sixteen seats as shown, paired 01 v 02, 03 v 04 ... in one-on-one
-        /// duels of one round each; winners meet in the quarter-finals, semi-finals and the final (15 matches).</summary>
+        /// <summary>The 8-player knockout: the menu's first eight seats as shown, paired 01 v 02, 03 v 04 ... in one-on-one
+        /// duels of one round each; winners meet in the semi-finals and final (7 matches).</summary>
         public void StartTournament()
         {
             if (playerSlots.Length != PlayersPerMatch && !RandomizePlayerSlots(true)) return;
-            _entrants = (int[])playerSlots.Clone();
+            _entrants = new int[TournamentPlayers];
+            Array.Copy(playerSlots, _entrants, TournamentPlayers);
             TournamentChampion = "";
             _bracket.Clear(); _bracket.AddRange(BuildBracket(_entrants.Length)); _bracketAt = 0;
             PlayBracketMatch();
