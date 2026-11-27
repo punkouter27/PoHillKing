@@ -78,17 +78,18 @@ def main():
         f"=== overnight_hill: {a.hours} h, {a.iters} iterations x {a.num_envs} worlds per run, bodies {list(q.HUMANS)} ==="
     )
     q.ensure_tensorboard()
-    best = {b: dict(ckpt=q.FIGHTER[b], round=0, three=None) for b in q.HUMANS}
+    ship = {b: q.shipped(b) for b in q.HUMANS}
+    best = {b: dict(ckpt=ship[b], round=0, three=None) for b in q.HUMANS}
     base = {}  # per body: the fighter's mirror duel share and three-way jitter (fixed references)
     for b in q.HUMANS:
         mirror = q.evaluate(
-            b, ["--rung", q.DUEL_RUNG[b], "--ckpt", q.FIGHTER[b], "--opponent", q.FIGHTER[b], "--seconds", "25"]
+            b, ["--rung", q.DUEL_RUNG[b], "--ckpt", ship[b], "--opponent", ship[b], "--seconds", "25"]
         )
         others = [h for h in q.HUMANS if h != b]
         three = q.evaluate(
             b,
-            ["--rung", f"{b}_hill", "--ckpt", q.FIGHTER[b], "--opponent"]
-            + [f"{q.FIGHTER[o]}:slot{i + 1}" for i, o in enumerate(others)]
+            ["--rung", f"{b}_hill", "--ckpt", ship[b], "--opponent"]
+            + [f"{ship[o]}:slot{i + 1}" for i, o in enumerate(others)]
             + ["--seconds", "20"],
         )
         base[b] = dict(
@@ -145,7 +146,7 @@ def main():
                 "three_new": q.evaluate(me, three_args[:2] + ["--ckpt", ckpt] + three_args[2:]),
                 "three_best": q.evaluate(me, three_args[:2] + ["--ckpt", best[me]["ckpt"]] + three_args[2:]),
                 "duel_vs_fighter": q.evaluate(
-                    me, ["--rung", q.DUEL_RUNG[me], "--ckpt", ckpt, "--opponent", q.FIGHTER[me], "--seconds", "25"]
+                    me, ["--rung", q.DUEL_RUNG[me], "--ckpt", ckpt, "--opponent", ship[me], "--seconds", "25"]
                 ),
             }
             new, old = q.mean(ev["three_new"], "learner_last_one_in"), q.mean(ev["three_best"], "learner_last_one_in")

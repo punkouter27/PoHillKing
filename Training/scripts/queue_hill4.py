@@ -30,30 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import queue_hill as q
 
 q.PROGRESS = os.path.join(q.LOG_DIR, "progress_hill4.txt")
-MODELS = os.path.join(os.path.dirname(q.ROOT), "Assets", "_Project", "RL_Models")
 MIRROR_DECIDED, MIRROR_GAIN, THREE_SLACK, DUEL_FLOOR = 0.6, 0.2, 0.03, 0.45
-
-
-def shipped(body):
-    """runs/shipped/<body>/model_final.pt: the shipped fighter rebuilt from its ONNX, with its action path in config.json."""
-    out = os.path.join(q.ROOT, "runs", "shipped", body, "model_final.pt")
-    if not os.path.exists(out):
-        p = q.run(
-            ["scripts/onnx_to_ckpt.py", "--onnx", os.path.join(MODELS, body, "fighter_policy.onnx"), "--out", out],
-            body,
-            capture=True,
-        )
-        if p.returncode != 0:
-            raise SystemExit(f"onnx_to_ckpt failed for {body}: {p.stdout[-400:]}{p.stderr[-400:]}")
-        side = os.path.join(MODELS, body, "fighter_action.json")
-        action = json.load(open(side)) if os.path.exists(side) else None
-        json.dump(
-            {"env": {"action": action}, "from_onnx": True},
-            open(os.path.join(os.path.dirname(out), "config.json"), "w"),
-            indent=1,
-        )
-        q.note(f"{body}: shipped fighter rebuilt as {os.path.relpath(out, q.ROOT)} (action path {action})")
-    return os.path.relpath(out, q.ROOT).replace("\\", "/")
 
 
 def decided(rows):
@@ -72,7 +49,7 @@ def main():
         f"=== queue_hill4 {a.run}: {a.bodies}, {a.iters} iterations, {a.num_envs} worlds, self-play every {a.self_play or '-'} ==="
     )
     q.ensure_tensorboard()
-    ship = {b: shipped(b) for b in q.HUMANS}
+    ship = {b: q.shipped(b) for b in q.HUMANS}
     for me in a.bodies:
         others = [h for h in q.HUMANS if h != me]
         bodies = [me, me] + others

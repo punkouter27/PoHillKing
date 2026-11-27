@@ -34,12 +34,7 @@ LOG_DIR = os.path.join(ROOT, "runs", "overnight")
 os.makedirs(LOG_DIR, exist_ok=True)
 PROGRESS = os.path.join(LOG_DIR, "progress_hill.txt")
 HUMANS = ("kim", "trump", "grandpa")
-# the checkpoints behind the shipped Models/<body>/fighter_policy.onnx (matched numerically on 2026-10-21)
-FIGHTER = {
-    "kim": "runs/r4league/kim_fight1/model_final.pt",
-    "trump": "runs/trump_r4bull/trump_fight1/model_final.pt",
-    "grandpa": "runs/r4league/grandpa_fight2/model_final.pt",
-}
+MODELS = os.path.join(os.path.dirname(ROOT), "Assets", "_Project", "RL_Models")
 DUEL_RUNG = {"kim": "r4league", "trump": "trump_r4bull", "grandpa": "r4league"}
 PROMOTE_MARGIN, DUEL_SLACK, JITTER_RATIO = 0.03, 0.05, 0.75
 RUN = "hill2"  # hill1 (no low-pass) was stopped at iteration 330 when the user asked for smoother, human-like motion
@@ -72,6 +67,34 @@ def run(args, robot, log_path=None, capture=False):
         return subprocess.run([PY] + args, cwd=ROOT, env=env, capture_output=True, text=True)
     with open(log_path, "w", encoding="utf-8") as f:
         return subprocess.run([PY] + args, cwd=ROOT, env=env, stdout=f, stderr=subprocess.STDOUT)
+
+
+def shipped(body):
+    """runs/shipped/<body>/model_final.pt: the shipped fighter rebuilt from its ONNX, with its action path in
+    config.json. The game's ONNX is the source of truth (the run dirs behind older brains get pruned), so a cached
+    checkpoint is rebuilt when the ONNX or fighter_action.json is newer or the action path changed."""
+    onnx = os.path.join(MODELS, body, "fighter_policy.onnx")
+    side = os.path.join(MODELS, body, "fighter_action.json")
+    if not os.path.exists(onnx):
+        raise SystemExit(f"no shipped ONNX for {body}: {onnx}")
+    out = os.path.join(ROOT, "runs", "shipped", body, "model_final.pt")
+    cfg = os.path.join(os.path.dirname(out), "config.json")
+    action = json.load(open(side, encoding="utf-8")) if os.path.exists(side) else None
+    stale = (
+        not os.path.exists(out)
+        or not os.path.exists(cfg)
+        or os.path.getmtime(out) < max(os.path.getmtime(onnx), os.path.getmtime(side) if action is not None else 0)
+        or (json.load(open(cfg, encoding="utf-8")).get("env") or {}).get("action") != action
+    )
+    if stale:
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        p = run(["scripts/onnx_to_ckpt.py", "--onnx", onnx, "--out", out], body, capture=True)
+        if p.returncode != 0:
+            raise SystemExit(f"onnx_to_ckpt failed for {body}: {(p.stdout or '')[-400:]}{(p.stderr or '')[-400:]}")
+        with open(cfg, "w", encoding="utf-8") as f:
+            json.dump({"env": {"action": action}, "from_onnx": True}, f, indent=1)
+        note(f"{body}: shipped fighter rebuilt as {os.path.relpath(out, ROOT)} (action path {action})")
+    return os.path.relpath(out, ROOT).replace("\\", "/")
 
 
 def evaluate(robot, args):
@@ -125,16 +148,17 @@ def main():
     a = ap.parse_args()
     note(f"=== queue_hill: {a.bodies}, {a.iters} iterations, {a.num_envs} worlds ===")
     ensure_tensorboard()
+    ship = {b: shipped(b) for b in HUMANS}
     for me in a.bodies:
         others = [h for h in HUMANS if h != me]
         scene = os.path.join(ROOT, "assets", "g1", f"scene_koth_3p_{me}_{'_'.join(others)}_train.xml")
         if not os.path.exists(scene):
             run(["-m", "koth.build_mjcf", "mix", me] + others, "g1", os.path.join(LOG_DIR, f"build_mix_3p_{me}.log"))
         rung, name = f"{me}_hill", f"{me}_{RUN}"
-        opp = [f"{FIGHTER[o]}:slot{i + 1}" for i, o in enumerate(others)]
+        opp = [f"{ship[o]}:slot{i + 1}" for i, o in enumerate(others)]
         ckpt = f"runs/{rung}/{name}/model_final.pt"
         if not os.path.exists(os.path.join(ROOT, ckpt)):
-            note(f"{name}: training ({rung}, warm from {FIGHTER[me]}, opponents {others}, half the worlds duels)")
+            note(f"{name}: training ({rung}, warm from {ship[me]}, opponents {others}, half the worlds duels)")
             train_args = (
                 [
                     "scripts/train.py",
@@ -147,7 +171,7 @@ def main():
                     "--iters",
                     str(a.iters),
                     "--warm",
-                    FIGHTER[me],
+                    ship[me],
                     "--opponent",
                 ]
                 + opp
@@ -165,13 +189,13 @@ def main():
         ev = {
             "three_new": evaluate(me, ["--rung", rung, "--ckpt", ckpt, "--opponent"] + opp + ["--seconds", "20"]),
             "three_fighter": evaluate(
-                me, ["--rung", rung, "--ckpt", FIGHTER[me], "--opponent"] + opp + ["--seconds", "20"]
+                me, ["--rung", rung, "--ckpt", ship[me], "--opponent"] + opp + ["--seconds", "20"]
             ),
             "duel_vs_fighter": evaluate(
-                me, ["--rung", DUEL_RUNG[me], "--ckpt", ckpt, "--opponent", FIGHTER[me], "--seconds", "25"]
+                me, ["--rung", DUEL_RUNG[me], "--ckpt", ckpt, "--opponent", ship[me], "--seconds", "25"]
             ),
             "duel_mirror": evaluate(
-                me, ["--rung", DUEL_RUNG[me], "--ckpt", FIGHTER[me], "--opponent", FIGHTER[me], "--seconds", "25"]
+                me, ["--rung", DUEL_RUNG[me], "--ckpt", ship[me], "--opponent", ship[me], "--seconds", "25"]
             ),
         }
         with open(os.path.join(LOG_DIR, f"{name}_eval.json"), "w", encoding="utf-8") as f:
