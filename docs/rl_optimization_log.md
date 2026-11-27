@@ -959,3 +959,14 @@ when every share >= 0.28. Progress: `runs/overnight/progress_balance.txt`; repor
   v Grandpa 0.025 (0.066, bar 0.036), strike_touch 0.084 (0.236), jitter 0.0374 -> not promoted (Grandpa duel). She won
   more by touching less: on the wider platform, keeping distance and letting the others go over pays more than
   strike_push. Next: a higher strike_push or a strike floor in the judge, and Kim v Grandpa duels.
+
+## 2026-11-27 - cloud training on Google Cloud (no run yet)
+
+- `cloud-train.ps1` + `cloud/` (README there): `start <train.py args>` trains the pushed commit on a Spot g2-standard-8
+  (1x L4, ~$0.35/h) in project `po-rl-training-7106` (free-trial credit, $290 budget alert, credit ends 2027-01-29); the
+  VM syncs the run folder to the bucket every 5 min, deletes itself at the end, and the launcher pulls the run into
+  `Training/runs/<rung>/<name>`. Spot preemption -> state "interrupted", `pull` prints the `--resume` command.
+- Smoke test (`-Smoke`, CPU VM, 22:24-22:31 UTC): sparse clone at the pushed commit, upload of a git-ignored warm
+  checkpoint + its config.json, `uv sync --frozen` of the Windows-made `uv.lock` on Ubuntu 22.04 (torch 2.9.1+cu128,
+  mujoco 3.15.0, warp 1.18.0: imports OK), pull home, VM self-deleted.
+- Blocked on GPU quota: new projects have 0 GPUs; requested GPUS-ALL-REGIONS = 2 and Spot L4 us-central1 = 2.

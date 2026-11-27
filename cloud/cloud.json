@@ -1,0 +1,10 @@
+{
+  "project": "po-rl-training-7106",
+  "bucket": "po-rl-training-7106-jobs",
+  "zones": ["us-central1-a", "us-central1-b", "us-central1-c"],
+  "machineType": "g2-standard-8",
+  "imageFamily": "common-cu129-ubuntu-2204-nvidia-580",
+  "imageProject": "deeplearning-platform-release",
+  "diskGb": 100,
+  "approxUsdPerHour": 0.35
+}
