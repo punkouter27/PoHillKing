@@ -76,6 +76,7 @@ mapfile -t ARGS < <(md attributes/po-args) # one train.py argument per line
 echo "== train.py ${ARGS[*]}"
 status training
 kill $SYNC_PID 2>/dev/null
+sync_out # the setup log now, not 5 min from now
 ( while sleep 300; do sync_out; done ) &
 [ -n "$ROBOT" ] && export KOTH_ROBOT="$ROBOT"
 if [ -n "$SMOKE" ]; then # the training stack imports and the run folder makes the round trip; no GPU, no train.py

@@ -63,7 +63,7 @@ function Get-JobState($job, $vms) {
         $state = 'lost (VM gone without a final report)'; $ended = $true
     }
     $endTime = ($ended -and $s) ? [datetimeoffset]$s.time : [datetimeoffset]::UtcNow
-    $h = [math]::Max(0, ($endTime - $start).TotalHours)
+    $h = [math]::Max(0.0, ($endTime - $start).TotalHours) # 0.0, not 0: Max(0, x) picks the int overload and truncates
     [pscustomobject]@{ Job = $job; State = $state; Ended = $ended; Run = "runs/$($j.rung)/$($j.name)"; Vm = $j.vm
         Zone = $j.zone; Hours = [math]::Round($h, 2); ApproxUsd = [math]::Round($h * $Cfg.approxUsdPerHour, 2); Info = $j }
 }
